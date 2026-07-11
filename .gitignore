@@ -1,0 +1,18 @@
+# Root ignores for the GreenRide mobile monorepo (rider-app + driver-app)
+# Each app also has its own .gitignore for Expo/RN specifics.
+
+# Dependencies
+node_modules/
+
+# Env files (EXPO_PUBLIC_* is bundled into the client; keep local values out of git)
+.env
+.env.local
+.env.*.local
+
+# Expo / build output
+.expo/
+dist/
+web-build/
+
+# OS
+.DS_Store
