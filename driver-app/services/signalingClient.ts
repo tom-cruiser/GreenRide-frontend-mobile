@@ -20,8 +20,9 @@ function getSignalingUrl(): string {
     ((Constants as any)?.manifest?.debuggerHost as string | undefined);
 
   const host = hostUri ? hostUri.split(':')[0] : null;
-  if (host) return `http://${host}:3001`;
-  return Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
+  // Call signaling now runs inside the main backend (same port as the API).
+  if (host) return `http://${host}:4000`;
+  return Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

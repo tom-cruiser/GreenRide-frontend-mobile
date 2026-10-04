@@ -85,7 +85,7 @@ export default function RideRequestsScreen() {
     if (!token) return;
     setPendingId(id);
     try {
-      await ridesAPI.cancelRide(token, id);
+      await ridesAPI.declineRide(token, id);
       load();
     } catch (e) {
       Alert.alert(

@@ -85,8 +85,9 @@ export const walletAPI = {
   getBalance: async (token: string) =>
     apiCall('/wallet/balance', { headers: { Authorization: `Bearer ${token}` } }),
 
+  // Starts a mobile-money top-up; the balance updates once the provider confirms.
   topUp: async (token: string, amount: number) =>
-    apiCall('/wallet/topup', {
+    apiCall('/payments/topup', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ amount }),

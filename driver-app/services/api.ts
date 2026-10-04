@@ -69,19 +69,30 @@ export const ridesAPI = {
       headers: authHeader(token),
     }),
 
+  // Hides a pending request from this driver only; the rider's ride stays open.
+  declineRide: (token: string, rideId: string | number) =>
+    apiCall(`/rides/${rideId}/decline`, {
+      method: 'POST',
+      headers: authHeader(token),
+    }),
+
+  arriveRide: (token: string, rideId: string | number) =>
+    apiCall(`/rides/${rideId}/arrive`, {
+      method: 'POST',
+      headers: authHeader(token),
+    }),
+
+  // For the assigned driver: releases the ride back to other drivers.
   cancelRide: (token: string, rideId: string | number) =>
     apiCall(`/rides/${rideId}/cancel`, {
       method: 'POST',
       headers: authHeader(token),
     }),
 
-  // Note: backend currently restricts /api/rides/complete to admin role.
-  // Driver calls will 403 until backend permissions are relaxed.
   completeRide: (token: string, rideId: string | number) =>
-    apiCall('/rides/complete', {
+    apiCall(`/rides/${rideId}/complete`, {
       method: 'POST',
       headers: authHeader(token),
-      body: JSON.stringify({ ride_id: rideId }),
     }),
 };
 
