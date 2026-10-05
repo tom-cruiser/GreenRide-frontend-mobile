@@ -60,29 +60,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (user && token) updateWalletBalance();
   }, [user, token, updateWalletBalance]);
 
+  // isLoading only covers restoring the saved session at startup; the auth
+  // screens show their own progress, so the navigator stays mounted.
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await authAPI.login({ email, password });
-      if (!response.user || !response.token) throw new Error('Invalid response from server');
-      setUser(response.user);
-      setToken(response.token);
-      await AsyncStorage.setItem('driverAuthToken', response.token);
-      await AsyncStorage.setItem('driverUserData', JSON.stringify(response.user));
-    } finally {
-      setIsLoading(false);
+    const response = await authAPI.login({ email, password });
+    if (!response.user || !response.token) throw new Error('Invalid response from server');
+    if (response.user.role !== 'driver') {
+      throw new Error('This is not a driver account. Use the GreenRide rider app instead.');
     }
+    setUser(response.user);
+    setToken(response.token);
+    await AsyncStorage.setItem('driverAuthToken', response.token);
+    await AsyncStorage.setItem('driverUserData', JSON.stringify(response.user));
   };
 
   const register = async (userData: { name: string; email: string; password: string }) => {
-    setIsLoading(true);
-    try {
-      const response = await authAPI.register(userData);
-      if (!response.user) throw new Error('Registration failed');
-      await login(userData.email, userData.password);
-    } finally {
-      setIsLoading(false);
-    }
+    const response = await authAPI.register(userData);
+    if (!response.user) throw new Error('Registration failed');
+    await login(userData.email, userData.password);
   };
 
   const logout = async () => {

@@ -1,5 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -14,7 +16,44 @@ export const unstable_settings = {
 
 function AppStack() {
   const colorScheme = useColorScheme();
-  const { user, token } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+  const { user, token, isLoading } = useAuth();
+  const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('driverHasOnboarded')
+      .then((value) => setHasOnboarded(value === 'true'))
+      .catch(() => setHasOnboarded(false));
+  }, []);
+
+  const bootstrapping = isLoading || hasOnboarded === null;
+
+  // Route guard: onboarding once, then sign-in before anything else.
+  useEffect(() => {
+    if (bootstrapping) return;
+
+    const first = segments[0];
+    const inAuthGroup = first === '(auth)';
+    const onOnboarding = first === 'onboarding';
+    const isAuthed = !!user && !!token;
+
+    if (!hasOnboarded) {
+      if (!onOnboarding) router.replace('/onboarding');
+      return;
+    }
+
+    if (!isAuthed && !inAuthGroup) {
+      router.replace('/(auth)/login');
+      return;
+    }
+
+    if (isAuthed && (inAuthGroup || onOnboarding)) {
+      router.replace('/(tabs)');
+    }
+  }, [bootstrapping, hasOnboarded, user, token, segments, router]);
+
+  if (bootstrapping) return null;
 
   // CallProvider is always mounted so the navigator isn't rebuilt on login;
   // with no user it stays idle and doesn't connect to call signaling.
@@ -25,8 +64,9 @@ function AppStack() {
       authToken={token ?? ''}
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack initialRouteName="onboarding">
+        <Stack>
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="registration-verification" options={{ title: 'Registration & Verification' }} />
           <Stack.Screen name="profile" options={{ title: 'Profile Management' }} />

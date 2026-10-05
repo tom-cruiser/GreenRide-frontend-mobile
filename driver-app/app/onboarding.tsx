@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DriverOnboarding() {
   const router = useRouter();
@@ -9,7 +10,13 @@ export default function DriverOnboarding() {
     <View style={styles.container}>
       <Text style={styles.title}>Green Ride Driver</Text>
       <Text style={styles.subtitle}>Start earning with eco-friendly rides</Text>
-      <TouchableOpacity style={styles.nextBtn} onPress={() => router.replace('/(tabs)')}>
+      <TouchableOpacity
+        style={styles.nextBtn}
+        onPress={async () => {
+          await AsyncStorage.setItem('driverHasOnboarded', 'true').catch(() => {});
+          router.replace('/(auth)/login');
+        }}
+      >
         <Text style={styles.nextText}>Get Started</Text>
       </TouchableOpacity>
     </View>

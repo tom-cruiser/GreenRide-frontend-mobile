@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuth();
   const [showRiderRating, setShowRiderRating] = useState(true);
+
+  // The route guard sends the user back to the login screen once logged out.
+  const confirmLogout = () =>
+    Alert.alert('Log out', 'Do you want to log out of GreenRide Driver?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: () => logout() },
+    ]);
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.container}>
@@ -11,9 +20,9 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Personal Information</Text>
-        <Text style={styles.item}>Name: Alex Driver</Text>
-        <Text style={styles.item}>Phone: +234 800 123 4567</Text>
-        <Text style={styles.item}>City: Lagos</Text>
+        <Text style={styles.item}>Name: {user?.name ?? '—'}</Text>
+        <Text style={styles.item}>Email: {user?.email ?? '—'}</Text>
+        <Text style={styles.item}>Phone: {user?.phone || 'Not set'}</Text>
       </View>
 
       <View style={styles.card}>
@@ -37,6 +46,10 @@ export default function ProfileScreen() {
         </View>
         <Switch value={showRiderRating} onValueChange={setShowRiderRating} />
       </View>
+
+      <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout} accessibilityRole="button">
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -58,4 +71,14 @@ const styles = StyleSheet.create({
   item: { color: '#334155', marginBottom: 4 },
   meta: { color: '#64748b', fontSize: 12, marginTop: 2 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logoutBtn: {
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fff',
+  },
+  logoutText: { color: '#b91c1c', fontWeight: '700', fontSize: 16 },
 });
