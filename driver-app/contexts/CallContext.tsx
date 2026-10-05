@@ -21,14 +21,27 @@ import React, {
   useRef,
 } from 'react';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
-import {
-  RTCPeerConnection,
-  RTCIceCandidate,
-  RTCSessionDescription,
-  mediaDevices,
-  MediaStream,
-} from 'react-native-webrtc';
+import type { RTCPeerConnection, MediaStream } from 'react-native-webrtc';
 import { signalingClient } from '../services/signalingClient';
+
+// react-native-webrtc throws on import when its native code is missing, as in
+// Expo Go. Load it lazily so the rest of the app still runs there; calls are
+// then turned off and only work in a development or release build.
+type WebRTC = typeof import('react-native-webrtc');
+const webrtc: WebRTC | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('react-native-webrtc') as WebRTC;
+  } catch {
+    return null;
+  }
+})();
+export const callsSupported = webrtc !== null;
+
+const rtc = (): WebRTC => {
+  if (!webrtc) throw new Error('Calls are not available in this build');
+  return webrtc;
+};
 
 // ─── ICE servers ─────────────────────────────────────────────────────────────
 function buildIceServers() {
@@ -157,7 +170,7 @@ async function requestMicPermission(): Promise<boolean> {
 }
 
 async function getAudioStream(): Promise<MediaStream> {
-  return mediaDevices.getUserMedia({ audio: true, video: false }) as Promise<MediaStream>;
+  return rtc().mediaDevices.getUserMedia({ audio: true, video: false }) as Promise<MediaStream>;
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -191,7 +204,7 @@ export function CallProvider({
 
   // ── Connect signaling on mount / user change ──────────────────────────────
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !callsSupported) return;
     signalingClient.connect(userId, displayName, authToken);
     return () => signalingClient.disconnect();
   }, [userId, displayName, authToken]);
@@ -212,7 +225,7 @@ export function CallProvider({
 
   // ── Create RTCPeerConnection ───────────────────────────────────────────────
   const createPeerConnection = useCallback((callId: string) => {
-    const conn = new RTCPeerConnection({ iceServers: buildIceServers() });
+    const conn = new (rtc().RTCPeerConnection)({ iceServers: buildIceServers() });
 
     peerEvents(conn).addEventListener('icecandidate', ({ candidate }) => {
       if (!candidate) return;
@@ -251,7 +264,7 @@ export function CallProvider({
   const flushIceBuffer = useCallback(async (conn: InstanceType<typeof RTCPeerConnection>) => {
     remoteDescSet.current = true;
     for (const c of iceBuf.current) {
-      await (conn as any).addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+      await (conn as any).addIceCandidate(new (rtc().RTCIceCandidate)(c)).catch(() => {});
     }
     iceBuf.current = [];
   }, []);
@@ -271,6 +284,10 @@ export function CallProvider({
     async (peerId: string, peerName: string) => {
       const { phase } = stateRef.current;
       if (phase !== 'idle' && phase !== 'ended') return false;
+      if (!callsSupported) {
+        Alert.alert('Calls unavailable', "Calls need the full GreenRide app build; they don't work in Expo Go.");
+        return false;
+      }
       if (!signalingClient.connected) {
         Alert.alert('Call Failed', 'Not connected to the call service. Check your connection and try again.');
         return false;
@@ -386,7 +403,7 @@ export function CallProvider({
       await attachLocalStream(conn);
 
       const offer = await (conn as any).createOffer({});
-      await (conn as any).setLocalDescription(new RTCSessionDescription(offer));
+      await (conn as any).setLocalDescription(new (rtc().RTCSessionDescription)(offer));
       signalingClient.send('offer', { callId: callInfo.callId, sdp: offer });
     });
 
@@ -395,18 +412,18 @@ export function CallProvider({
       const { callInfo, phase } = stateRef.current;
       if (!pc.current || !callInfo || phase !== 'negotiating') return;
 
-      await (pc.current as any).setRemoteDescription(new RTCSessionDescription(msg.sdp));
+      await (pc.current as any).setRemoteDescription(new (rtc().RTCSessionDescription)(msg.sdp));
       await flushIceBuffer(pc.current);
 
       const answer = await (pc.current as any).createAnswer();
-      await (pc.current as any).setLocalDescription(new RTCSessionDescription(answer));
+      await (pc.current as any).setLocalDescription(new (rtc().RTCSessionDescription)(answer));
       signalingClient.send('answer', { callId: callInfo.callId, sdp: answer });
     });
 
     // Caller receives answer → set remote desc
     const offAnswer = signalingClient.on('answer', async (msg: any) => {
       if (!pc.current) return;
-      await (pc.current as any).setRemoteDescription(new RTCSessionDescription(msg.sdp));
+      await (pc.current as any).setRemoteDescription(new (rtc().RTCSessionDescription)(msg.sdp));
       await flushIceBuffer(pc.current);
     });
 
@@ -418,7 +435,7 @@ export function CallProvider({
         return;
       }
       await (pc.current as any)
-        .addIceCandidate(new RTCIceCandidate(msg.candidate))
+        .addIceCandidate(new (rtc().RTCIceCandidate)(msg.candidate))
         .catch(() => {});
     });
 

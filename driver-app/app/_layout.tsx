@@ -39,7 +39,16 @@ function AppStack() {
     const isAuthed = !!user && !!token;
 
     if (!hasOnboarded) {
-      if (!onOnboarding) router.replace('/onboarding');
+      // The onboarding screen saves the flag and then navigates away, so
+      // re-read it before sending the user back to onboarding.
+      if (!onOnboarding) {
+        AsyncStorage.getItem('driverHasOnboarded')
+          .then((value) => {
+            if (value === 'true') setHasOnboarded(true);
+            else router.replace('/onboarding');
+          })
+          .catch(() => router.replace('/onboarding'));
+      }
       return;
     }
 

@@ -9,6 +9,7 @@ import {
   Modal,
   Switch,
   Platform,
+  ScrollView,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -19,6 +20,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { ridesAPI, driversAPI } from "../../services/api";
 
 type Coords = { latitude: number; longitude: number };
+
+// Longest trip the app will price (the server rejects anything over 500 km).
+const MAX_TRIP_KM = 200;
 
 type Estimate = {
   fare: number;
@@ -180,6 +184,16 @@ export default function RideBookingScreen() {
       }
 
       const km = Math.max(0.1, Math.round(distanceKm(pickupCoords, dropoffCoords) * 100) / 100);
+      if (__DEV__) console.log("[booking] geocoded", { pickupCoords, dropoffCoords, km });
+      // A geocoder can match a name in another town or country; catch that
+      // here instead of sending an impossible trip to the server.
+      if (km > MAX_TRIP_KM) {
+        Alert.alert(
+          "Check the addresses",
+          `These places are ${Math.round(km)} km apart. Add the neighbourhood and city to both addresses.`,
+        );
+        return;
+      }
       const result = await ridesAPI.estimate(token, { distance: km, is_shared: isSharedRide });
       setEstimate({ fare: result.fare, distanceKm: km, pickupCoords });
       setBookingStep("confirmation");
@@ -251,7 +265,12 @@ export default function RideBookingScreen() {
   const userLng = location ? location.longitude : 29.36;
 
   return (
-    <View style={styles.container}>
+    // Scrollable: the fare card and Confirm Booking appear below the form.
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity
         style={styles.goBack}
         onPress={() => router.replace("/(tabs)")}
@@ -465,17 +484,21 @@ export default function RideBookingScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  container: {
+    flexGrow: 1,
     alignItems: "center",
     padding: 24,
-    justifyContent: "center",
+    paddingTop: 56,
+    paddingBottom: 40,
   },
   map: {
     width: "100%",

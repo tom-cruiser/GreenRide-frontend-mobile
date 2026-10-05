@@ -59,8 +59,10 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
       ...options,
+      // Merged after spreading options: options.headers (the login token)
+      // must not replace the JSON content type, or bodies arrive empty.
+      headers: { 'Content-Type': 'application/json', ...options.headers },
       signal: controller.signal,
     });
     if (!response.ok) {
