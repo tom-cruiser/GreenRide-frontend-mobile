@@ -9,6 +9,16 @@ export class ApiError extends Error {
   }
 }
 
+// Called when an authenticated request comes back 401 (expired or invalid
+// login). AuthContext registers logout here.
+let onUnauthorized: (() => void) | null = null;
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+  onUnauthorized = handler;
+};
+
+const hasAuthHeader = (headers: RequestInit['headers']) =>
+  Boolean(headers && typeof headers === 'object' && 'Authorization' in headers);
+
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -21,6 +31,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401 && hasAuthHeader(options.headers)) onUnauthorized?.();
       throw new ApiError((errorData as any).error || `HTTP ${response.status}`, response.status);
     }
     return response.json();
@@ -55,6 +66,10 @@ export const authAPI = {
 export const ridesAPI = {
   getRideRequests: (token: string) =>
     apiCall('/rides/requests', { headers: authHeader(token) }),
+
+  // The driver's assigned ride (accepted, arrived or in progress), or null.
+  getActiveRide: (token: string) =>
+    apiCall('/rides/active', { headers: authHeader(token) }),
 
   getRideHistory: (token: string) =>
     apiCall('/rides/history', { headers: authHeader(token) }),

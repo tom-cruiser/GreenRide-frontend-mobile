@@ -40,6 +40,17 @@ const { baseUrl: API_BASE_URL } = getApiConfig();
 // eslint-disable-next-line no-console
 console.log('[api] base URL:', API_BASE_URL);
 
+
+// Called when an authenticated request comes back 401 (expired or invalid
+// login). AuthContext registers logout here.
+let onUnauthorized: (() => void) | null = null;
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+  onUnauthorized = handler;
+};
+
+const hasAuthHeader = (headers: RequestInit['headers']) =>
+  Boolean(headers && typeof headers === 'object' && 'Authorization' in headers);
+
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   // eslint-disable-next-line no-console
   console.log('[api] →', options.method ?? 'GET', `${API_BASE_URL}${endpoint}`);
@@ -54,6 +65,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401 && hasAuthHeader(options.headers)) onUnauthorized?.();
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
     return response.json();
@@ -86,11 +98,11 @@ export const walletAPI = {
     apiCall('/wallet/balance', { headers: { Authorization: `Bearer ${token}` } }),
 
   // Starts a mobile-money top-up; the balance updates once the provider confirms.
-  topUp: async (token: string, amount: number) =>
+  topUp: async (token: string, amount: number, phone?: string) =>
     apiCall('/payments/topup', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ amount }),
+      body: JSON.stringify({ amount, phone }),
     }),
 
   withdraw: async (token: string, amount: number) =>
@@ -123,6 +135,18 @@ export const ridesAPI = {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(rideData),
     }),
+
+  // Server-side fare for a trip; the only source of prices.
+  estimate: async (token: string, data: { distance: number; is_shared?: boolean }) =>
+    apiCall('/rides/estimate', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    }),
+
+  // The rider's open ride (waiting for a driver or in progress), or null.
+  getActiveRide: async (token: string) =>
+    apiCall('/rides/active', { headers: { Authorization: `Bearer ${token}` } }),
 
   getRideHistory: async (token: string) =>
     apiCall('/rides/history', { headers: { Authorization: `Bearer ${token}` } }),
@@ -159,6 +183,20 @@ export const ridesAPI = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ rating, feedback }),
+    }),
+};
+
+export const paymentsAPI = {
+  getPayment: async (token: string, paymentId: string | number) =>
+    apiCall(`/payments/${paymentId}`, { headers: { Authorization: `Bearer ${token}` } }),
+
+  // Development only (fake payment provider): stands in for approving the
+  // mobile-money prompt on the phone.
+  devConfirm: async (token: string, paymentId: string | number) =>
+    apiCall(`/payments/dev/${paymentId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'succeeded' }),
     }),
 };
 

@@ -82,6 +82,7 @@ function RootNavigator() {
           <Stack.Screen name="promotions" options={{ headerShown: false, title: 'Promotions' }} />
           <Stack.Screen name="settings" options={{ headerShown: false, title: 'Settings' }} />
           <Stack.Screen name="messaging" options={{ headerShown: false, title: 'Messages' }} />
+          <Stack.Screen name="active-ride" options={{ headerShown: false }} />
           <Stack.Screen name="call" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         </Stack>
         <StatusBar style="auto" />

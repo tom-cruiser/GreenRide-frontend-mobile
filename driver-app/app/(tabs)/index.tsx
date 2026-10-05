@@ -7,6 +7,7 @@ import SafetySupportBar from '../../components/safety-support-bar';
 import EarningsSummary from '../../components/earnings-summary';
 import RideStatusToggle from '../../components/ride-status-toggle';
 import { useAuth } from '../../contexts/AuthContext';
+import { ridesAPI } from '../../services/api';
 import { STATUS_LABELS, useDriverProfile } from '../../hooks/useDriverProfile';
 
 export default function DriverDashboard() {
@@ -15,12 +16,24 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { profile, status, reload: reloadProfile } = useDriverProfile();
+  const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
 
-  // Re-check approval whenever the dashboard comes back into view.
+  const loadActiveRide = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { ride } = await ridesAPI.getActiveRide(token);
+      setActiveRideStatus(ride?.status ?? null);
+    } catch {
+      setActiveRideStatus(null);
+    }
+  }, [token]);
+
+  // Re-check approval and the current ride whenever the dashboard comes back into view.
   useFocusEffect(
     useCallback(() => {
       reloadProfile();
-    }, [reloadProfile]),
+      loadActiveRide();
+    }, [reloadProfile, loadActiveRide]),
   );
 
   useEffect(() => {
@@ -30,7 +43,7 @@ export default function DriverDashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([updateWalletBalance(), reloadProfile()]);
+      await Promise.all([updateWalletBalance(), reloadProfile(), loadActiveRide()]);
     } finally {
       setRefreshing(false);
     }
@@ -58,6 +71,14 @@ export default function DriverDashboard() {
           vehicle={profile ? `${profile.vehicle_make} ${profile.vehicle_model}` : undefined}
           onProfilePress={() => router.push('/profile')}
         />
+        {activeRideStatus && (
+          <TouchableOpacity style={styles.activeRide} onPress={() => router.push('/active-ride')}>
+            <Text style={styles.activeRideTitle}>
+              {activeRideStatus === 'in_progress' ? 'Trip in progress' : 'You have a rider waiting'}
+            </Text>
+            <Text style={styles.activeRideText}>Tap to open your current ride</Text>
+          </TouchableOpacity>
+        )}
         {(status === 'not_onboarded' || status === 'pending') && (
           <TouchableOpacity
             style={styles.banner}
@@ -168,6 +189,14 @@ const styles = StyleSheet.create({
     color: '#1b5e20',
     fontWeight: '700',
   },
+  activeRide: {
+    backgroundColor: '#1976d2',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  activeRideTitle: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 2 },
+  activeRideText: { color: '#e3f2fd' },
   banner: {
     backgroundColor: '#fef3c7',
     borderColor: '#fcd34d',

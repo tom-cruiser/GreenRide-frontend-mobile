@@ -9,20 +9,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { walletAPI } from '../services/api';
-
-type Transaction = {
-  id: number | string;
-  amount: number;
-  type?: string;
-  description?: string;
-  created_at?: string;
-};
+import { formatTxDate, toTransactionRows, type TransactionRow } from '../utils/transactions';
 
 const formatAmount = (amount: number) => `${amount.toLocaleString()} FBU`;
 
 export default function WalletScreen() {
   const { token, walletBalance, updateWalletBalance } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [rows, setRows] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +29,7 @@ export default function WalletScreen() {
     try {
       await updateWalletBalance();
       const data = await walletAPI.getTransactions(token);
-      setTransactions((data?.transactions as Transaction[]) || []);
+      setRows(toTransactionRows(data?.transactions ?? []));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load wallet');
@@ -70,27 +63,23 @@ export default function WalletScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        {!loading && transactions.length === 0 && (
+        {!loading && rows.length === 0 && (
           <Text style={styles.empty}>No transactions yet.</Text>
         )}
-        {transactions.map((tx) => (
-          <View key={tx.id} style={styles.txRow}>
+        {rows.map((row) => (
+          <View key={row.key} style={styles.txRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.txDesc}>
-                {tx.description || tx.type || 'Transaction'}
-              </Text>
-              {tx.created_at && (
-                <Text style={styles.txDate}>{tx.created_at}</Text>
-              )}
+              <Text style={styles.txDesc}>{row.label}</Text>
+              <Text style={styles.txDate}>{formatTxDate(row.date)}</Text>
             </View>
             <Text
               style={[
                 styles.txAmount,
-                tx.amount < 0 ? styles.txDebit : styles.txCredit,
+                row.direction === 'outgoing' ? styles.txDebit : styles.txCredit,
               ]}
             >
-              {tx.amount < 0 ? '-' : '+'}
-              {formatAmount(Math.abs(tx.amount))}
+              {row.direction === 'outgoing' ? '-' : '+'}
+              {formatAmount(row.amount)}
             </Text>
           </View>
         ))}

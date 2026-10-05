@@ -69,8 +69,7 @@ export default function RideRequestsScreen() {
     setPendingId(id);
     try {
       await ridesAPI.acceptRide(token, id);
-      Alert.alert("Accepted", "Ride accepted.");
-      load();
+      router.push("/active-ride");
     } catch (e) {
       Alert.alert(
         "Could not accept",

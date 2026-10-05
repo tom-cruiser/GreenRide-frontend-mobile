@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI, walletAPI } from '../services/api';
+import { Alert } from 'react-native';
+import { authAPI, setUnauthorizedHandler, walletAPI } from '../services/api';
 
 interface User {
   id: string;
@@ -86,6 +87,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setWalletBalance(0);
     await AsyncStorage.multiRemove(['driverAuthToken', 'driverUserData']);
   };
+
+  // An expired or invalid login (any authenticated request answered 401):
+  // sign out once; the route guard then shows the login screen.
+  const logoutRef = useRef(logout);
+  const sessionExpired = useRef(false);
+  useEffect(() => {
+    logoutRef.current = logout;
+  });
+  useEffect(() => {
+    if (token) sessionExpired.current = false;
+  }, [token]);
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      if (sessionExpired.current) return;
+      sessionExpired.current = true;
+      logoutRef.current();
+      Alert.alert('Session expired', 'Please sign in again.');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const updateProfile = async (userData: Partial<User>) => {
     if (!user || !token) return;

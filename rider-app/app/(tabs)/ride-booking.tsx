@@ -15,9 +15,37 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import AppLogo from "../../components/app-logo";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "../../contexts/AuthContext";
 import { ridesAPI, driversAPI } from "../../services/api";
+
+type Coords = { latitude: number; longitude: number };
+
+type Estimate = {
+  fare: number;
+  distanceKm: number;
+  pickupCoords: Coords;
+};
+
+// Straight-line distance in km between two points (haversine formula).
+function distanceKm(a: Coords, b: Coords): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
+// Looks up a typed address with the phone's geocoder (no API key needed).
+async function geocode(address: string): Promise<Coords | null> {
+  try {
+    const [first] = await Location.geocodeAsync(address);
+    return first ? { latitude: first.latitude, longitude: first.longitude } : null;
+  } catch {
+    return null;
+  }
+}
 
 type Driver = {
   id: number;
@@ -39,12 +67,12 @@ export default function RideBookingScreen() {
     );
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
-  const [fare, setFare] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const [estimating, setEstimating] = useState(false);
   const [location, setLocation] =
     useState<Location.LocationObjectCoords | null>(null);
   const [confirmationModalVisible, setConfirmationModalVisible] =
     useState(false);
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [bookingStep, setBookingStep] = useState<
     "input" | "confirmation" | "booked"
   >("input");
@@ -121,101 +149,92 @@ export default function RideBookingScreen() {
     }
   };
 
-  const handleEstimate = () => {
-    if (!pickup || !dropoff) {
+  const resetEstimate = () => {
+    setEstimate(null);
+    setBookingStep("input");
+  };
+
+  const handleEstimate = async () => {
+    if (!pickup.trim() || !dropoff.trim()) {
       Alert.alert(
         "Missing Information",
         "Please enter both pickup and dropoff locations.",
       );
       return;
     }
+    if (!token) return;
 
-    // Simple distance calculation (in real app, use proper mapping service)
-    const estimatedDistance = 1.0; // km
-    const baseRate = 7000; // FBU per km
-    const estimatedFare = Math.max(baseRate * estimatedDistance, 3500);
-    const discountedFare = isSharedRide
-      ? Math.floor(estimatedFare * 0.75)
-      : estimatedFare;
+    setEstimating(true);
+    try {
+      // Pickup falls back to the phone's GPS position if the address isn't found.
+      const pickupCoords =
+        (await geocode(pickup)) ??
+        (location ? { latitude: location.latitude, longitude: location.longitude } : null);
+      const dropoffCoords = await geocode(dropoff);
+      if (!pickupCoords || !dropoffCoords) {
+        Alert.alert(
+          "Address not found",
+          `We couldn't find ${!pickupCoords ? "the pickup" : "the dropoff"} address. Try adding the street or neighbourhood and city.`,
+        );
+        return;
+      }
 
-    setFare(`${discountedFare.toLocaleString()} FBU`);
-    setBookingStep("confirmation");
+      const km = Math.max(0.1, Math.round(distanceKm(pickupCoords, dropoffCoords) * 100) / 100);
+      const result = await ridesAPI.estimate(token, { distance: km, is_shared: isSharedRide });
+      setEstimate({ fare: result.fare, distanceKm: km, pickupCoords });
+      setBookingStep("confirmation");
+    } catch (error) {
+      Alert.alert(
+        "Estimate failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setEstimating(false);
+    }
   };
 
-  const handleBookRide = async () => {
+  const handleBookRide = () => {
     if (!user || !token) {
       Alert.alert("Authentication Required", "Please log in to book a ride.");
       return;
     }
+    if (!estimate) return;
 
-    // Check wallet balance (very simplified)
-    const fareAmount = isSharedRide ? 5250 : 7000;
-    if (walletBalance < fareAmount) {
+    if (walletBalance < estimate.fare) {
       Alert.alert(
         "Insufficient Balance",
-        "Please top up your wallet to book this ride.",
+        `This ride costs ${estimate.fare.toLocaleString()} FBU. Please top up your wallet.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Top up", onPress: () => router.push("/(tabs)/wallet") },
+        ],
       );
       return;
     }
 
-    const nearestDriver = nearbyDrivers[0];
-    if (!nearestDriver) {
-      Alert.alert(
-        "No Drivers Available",
-        "No drivers are currently available in your area.",
-      );
-      return;
-    }
-
-    setSelectedDriver(nearestDriver);
     setConfirmationModalVisible(true);
   };
 
   const confirmBooking = async () => {
-    if (!token || !user || !selectedDriver) return;
+    if (!token || !user || !estimate) return;
 
     setIsBooking(true);
     try {
-      const rideData = {
-        pickup,
-        dropoff,
-        distance: 1.0, // km
-        rider_id: user.id,
+      await ridesAPI.bookRide(token, {
+        pickup: pickup.trim(),
+        dropoff: dropoff.trim(),
+        distance: estimate.distanceKm,
         is_shared: isSharedRide,
         max_co_riders: isSharedRide ? maxCoRiders : undefined,
-        pickup_lat: location?.latitude,
-        pickup_lng: location?.longitude,
-      };
-
-      const response = await ridesAPI.bookRide(token, rideData);
-
-      if (response.ride) {
-        setConfirmationModalVisible(false);
-        setBookingStep("booked");
-        if (response.share?.groupId) {
-          Alert.alert(
-            "Shared Ride Requested",
-            "We’re finding co-riders going your way. You can track the match status now.",
-            [
-              {
-                text: "Track",
-                onPress: () =>
-                  router.push({
-                    pathname: "/shared-ride",
-                    params: { groupId: String(response.share.groupId) },
-                  }),
-              },
-              { text: "Later", onPress: () => router.replace("/(tabs)") },
-            ],
-          );
-        } else {
-          Alert.alert(
-            "Ride Booked!",
-            `Your ride has been confirmed with ${selectedDriver.name}. They will arrive in ${selectedDriver.eta}.`,
-            [{ text: "OK", onPress: () => router.replace("/(tabs)") }],
-          );
-        }
-      }
+        pickup_lat: estimate.pickupCoords.latitude,
+        pickup_lng: estimate.pickupCoords.longitude,
+      });
+      setConfirmationModalVisible(false);
+      resetEstimate();
+      setPickup("");
+      setDropoff("");
+      // The active-ride screen shows "Finding a driver" and follows the ride.
+      router.replace("/active-ride");
     } catch (error) {
       console.error("Booking failed:", error);
       const message =
@@ -226,22 +245,6 @@ export default function RideBookingScreen() {
     } finally {
       setIsBooking(false);
     }
-  };
-
-  const handleDriverContact = () => {
-    if (!selectedDriver) return;
-    Alert.alert("Contact Driver", "Choose how to contact your driver:", [
-      {
-        text: "Call",
-        onPress: () =>
-          Alert.alert("Calling", `Calling ${selectedDriver.name}...`),
-      },
-      {
-        text: "Message",
-        onPress: () => Alert.alert("Messaging", "Opening in-app messaging..."),
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
   };
 
   const userLat = location ? location.latitude : -3.375;
@@ -307,13 +310,19 @@ export default function RideBookingScreen() {
         style={styles.input}
         placeholder="Pickup Location"
         value={pickup}
-        onChangeText={setPickup}
+        onChangeText={(v) => {
+          setPickup(v);
+          resetEstimate();
+        }}
       />
       <TextInput
         style={styles.input}
         placeholder="Dropoff Location"
         value={dropoff}
-        onChangeText={setDropoff}
+        onChangeText={(v) => {
+          setDropoff(v);
+          resetEstimate();
+        }}
       />
 
       <View style={styles.sharedRow}>
@@ -327,8 +336,7 @@ export default function RideBookingScreen() {
           value={isSharedRide}
           onValueChange={(v) => {
             setIsSharedRide(v);
-            setFare(null);
-            setBookingStep("input");
+            resetEstimate();
           }}
           trackColor={{ false: "#E5E7EB", true: "#BDECC0" }}
           thumbColor={isSharedRide ? "#43a047" : "#9CA3AF"}
@@ -366,15 +374,21 @@ export default function RideBookingScreen() {
           </Text>
         </View>
       )}
-      <TouchableOpacity style={styles.estimateButton} onPress={handleEstimate}>
-        <Text style={styles.estimateText}>Estimate Fare</Text>
+      <TouchableOpacity
+        style={[styles.estimateButton, estimating && { opacity: 0.6 }]}
+        onPress={handleEstimate}
+        disabled={estimating}
+      >
+        <Text style={styles.estimateText}>
+          {estimating ? "Estimating…" : "Estimate Fare"}
+        </Text>
       </TouchableOpacity>
 
-      {fare && bookingStep === "confirmation" && (
+      {estimate && bookingStep === "confirmation" && (
         <View style={styles.confirmationSection}>
           <View style={styles.fareCard}>
             <Text style={styles.fareLabel}>Estimated Fare</Text>
-            <Text style={styles.fareAmount}>{fare}</Text>
+            <Text style={styles.fareAmount}>{estimate.fare.toLocaleString()} FBU</Text>
           </View>
 
           <View style={styles.tripSummary}>
@@ -389,11 +403,9 @@ export default function RideBookingScreen() {
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Distance:</Text>
-              <Text style={styles.summaryValue}>~1.0 km</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Estimated Time:</Text>
-              <Text style={styles.summaryValue}>15-20 mins</Text>
+              <Text style={styles.summaryValue}>
+                ~{estimate.distanceKm.toFixed(1)} km (straight line)
+              </Text>
             </View>
           </View>
 
@@ -412,42 +424,26 @@ export default function RideBookingScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Driver Found!</Text>
+            <Text style={styles.modalTitle}>Confirm booking</Text>
 
-            {selectedDriver && (
-              <View style={styles.driverInfo}>
-                <View style={styles.driverAvatar}>
-                  <IconSymbol name="person.fill" size={32} color="#0B0B0B" />
-                </View>
-                <View style={styles.driverDetails}>
-                  <Text style={styles.driverName}>{selectedDriver.name}</Text>
-                  <View style={styles.ratingContainer}>
-                    <IconSymbol name="star.fill" size={16} color="#FFD700" />
-                    <Text style={styles.ratingText}>
-                      {selectedDriver.rating}
-                    </Text>
-                  </View>
-                  <Text style={styles.etaText}>
-                    Arrives in {selectedDriver.eta}
+            {estimate && (
+              <View style={styles.modalTripSummary}>
+                <Text style={styles.modalFare}>
+                  Total: {estimate.fare.toLocaleString()} FBU
+                </Text>
+                <Text style={styles.modalRoute}>
+                  {pickup} → {dropoff}
+                </Text>
+                {isSharedRide && (
+                  <Text style={styles.modalRoute}>
+                    Shared ride with up to {maxCoRiders} co-rider(s)
                   </Text>
-                </View>
+                )}
+                <Text style={styles.modalRoute}>
+                  The fare is held from your wallet and charged when the trip ends.
+                </Text>
               </View>
             )}
-
-            <View style={styles.modalTripSummary}>
-              <Text style={styles.modalFare}>Total: {fare}</Text>
-              <Text style={styles.modalRoute}>
-                {pickup} → {dropoff}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.contactButton}
-              onPress={handleDriverContact}
-            >
-              <IconSymbol name="message.fill" size={20} color="#0B0B0B" />
-              <Text style={styles.contactButtonText}>Contact Driver</Text>
-            </TouchableOpacity>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -710,45 +706,6 @@ const styles = StyleSheet.create({
     color: "#0B0B0B",
     marginBottom: 20,
   },
-  driverInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    width: "100%",
-  },
-  driverAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#F6F6F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  driverDetails: {
-    flex: 1,
-  },
-  driverName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0B0B0B",
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginLeft: 4,
-  },
-  etaText: {
-    fontSize: 14,
-    color: "#0B0B0B",
-    fontWeight: "600",
-    marginTop: 4,
-  },
   modalTripSummary: {
     alignItems: "center",
     marginBottom: 20,
@@ -766,20 +723,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     marginTop: 4,
-  },
-  contactButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F6F6F6",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  contactButtonText: {
-    color: "#0B0B0B",
-    fontWeight: "600",
-    marginLeft: 8,
   },
   modalButtons: {
     flexDirection: "row",

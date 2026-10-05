@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Platform,
@@ -10,13 +10,13 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 import Constants from "expo-constants";
 
 import AppLogo from "../../components/app-logo";
 import { useAuth } from "../../contexts/AuthContext";
-import { driversAPI } from "../../services/api";
+import { driversAPI, ridesAPI } from "../../services/api";
 import { Colors, Radius, Spacing } from "../../constants/theme";
 import { useColorScheme } from "../../hooks/use-color-scheme";
 
@@ -42,6 +42,18 @@ export default function HomeScreen() {
     null,
   );
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
+  const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
+
+  // Show a "current ride" banner whenever the rider has an open ride.
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      ridesAPI
+        .getActiveRide(token)
+        .then(({ ride }) => setActiveRideStatus(ride?.status ?? null))
+        .catch(() => setActiveRideStatus(null));
+    }, [token]),
+  );
   const hasAndroidMapsKey =
     Platform.OS !== "android" ||
     Boolean(
@@ -249,6 +261,19 @@ export default function HomeScreen() {
           { backgroundColor: theme.surface, borderColor: theme.border },
         ]}
       >
+        {activeRideStatus && (
+          <TouchableOpacity
+            style={[styles.activeRideCard, { backgroundColor: theme.tint }]}
+            onPress={() => router.push("/active-ride")}
+            accessibilityRole="button"
+          >
+            <Text style={styles.activeRideTitle}>
+              {activeRideStatus === "pending" ? "Finding your driver…" : "Your ride is in progress"}
+            </Text>
+            <Text style={styles.activeRideHint}>Tap to follow your ride</Text>
+          </TouchableOpacity>
+        )}
+
         <View
           style={[
             styles.walletCard,
@@ -433,6 +458,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  activeRideCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+  activeRideTitle: { color: "#fff", fontWeight: "800", fontSize: 16 },
+  activeRideHint: { color: "#fff", opacity: 0.9, marginTop: 2 },
   container: {
     flex: 1,
   },

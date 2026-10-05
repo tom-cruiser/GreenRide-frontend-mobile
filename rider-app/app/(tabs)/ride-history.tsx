@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Alert, Modal, TextInput, RefreshControl } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Modal, TextInput, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,7 +9,7 @@ import { CallRideButton, CALLABLE_RIDE_STATUSES } from '../../components/CallRid
 
 type HistoryItem = {
   id: string;
-  type: 'Ride' | 'Top-Up';
+  type: 'Ride';
   date: string;
   amount: string;
   from: string;
@@ -23,47 +23,14 @@ type HistoryItem = {
   shareLabel?: string;
 };
 
-const DATA: HistoryItem[] = [
-  {
-    id: '1',
-    type: 'Ride',
-    date: 'Jan 27, 2026',
-    amount: '-3,500 FBU',
-    from: 'Downtown',
-    to: 'Airport',
-    driverName: 'Jean Pierre',
-    distance: '0.5 km',
-    duration: '15 mins',
-    rating: null,
-    status: 'completed',
-  },
-  {
-    id: '2',
-    type: 'Ride',
-    date: 'Jan 25, 2026',
-    amount: '-7,000 FBU',
-    from: 'Market',
-    to: 'University',
-    driverName: 'Marie Claire',
-    distance: '1.0 km',
-    duration: '20 mins',
-    rating: 5,
-    status: 'completed',
-  },
-  {
-    id: '3',
-    type: 'Top-Up',
-    date: 'Jan 24, 2026',
-    amount: '+10,000 FBU',
-    from: '',
-    to: '',
-    driverName: '',
-    distance: '',
-    duration: '',
-    rating: null,
-    status: 'completed',
-  },
-];
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Finding a driver',
+  accepted: 'Driver on the way',
+  arrived: 'Driver arrived',
+  in_progress: 'On the trip',
+  cancelled: 'Cancelled',
+};
 
 type BackendRide = {
   id: string;
@@ -74,6 +41,7 @@ type BackendRide = {
   status: string;
   date: string;
   rating: number | null;
+  driverName: string | null;
   is_shared: boolean;
   share: null | {
     groupId: number;
@@ -95,13 +63,12 @@ export default function RideHistoryScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const topUpItems = useMemo(() => DATA.filter((d) => d.type === 'Top-Up'), []);
 
   const fetchHistory = async () => {
     if (!token || !user) return;
 
     setLoadError(null);
-    const res = await ridesAPI.getRideHistory(token, user.id);
+    const res = await ridesAPI.getRideHistory(token);
     const backendRides = (res.rides ?? []) as BackendRide[];
 
     const mapped: HistoryItem[] = backendRides.map((r) => {
@@ -116,7 +83,7 @@ export default function RideHistoryScreen() {
         amount: `-${Number(r.fare).toLocaleString()} FBU`,
         from: r.pickup,
         to: r.dropoff,
-        driverName: r.status === 'completed' ? 'Driver' : 'Searching…',
+        driverName: r.driverName ?? (r.status === 'pending' ? 'Searching…' : '—'),
         distance: `${Number(r.distance).toFixed(1)} km`,
         duration: '—',
         rating: r.rating,
@@ -186,19 +153,6 @@ export default function RideHistoryScreen() {
   };
 
   const renderRideItem = ({ item }: { item: HistoryItem }) => {
-    if (item.type === 'Top-Up') {
-      return (
-        <View style={styles.card}>
-          <Image source={require('../../assets/images/app-logo.png')} style={styles.icon} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rideType}>{item.type}</Text>
-            <Text style={styles.rideDate}>{item.date}</Text>
-          </View>
-          <Text style={[styles.amount, { color: '#16A34A' }]}>{item.amount}</Text>
-        </View>
-      );
-    }
-
     return (
       <View style={styles.rideCard}>
         <View style={styles.rideHeader}>
@@ -222,13 +176,15 @@ export default function RideHistoryScreen() {
                 {renderStars(item.rating)}
                 <Text style={styles.ratingText}>You rated this ride</Text>
               </View>
-            ) : (
+            ) : item.status === 'completed' ? (
               <TouchableOpacity
                 style={styles.rateButton}
                 onPress={() => handleRateRide(item)}
               >
                 <Text style={styles.rateButtonText}>Rate Ride</Text>
               </TouchableOpacity>
+            ) : (
+              <Text style={styles.statusText}>{STATUS_LABELS[item.status] ?? item.status}</Text>
             )}
           </View>
         </View>
@@ -246,7 +202,7 @@ export default function RideHistoryScreen() {
       {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
       
       <FlatList
-        data={[...rides, ...topUpItems]}
+        data={rides}
         keyExtractor={(item) => item.id}
         renderItem={renderRideItem}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={async () => {
@@ -313,6 +269,7 @@ export default function RideHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  statusText: { fontSize: 12, color: '#6B7280', fontWeight: '600', marginTop: 6, textAlign: 'right' },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

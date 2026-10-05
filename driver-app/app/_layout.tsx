@@ -82,6 +82,7 @@ function AppStack() {
           <Stack.Screen name="wallet" options={{ title: 'Wallet' }} />
           <Stack.Screen name="ride-requests" options={{ title: 'Ride Requests' }} />
           <Stack.Screen name="ride-history" options={{ title: 'Ride History' }} />
+          <Stack.Screen name="active-ride" options={{ title: 'Current Ride' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen
             name="call"

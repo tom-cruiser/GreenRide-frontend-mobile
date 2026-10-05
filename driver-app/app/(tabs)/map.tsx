@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { ridesAPI } from "../../services/api";
 
@@ -26,6 +27,7 @@ type RideRequest = {
 
 export default function DriverMapScreen() {
   const { token } = useAuth();
+  const router = useRouter();
   const [requests, setRequests] = useState<RideRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,8 +96,7 @@ export default function DriverMapScreen() {
     if (!token) return;
     try {
       await ridesAPI.acceptRide(token, rideId);
-      Alert.alert("Accepted", "Ride request accepted.");
-      loadRequests();
+      router.push("/active-ride");
     } catch (e) {
       Alert.alert(
         "Could not accept",
