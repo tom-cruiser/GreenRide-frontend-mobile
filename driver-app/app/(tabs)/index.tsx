@@ -1,18 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import AppHeader from '../../components/app-header';
 import ProfileSummary from '../../components/profile-summary';
 import SafetySupportBar from '../../components/safety-support-bar';
 import EarningsSummary from '../../components/earnings-summary';
 import RideStatusToggle from '../../components/ride-status-toggle';
 import { useAuth } from '../../contexts/AuthContext';
+import { STATUS_LABELS, useDriverProfile } from '../../hooks/useDriverProfile';
 
 export default function DriverDashboard() {
   const router = useRouter();
   const { user, token, walletBalance, updateWalletBalance } = useAuth();
   const [available, setAvailable] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { profile, status, reload: reloadProfile } = useDriverProfile();
+
+  // Re-check approval whenever the dashboard comes back into view.
+  useFocusEffect(
+    useCallback(() => {
+      reloadProfile();
+    }, [reloadProfile]),
+  );
 
   useEffect(() => {
     if (token) updateWalletBalance();
@@ -21,7 +30,7 @@ export default function DriverDashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await updateWalletBalance();
+      await Promise.all([updateWalletBalance(), reloadProfile()]);
     } finally {
       setRefreshing(false);
     }
@@ -45,9 +54,25 @@ export default function DriverDashboard() {
       >
         <ProfileSummary
           name={user?.name}
-          status={user?.role === 'driver' ? 'Verified driver' : 'Pending verification'}
+          status={STATUS_LABELS[status]}
+          vehicle={profile ? `${profile.vehicle_make} ${profile.vehicle_model}` : undefined}
           onProfilePress={() => router.push('/profile')}
         />
+        {(status === 'not_onboarded' || status === 'pending') && (
+          <TouchableOpacity
+            style={styles.banner}
+            onPress={() => router.push('/registration-verification')}
+          >
+            <Text style={styles.bannerTitle}>
+              {status === 'not_onboarded' ? 'Finish your registration' : 'Waiting for approval'}
+            </Text>
+            <Text style={styles.bannerText}>
+              {status === 'not_onboarded'
+                ? 'Add your vehicle details so we can approve you to accept rides.'
+                : "You can accept rides once the GreenRide team approves your account."}
+            </Text>
+          </TouchableOpacity>
+        )}
         <RideStatusToggle status={available} onToggle={() => setAvailable(!available)} />
         <EarningsSummary
           label="Wallet balance"
@@ -143,6 +168,16 @@ const styles = StyleSheet.create({
     color: '#1b5e20',
     fontWeight: '700',
   },
+  banner: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#fcd34d',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  bannerTitle: { fontWeight: '700', color: '#92400e', marginBottom: 4 },
+  bannerText: { color: '#78350f' },
   featureItem: {
     fontSize: 14,
     color: '#1f2937',

@@ -2,6 +2,13 @@ import { getBackendOrigin } from './backend';
 
 const getApiBase = (): string => `${getBackendOrigin()}/api`;
 
+// Keeps the HTTP status so screens can tell e.g. "not found" from a failure.
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -14,7 +21,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error((errorData as any).error || `HTTP ${response.status}`);
+      throw new ApiError((errorData as any).error || `HTTP ${response.status}`, response.status);
     }
     return response.json();
   } finally {
@@ -97,6 +104,32 @@ export const ridesAPI = {
     apiCall(`/rides/${rideId}/complete`, {
       method: 'POST',
       headers: authHeader(token),
+    }),
+};
+
+export type VehicleDetails = {
+  vehicle_make: string;
+  vehicle_model: string;
+  license_number: string;
+};
+
+export const driversAPI = {
+  // 404 until the driver has onboarded.
+  getMe: (token: string) => apiCall('/drivers/me', { headers: authHeader(token) }),
+
+  onboard: (token: string, details: VehicleDetails) =>
+    apiCall('/drivers/onboard', {
+      method: 'POST',
+      headers: authHeader(token),
+      body: JSON.stringify(details),
+    }),
+
+  // Allowed only while waiting for approval.
+  updateMe: (token: string, details: VehicleDetails) =>
+    apiCall('/drivers/me', {
+      method: 'PUT',
+      headers: authHeader(token),
+      body: JSON.stringify(details),
     }),
 };
 
