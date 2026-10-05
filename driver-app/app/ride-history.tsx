@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ridesAPI } from '../services/api';
+import { CallRideButton, CALLABLE_RIDE_STATUSES } from '../components/CallRideButton';
 
 type Ride = {
   id: number | string;
@@ -101,6 +102,9 @@ export default function RideHistoryScreen() {
                 <Text style={styles.detail}>Passenger Rating: {rating}/5</Text>
               )}
               {item.status && <Text style={styles.status}>{item.status}</Text>}
+              {item.status && CALLABLE_RIDE_STATUSES.includes(item.status) && (
+                <CallRideButton rideId={item.id} label="Call rider" />
+              )}
               <TouchableOpacity
                 style={styles.feedbackBtn}
                 onPress={() => router.push('/feedback-ratings')}

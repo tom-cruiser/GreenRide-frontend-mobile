@@ -127,6 +127,10 @@ export const ridesAPI = {
   getRideHistory: async (token: string) =>
     apiCall('/rides/history', { headers: { Authorization: `Bearer ${token}` } }),
 
+  // One ride with rider_id / driver_id and names; only its rider, driver or staff can read it.
+  getRide: async (token: string, rideId: string | number) =>
+    apiCall(`/rides/${rideId}`, { headers: { Authorization: `Bearer ${token}` } }),
+
   acceptRide: async (token: string, rideId: string) =>
     apiCall(`/rides/${rideId}/accept`, {
       method: 'POST',

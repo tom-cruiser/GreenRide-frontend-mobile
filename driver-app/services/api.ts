@@ -52,6 +52,10 @@ export const ridesAPI = {
   getRideHistory: (token: string) =>
     apiCall('/rides/history', { headers: authHeader(token) }),
 
+  // One ride with rider_id / driver_id and names; only its rider, driver or staff can read it.
+  getRide: (token: string, rideId: string | number) =>
+    apiCall(`/rides/${rideId}`, { headers: authHeader(token) }),
+
   getSharedRideGroup: (token: string, groupId: string) =>
     apiCall(`/rides/share/${encodeURIComponent(groupId)}`, {
       headers: authHeader(token),

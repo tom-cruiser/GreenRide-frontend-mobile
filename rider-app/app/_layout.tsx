@@ -8,6 +8,8 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { CallProvider } from '@/contexts/CallContext';
+import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -60,22 +62,32 @@ function RootNavigator() {
 
   if (bootstrapping) return null;
 
+  // Always mounted so the navigator isn't rebuilt on login; with no user it
+  // stays idle and doesn't connect to call signaling.
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen name="profile" options={{ headerShown: false, title: 'Profile' }} />
-        <Stack.Screen name="safety" options={{ headerShown: false, title: 'Safety & Support' }} />
-        <Stack.Screen name="support" options={{ headerShown: false, title: 'Help & Support' }} />
-        <Stack.Screen name="promotions" options={{ headerShown: false, title: 'Promotions' }} />
-        <Stack.Screen name="settings" options={{ headerShown: false, title: 'Settings' }} />
-        <Stack.Screen name="messaging" options={{ headerShown: false, title: 'Messages' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <CallProvider
+      userId={user && token ? String(user.id) : ''}
+      displayName={user?.name ?? ''}
+      authToken={token ?? ''}
+    >
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="profile" options={{ headerShown: false, title: 'Profile' }} />
+          <Stack.Screen name="safety" options={{ headerShown: false, title: 'Safety & Support' }} />
+          <Stack.Screen name="support" options={{ headerShown: false, title: 'Help & Support' }} />
+          <Stack.Screen name="promotions" options={{ headerShown: false, title: 'Promotions' }} />
+          <Stack.Screen name="settings" options={{ headerShown: false, title: 'Settings' }} />
+          <Stack.Screen name="messaging" options={{ headerShown: false, title: 'Messages' }} />
+          <Stack.Screen name="call" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+        </Stack>
+        <StatusBar style="auto" />
+        <IncomingCallOverlay />
+      </ThemeProvider>
+    </CallProvider>
   );
 }
 

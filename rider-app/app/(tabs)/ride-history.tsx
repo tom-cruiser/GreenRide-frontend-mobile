@@ -5,6 +5,7 @@ import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '../../contexts/AuthContext';
 import { ridesAPI } from '../../services/api';
+import { CallRideButton, CALLABLE_RIDE_STATUSES } from '../../components/CallRideButton';
 
 type HistoryItem = {
   id: string;
@@ -213,6 +214,9 @@ export default function RideHistoryScreen() {
           </View>
           <View style={styles.rideRight}>
             <Text style={styles.amount}>{item.amount}</Text>
+            {CALLABLE_RIDE_STATUSES.includes(item.status) && (
+              <CallRideButton rideId={item.id} label="Call driver" />
+            )}
             {item.rating != null ? (
               <View style={styles.existingRating}>
                 {renderStars(item.rating)}

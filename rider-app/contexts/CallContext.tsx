@@ -46,6 +46,26 @@ function buildIceServers() {
   return servers;
 }
 
+const RING_TIMEOUT_MS = 30000;
+
+// react-native-webrtc's RTCPeerConnection extends event-target-shim's
+// EventTarget, but its type import ('event-target-shim/index') doesn't resolve
+// under Expo's module resolution, so addEventListener is missing from the
+// types even though it exists at runtime. Type just the events we use.
+type IceCandidateLike = { candidate: string; sdpMid: string | null; sdpMLineIndex: number | null };
+type PeerConnectionEvents = {
+  addEventListener(type: 'icecandidate', listener: (event: { candidate: IceCandidateLike | null }) => void): void;
+  addEventListener(type: 'iceconnectionstatechange', listener: () => void): void;
+};
+const peerEvents = (conn: InstanceType<typeof RTCPeerConnection>) => conn as unknown as PeerConnectionEvents;
+
+const BUSY_MESSAGES: Record<string, string> = {
+  busy: 'They are on another call.',
+  unreachable: 'They are not connected right now.',
+  'not-allowed': 'Calls are only available between a rider and driver during an active ride.',
+  invalid: 'The call could not be started.',
+};
+
 // ─── State ────────────────────────────────────────────────────────────────────
 export type CallPhase =
   | 'idle'
@@ -112,7 +132,8 @@ export interface CallContextValue {
   callInfo: CallInfo | null;
   isMuted: boolean;
   durationSeconds: number;
-  initiateCall: (peerId: string, peerName: string) => Promise<void>;
+  /** Resolves true once the call is ringing; false if it could not start. */
+  initiateCall: (peerId: string, peerName: string) => Promise<boolean>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
   endCall: () => void;
@@ -193,7 +214,7 @@ export function CallProvider({
   const createPeerConnection = useCallback((callId: string) => {
     const conn = new RTCPeerConnection({ iceServers: buildIceServers() });
 
-    conn.onicecandidate = ({ candidate }: any) => {
+    peerEvents(conn).addEventListener('icecandidate', ({ candidate }) => {
       if (!candidate) return;
       signalingClient.send('ice-candidate', {
         callId,
@@ -203,9 +224,9 @@ export function CallProvider({
           sdpMLineIndex: candidate.sdpMLineIndex,
         },
       });
-    };
+    });
 
-    conn.oniceconnectionstatechange = () => {
+    peerEvents(conn).addEventListener('iceconnectionstatechange', () => {
       const s = conn.iceConnectionState;
       if (s === 'failed') {
         signalingClient.send('ice-failure', { callId, stats: { iceState: 'failed' } });
@@ -217,10 +238,10 @@ export function CallProvider({
           timerRef.current = setInterval(() => dispatch({ type: 'TICK' }), 1000);
         }
       }
-    };
+    });
 
-    // Audio-only — remote tracks play automatically via react-native-webrtc
-    conn.ontrack = () => {};
+    // Audio-only: remote audio tracks play automatically in react-native-webrtc,
+    // so no 'track' listener is needed.
 
     pc.current = conn;
     return conn;
@@ -248,10 +269,16 @@ export function CallProvider({
   // ── Public actions ────────────────────────────────────────────────────────
   const initiateCall = useCallback(
     async (peerId: string, peerName: string) => {
+      const { phase } = stateRef.current;
+      if (phase !== 'idle' && phase !== 'ended') return false;
+      if (!signalingClient.connected) {
+        Alert.alert('Call Failed', 'Not connected to the call service. Check your connection and try again.');
+        return false;
+      }
       const ok = await requestMicPermission();
       if (!ok) {
         Alert.alert('Permission required', 'Microphone access is needed for calls.');
-        return;
+        return false;
       }
       const callId = `${userId}::${peerId}::${Date.now()}`;
       const info: CallInfo = { callId, peerId, peerName, isOutgoing: true };
@@ -262,6 +289,7 @@ export function CallProvider({
         callerName: displayName,
         receiverId: peerId,
       });
+      return true;
     },
     [userId, displayName],
   );
@@ -278,11 +306,22 @@ export function CallProvider({
     }
 
     dispatch({ type: 'NEGOTIATING' });
-    signalingClient.send('call-accepted', { callId: callInfo.callId });
+    // Attach the microphone BEFORE telling the caller: their offer can arrive
+    // right after 'call-accepted', and an answer built without a local track
+    // would leave the caller unable to hear us.
     const conn = createPeerConnection(callInfo.callId);
-    await attachLocalStream(conn);
+    try {
+      await attachLocalStream(conn);
+    } catch {
+      signalingClient.send('call-rejected', { callId: callInfo.callId, reason: 'rejected' });
+      cleanup();
+      dispatch({ type: 'END' });
+      Alert.alert('Call Failed', 'Could not access the microphone.');
+      return;
+    }
+    signalingClient.send('call-accepted', { callId: callInfo.callId });
     // Caller will send 'offer' — handled in the signaling listener below
-  }, [createPeerConnection, attachLocalStream]);
+  }, [createPeerConnection, attachLocalStream, cleanup]);
 
   const rejectCall = useCallback(() => {
     const { callInfo } = stateRef.current;
@@ -310,11 +349,22 @@ export function CallProvider({
     dispatch({ type: 'MUTE_TOGGLE' });
   }, []);
 
+  // ── Stop ringing after RING_TIMEOUT_MS with no answer ──────────────────────
+  useEffect(() => {
+    if (state.phase !== 'outgoing') return;
+    const timer = setTimeout(() => {
+      endCall();
+      Alert.alert('No answer', 'The call was not answered.');
+    }, RING_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [state.phase, endCall]);
+
   // ── Signaling event listeners ─────────────────────────────────────────────
   useEffect(() => {
-    // Incoming call request
+    // Incoming call request ('ended' counts as free: the last call is over)
     const offReq = signalingClient.on('call-request', (msg: any) => {
-      if (stateRef.current.phase !== 'idle') return; // busy; server already replied
+      const { phase } = stateRef.current;
+      if (phase !== 'idle' && phase !== 'ended') return;
       dispatch({
         type: 'INCOMING',
         info: {
@@ -384,21 +434,24 @@ export function CallProvider({
       dispatch({ type: 'END' });
     });
 
-    // Receiver is busy or unreachable
+    // The server refused the call (busy, unreachable, no active ride, ...)
     const offBusy = signalingClient.on('call-busy', (msg: any) => {
-      Alert.alert(
-        'Call Failed',
-        msg.reason === 'busy' ? 'User is on another call.' : 'User is unreachable.',
-      );
+      Alert.alert('Call Failed', BUSY_MESSAGES[msg?.reason] ?? BUSY_MESSAGES.invalid);
       cleanup();
       dispatch({ type: 'END' });
     });
 
-    // Peer reconnected after transient disconnect — rejoin room so server re-routes
-    const offRecon = signalingClient.on('peer-reconnected', (msg: any) => {
-      const { callInfo } = stateRef.current;
-      if (!callInfo || callInfo.callId !== msg.callId) return;
-      signalingClient.send('rejoin-room', { callId: callInfo.callId });
+    // Our socket reconnected and re-registered: rejoin the call in progress so
+    // the server routes the other side's messages to the new socket.
+    const offRegistered = signalingClient.on('registered', () => {
+      const { callInfo, phase } = stateRef.current;
+      if (callInfo && (phase === 'outgoing' || phase === 'negotiating' || phase === 'active')) {
+        signalingClient.send('rejoin-room', { callId: callInfo.callId });
+      }
+    });
+
+    const offError = signalingClient.on('error', (msg: any) => {
+      console.warn('[calls] signaling error:', msg?.message);
     });
 
     return () => {
@@ -410,7 +463,8 @@ export function CallProvider({
       offRejected();
       offEnded();
       offBusy();
-      offRecon();
+      offRegistered();
+      offError();
     };
   }, [createPeerConnection, attachLocalStream, flushIceBuffer, cleanup]);
 
