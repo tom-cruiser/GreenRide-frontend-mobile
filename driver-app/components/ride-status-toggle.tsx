@@ -1,16 +1,38 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function RideStatusToggle({ status, onToggle }) {
+type Props = { status: boolean; onToggle: () => void; busy?: boolean; disabled?: boolean };
+
+// Online = riders nearby can see you and you get ride requests.
+export default function RideStatusToggle({ status, onToggle, busy = false, disabled = false }: Props) {
   return (
     <View style={styles.statusBox}>
       <Text style={styles.label}>Ride Status</Text>
       <View style={styles.row}>
-        <Text style={{ color: status ? '#43a047' : '#bdbdbd', fontWeight: 'bold' }}>
-          {status ? 'Active' : 'Inactive'}
-        </Text>
-        <TouchableOpacity style={[styles.toggleBtn, status ? styles.active : styles.inactive]} onPress={onToggle}>
-          <Text style={styles.toggleText}>{status ? 'Go Offline' : 'Go Online'}</Text>
+        <View style={styles.statusText}>
+          <Text style={{ color: status ? '#43a047' : '#9e9e9e', fontWeight: 'bold' }}>
+            {status ? 'Online' : 'Offline'}
+          </Text>
+          <Text style={styles.hint}>
+            {disabled
+              ? 'Available once your account is approved'
+              : status
+                ? 'Riders near you can see you'
+                : 'Go online to receive ride requests'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.toggleBtn, status ? styles.active : styles.inactive, disabled && styles.disabled]}
+          onPress={onToggle}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ busy, disabled }}
+        >
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.toggleText}>{status ? 'Go Offline' : 'Go Online'}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -38,18 +60,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
+  statusText: { flex: 1 },
+  hint: { color: '#757575', fontSize: 12, marginTop: 2 },
   toggleBtn: {
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
+    minWidth: 110,
   },
   active: {
     backgroundColor: '#e53935',
   },
   inactive: {
     backgroundColor: '#43a047',
+  },
+  disabled: {
+    backgroundColor: '#bdbdbd',
   },
   toggleText: {
     color: '#fff',

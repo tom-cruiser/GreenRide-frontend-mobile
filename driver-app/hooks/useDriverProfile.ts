@@ -9,6 +9,7 @@ export type DriverProfile = {
   license_number: string | null;
   verified: boolean;
   verified_at: string | null;
+  is_online?: boolean;
   created_at: string;
 };
 

@@ -9,14 +9,15 @@ import RideStatusToggle from '../../components/ride-status-toggle';
 import { useAuth } from '../../contexts/AuthContext';
 import { ridesAPI } from '../../services/api';
 import { STATUS_LABELS, useDriverProfile } from '../../hooks/useDriverProfile';
+import { useDriverAvailability } from '../../hooks/useDriverAvailability';
 
 export default function DriverDashboard() {
   const router = useRouter();
   const { user, token, walletBalance, updateWalletBalance } = useAuth();
-  const [available, setAvailable] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { profile, status, reload: reloadProfile } = useDriverProfile();
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
+  const availability = useDriverAvailability(profile?.is_online, status === 'verified');
 
   const loadActiveRide = useCallback(async () => {
     if (!token) return;
@@ -94,7 +95,12 @@ export default function DriverDashboard() {
             </Text>
           </TouchableOpacity>
         )}
-        <RideStatusToggle status={available} onToggle={() => setAvailable(!available)} />
+        <RideStatusToggle
+          status={availability.online}
+          busy={availability.busy}
+          disabled={status !== 'verified'}
+          onToggle={availability.toggle}
+        />
         <EarningsSummary
           label="Wallet balance"
           today={walletBalance}

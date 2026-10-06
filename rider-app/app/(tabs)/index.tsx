@@ -94,58 +94,6 @@ export default function HomeScreen() {
       if (!isMounted) return;
 
       setCoords(loc.coords);
-
-      if (loc.coords) {
-        try {
-          // Only fetch nearby drivers if token is available
-          if (token) {
-            const response = await driversAPI.getNearbyDrivers(
-              token,
-              loc.coords.latitude,
-              loc.coords.longitude,
-            );
-            if (!isMounted) return;
-
-            if (response?.drivers?.length) {
-              setNearbyDrivers(response.drivers);
-            } else {
-              setNearbyDrivers([]);
-            }
-          } else {
-            // Use mock drivers if not authenticated yet
-            setNearbyDrivers([
-              {
-                id: 1,
-                latitude: loc.coords.latitude + 0.001,
-                longitude: loc.coords.longitude + 0.001,
-                name: "Jean Pierre",
-              },
-              {
-                id: 2,
-                latitude: loc.coords.latitude - 0.001,
-                longitude: loc.coords.longitude + 0.002,
-                name: "Marie Claire",
-              },
-            ]);
-          }
-        } catch (error) {
-          console.error("Failed to load nearby drivers:", error);
-          setNearbyDrivers([
-            {
-              id: 1,
-              latitude: loc.coords.latitude + 0.001,
-              longitude: loc.coords.longitude + 0.001,
-              name: "Jean Pierre",
-            },
-            {
-              id: 2,
-              latitude: loc.coords.latitude - 0.001,
-              longitude: loc.coords.longitude + 0.002,
-              name: "Marie Claire",
-            },
-          ]);
-        }
-      }
     })();
 
     updateWalletBalance();
@@ -154,6 +102,30 @@ export default function HomeScreen() {
       isMounted = false;
     };
   }, [updateWalletBalance, token]);
+
+  // Real drivers online near the rider, refreshed every 30 s so drivers who
+  // go online (or move) show up without reopening the screen.
+  const lat = coords?.latitude;
+  const lng = coords?.longitude;
+  useEffect(() => {
+    if (!token || lat === undefined || lng === undefined) return undefined;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await driversAPI.getNearbyDrivers(token, lat, lng);
+        if (!cancelled) setNearbyDrivers(response?.drivers ?? []);
+      } catch (error) {
+        console.error("Failed to load nearby drivers:", error);
+        if (!cancelled) setNearbyDrivers([]);
+      }
+    };
+    load();
+    const timer = setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [token, lat, lng]);
 
   const handleEstimate = () => {
     if (!pickup || !dropoff) {

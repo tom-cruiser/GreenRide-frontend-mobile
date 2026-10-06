@@ -148,6 +148,21 @@ export const driversAPI = {
       headers: authHeader(token),
       body: JSON.stringify(details),
     }),
+
+  // Approved drivers only. Riders see online drivers near them.
+  setAvailability: (token: string, body: { online: boolean; lat?: number; lng?: number }) =>
+    apiCall('/drivers/me/availability', {
+      method: 'PUT',
+      headers: authHeader(token),
+      body: JSON.stringify(body),
+    }),
+
+  updateLocation: (token: string, position: { lat: number; lng: number }) =>
+    apiCall('/drivers/me/location', {
+      method: 'PUT',
+      headers: authHeader(token),
+      body: JSON.stringify(position),
+    }),
 };
 
 export const walletAPI = {

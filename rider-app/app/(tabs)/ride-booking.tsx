@@ -126,30 +126,10 @@ export default function RideBookingScreen() {
   const loadNearbyDrivers = async (lat: number, lng: number) => {
     try {
       const response = await driversAPI.getNearbyDrivers(token!, lat, lng);
-      if (response.drivers) {
-        setNearbyDrivers(response.drivers as Driver[]);
-      }
+      setNearbyDrivers((response.drivers ?? []) as Driver[]);
     } catch (error) {
       console.error("Failed to load nearby drivers:", error);
-      // Use dummy data as fallback
-      setNearbyDrivers([
-        {
-          id: 1,
-          latitude: lat + 0.001,
-          longitude: lng + 0.001,
-          name: "Jean Pierre",
-          rating: 4.8,
-          eta: "5 mins",
-        },
-        {
-          id: 2,
-          latitude: lat - 0.001,
-          longitude: lng + 0.002,
-          name: "Marie Claire",
-          rating: 4.9,
-          eta: "3 mins",
-        },
-      ]);
+      setNearbyDrivers([]);
     }
   };
 
