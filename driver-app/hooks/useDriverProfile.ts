@@ -10,6 +10,7 @@ export type DriverProfile = {
   verified: boolean;
   verified_at: string | null;
   is_online?: boolean;
+  status?: 'pending' | 'verified' | 'rejected';
   created_at: string;
 };
 

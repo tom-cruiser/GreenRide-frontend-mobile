@@ -1,10 +1,10 @@
 import React from 'react';
 import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-type Props = { status: boolean; onToggle: () => void; busy?: boolean; disabled?: boolean };
+type Props = { status: boolean; onToggle: () => void; busy?: boolean; disabled?: boolean; locationDenied?: boolean };
 
 // Online = riders nearby can see you and you get ride requests.
-export default function RideStatusToggle({ status, onToggle, busy = false, disabled = false }: Props) {
+export default function RideStatusToggle({ status, onToggle, busy = false, disabled = false, locationDenied = false }: Props) {
   return (
     <View style={styles.statusBox}>
       <Text style={styles.label}>Ride Status</Text>
@@ -16,6 +16,8 @@ export default function RideStatusToggle({ status, onToggle, busy = false, disab
           <Text style={styles.hint}>
             {disabled
               ? 'Available once your account is approved'
+              : locationDenied && !status
+                ? 'Allow location access so riders can see you'
               : status
                 ? 'Riders near you can see you'
                 : 'Go online to receive ride requests'}

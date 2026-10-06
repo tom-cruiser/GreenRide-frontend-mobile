@@ -25,6 +25,9 @@ type NearbyDriver = {
   latitude: number;
   longitude: number;
   name?: string;
+  vehicle?: string;
+  eta?: string;
+  distance?: string;
 };
 
 export default function HomeScreen() {
@@ -42,6 +45,8 @@ export default function HomeScreen() {
     null,
   );
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
+  // False until the first answer, so "no drivers" isn't shown while loading.
+  const [nearbyLoaded, setNearbyLoaded] = useState(false);
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
 
   // Show a "current ride" banner whenever the rider has an open ride.
@@ -113,7 +118,10 @@ export default function HomeScreen() {
     const load = async () => {
       try {
         const response = await driversAPI.getNearbyDrivers(token, lat, lng);
-        if (!cancelled) setNearbyDrivers(response?.drivers ?? []);
+        if (!cancelled) {
+          setNearbyDrivers(response?.drivers ?? []);
+          setNearbyLoaded(true);
+        }
       } catch (error) {
         console.error("Failed to load nearby drivers:", error);
         if (!cancelled) setNearbyDrivers([]);
@@ -180,6 +188,7 @@ export default function HomeScreen() {
                 longitude: driver.longitude,
               }}
               title={driver.name || `Driver ${driver.id}`}
+              description={[driver.vehicle, driver.eta && `${driver.eta} away`].filter(Boolean).join(" · ")}
               pinColor="#1976d2"
             />
           ))}
@@ -207,7 +216,11 @@ export default function HomeScreen() {
               Hi, {greetingName}
             </Text>
             <Text style={[styles.subGreeting, { color: theme.muted }]}>
-              Ready to ride?
+              {!nearbyLoaded
+                ? "Ready to ride?"
+                : nearbyDrivers.length
+                  ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby · closest ${nearbyDrivers[0].eta ?? ""}`.trim()
+                  : "No drivers online near you right now"}
             </Text>
           </View>
 
