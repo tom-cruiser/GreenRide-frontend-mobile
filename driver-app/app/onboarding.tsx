@@ -1,59 +1,201 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  ListRenderItem,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+type Slide = {
+  key: string;
+  title: string;
+  description: string;
+  image?: any;
+  icon?: keyof typeof Ionicons.glyphMap;
+};
+
+const SLIDES: Slide[] = [
+  {
+    key: 'welcome',
+    title: 'Drive with Green Ride',
+    description: 'Join a network of eco-friendly drivers and turn your time on the road into steady income.',
+    image: require('../assets/images/app-logo.png'),
+  },
+  {
+    key: 'requests',
+    title: 'Rides come to you',
+    description: 'Go online when it suits you. Nearby ride requests appear instantly — accept the ones you want.',
+    image: require('../assets/images/onboarding-visual.png'),
+  },
+  {
+    key: 'earnings',
+    title: 'Get paid, fast',
+    description: 'Fares land straight in your wallet. See daily earnings, trip history and ratings at a glance.',
+    icon: 'wallet-outline',
+  },
+];
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function DriverOnboarding() {
   const router = useRouter();
+  const listRef = useRef<FlatList<Slide>>(null);
+  const [index, setIndex] = useState(0);
+
+  const finish = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem('driverHasOnboarded', 'true');
+    } catch {}
+    router.replace('/(auth)/login');
+  }, [router]);
+
+  const goNext = useCallback(() => {
+    if (index >= SLIDES.length - 1) {
+      finish();
+      return;
+    }
+    const next = index + 1;
+    listRef.current?.scrollToIndex({ index: next, animated: true });
+    setIndex(next);
+  }, [index, finish]);
+
+  const onMomentumScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    if (newIndex !== index) setIndex(newIndex);
+  }, [index]);
+
+  const renderItem: ListRenderItem<Slide> = useCallback(({ item }) => (
+    <View style={styles.slide}>
+      <View style={styles.imageWrap}>
+        {item.image ? (
+          <Image source={item.image} style={styles.image} accessibilityLabel={item.title} />
+        ) : (
+          <View style={styles.iconCircle}>
+            <Ionicons name={item.icon ?? 'leaf-outline'} size={96} color="#2e7d32" />
+          </View>
+        )}
+      </View>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.description}>{item.description}</Text>
+    </View>
+  ), []);
+
+  const isLast = index === SLIDES.length - 1;
+  const dots = useMemo(() => SLIDES.map((s, i) => (
+    <View key={s.key} style={[styles.dot, i === index && styles.dotActive]} />
+  )), [index]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Green Ride Driver</Text>
-      <Text style={styles.subtitle}>Start earning with eco-friendly rides</Text>
-      <TouchableOpacity
-        style={styles.nextBtn}
-        onPress={async () => {
-          await AsyncStorage.setItem('driverHasOnboarded', 'true').catch(() => {});
-          router.replace('/(auth)/login');
-        }}
-      >
-        <Text style={styles.nextText}>Get Started</Text>
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.skipRow}>
+        {!isLast ? (
+          <TouchableOpacity onPress={finish} hitSlop={12}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        ) : (
+          <View />
+        )}
+      </View>
+
+      <FlatList
+        ref={listRef}
+        data={SLIDES}
+        keyExtractor={(item) => item.key}
+        renderItem={renderItem}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        getItemLayout={(_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i })}
+      />
+
+      <View style={styles.dotsRow}>{dots}</View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.primaryBtn} onPress={goNext}>
+          <Text style={styles.primaryBtnText}>
+            {isLast ? 'Start driving' : 'Next'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  safe: { flex: 1, backgroundColor: '#f5fff7' },
+  skipRow: {
+    height: 32,
+    paddingHorizontal: 20,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  skipText: { color: '#2e7d32', fontWeight: '600', fontSize: 14 },
+  slide: {
+    width: SCREEN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5fff7',
-    padding: 24,
+    paddingHorizontal: 32,
+  },
+  imageWrap: {
+    width: 240,
+    height: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  image: { width: '100%', height: '100%', resizeMode: 'contain' },
+  iconCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#e8f5e9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#2e7d32',
-    marginBottom: 16,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1b5e20',
+    textAlign: 'center',
+    marginBottom: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+  description: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#4b5563',
     textAlign: 'center',
   },
-  nextBtn: {
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#c8e6c9',
+  },
+  dotActive: { backgroundColor: '#43a047', width: 22 },
+  footer: { paddingHorizontal: 24, paddingBottom: 12 },
+  primaryBtn: {
     backgroundColor: '#43a047',
     paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    width: 220,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  nextText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
