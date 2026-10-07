@@ -48,6 +48,21 @@ export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   onUnauthorized = handler;
 };
 
+// A failed request: the server's message, its HTTP status and any details
+// (e.g. { reason: 'insufficient_balance', price, balance, missing }).
+export class ApiError extends Error {
+  status: number;
+  details: any;
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export const isInsufficientBalance = (e: unknown): e is ApiError =>
+  e instanceof ApiError && e.details?.reason === 'insufficient_balance';
+
 const hasAuthHeader = (headers: RequestInit['headers']) =>
   Boolean(headers && typeof headers === 'object' && 'Authorization' in headers);
 
@@ -68,7 +83,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       if (response.status === 401 && hasAuthHeader(options.headers)) onUnauthorized?.();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
+      throw new ApiError(errorData.error || `HTTP ${response.status}`, response.status, errorData.details);
     }
     return response.json();
   } finally {
@@ -186,6 +201,96 @@ export const ridesAPI = {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ rating, feedback }),
     }),
+};
+
+// Share with friends: the host invites people they know (by phone or ride code).
+export type FriendsPerson = { firstName: string; initials: string };
+export type FriendsGuest = FriendsPerson & {
+  invitationId: number;
+  status: 'invited' | 'accepted' | 'declined' | 'expired' | 'removed' | 'left';
+  via: 'phone' | 'code';
+  price: number | null;
+};
+export type FriendsGroup = {
+  groupId: number;
+  status: 'gathering' | 'requested' | 'cancelled';
+  role: 'host' | 'guest' | 'invited';
+  code: string;
+  link: string;
+  pickup: string;
+  dropoff: string;
+  distance: number;
+  createdAt: string;
+  expiresAt: string;
+  expired: boolean;
+  requestedAt: string | null;
+  currency: string;
+  host: FriendsPerson;
+  ridersCount: number;
+  maxRiders: number;
+  seatsLeft: number;
+  price: { host: number; guest: number };
+  myPrice: number;
+  myRideId: number | null;
+  invitation: { id: number; status: FriendsGuest['status']; expiresAt: string } | null;
+  guests?: FriendsGuest[];
+};
+export type CodeLookup = {
+  groupId: number;
+  code: string;
+  host: FriendsPerson;
+  pickup: string;
+  dropoff: string;
+  createdAt: string;
+  expiresAt: string;
+  ridersCount: number;
+  maxRiders: number;
+  seatsLeft: number;
+  price: number;
+  currency: string;
+  isHost: boolean;
+  alreadyJoined: boolean;
+};
+
+const authed = (token: string, init: RequestInit = {}): RequestInit => ({
+  ...init,
+  headers: { Authorization: `Bearer ${token}` },
+});
+const post = (token: string, body?: unknown): RequestInit =>
+  authed(token, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
+
+export const friendsAPI = {
+  create: (token: string, ride: { pickup: string; dropoff: string; distance: number; pickup_lat?: number; pickup_lng?: number }) =>
+    apiCall('/rides/friends', post(token, ride)) as Promise<{ group: FriendsGroup }>,
+  get: (token: string, groupId: string | number) =>
+    apiCall(`/rides/friends/${groupId}`, authed(token)) as Promise<{ group: FriendsGroup }>,
+  invite: (token: string, groupId: string | number, phone: string) =>
+    apiCall(`/rides/friends/${groupId}/invite`, post(token, { phone })) as Promise<{ invitation: FriendsGuest }>,
+  removeGuest: (token: string, groupId: string | number, invitationId: number) =>
+    apiCall(`/rides/friends/${groupId}/guests/${invitationId}`, authed(token, { method: 'DELETE' })) as Promise<{ group: FriendsGroup }>,
+  requestDriver: (token: string, groupId: string | number, alone = false) =>
+    apiCall(`/rides/friends/${groupId}/request-driver`, post(token, { alone })) as Promise<{ group: FriendsGroup }>,
+  // A guest leaves (full refund); the host cancels the whole group.
+  leave: (token: string, groupId: string | number) => apiCall(`/rides/friends/${groupId}/leave`, post(token)),
+  myInvitations: (token: string) =>
+    apiCall('/rides/friends/invitations', authed(token)) as Promise<{ invitations: FriendsGroup[] }>,
+  getInvitation: (token: string, invitationId: string | number) =>
+    apiCall(`/rides/friends/invitations/${invitationId}`, authed(token)) as Promise<{ group: FriendsGroup }>,
+  accept: (token: string, invitationId: string | number) =>
+    apiCall(`/rides/friends/invitations/${invitationId}/accept`, post(token)) as Promise<{ group: FriendsGroup }>,
+  decline: (token: string, invitationId: string | number) =>
+    apiCall(`/rides/friends/invitations/${invitationId}/decline`, post(token)),
+  lookupCode: (token: string, code: string) =>
+    apiCall(`/rides/friends/code/${encodeURIComponent(code)}`, authed(token)) as Promise<{ ride: CodeLookup }>,
+  joinByCode: (token: string, code: string) =>
+    apiCall(`/rides/friends/code/${encodeURIComponent(code)}/join`, post(token)) as Promise<{ group: FriendsGroup }>,
+};
+
+export const pushAPI = {
+  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web') =>
+    apiCall('/push-tokens', post(token, { token: pushToken, platform })),
+  remove: (token: string, pushToken: string) =>
+    apiCall('/push-tokens', authed(token, { method: 'DELETE', body: JSON.stringify({ token: pushToken }) })),
 };
 
 export const paymentsAPI = {

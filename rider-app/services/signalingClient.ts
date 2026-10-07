@@ -42,6 +42,9 @@ const SERVER_EVENTS = [
   'peer-disconnected',
   'peer-reconnected',
   'error',
+  // Live app updates (not calls): a "share with friends" group changed, or a new notification.
+  'friends:updated',
+  'notification',
 ] as const;
 
 // ─── Client ───────────────────────────────────────────────────────────────────
