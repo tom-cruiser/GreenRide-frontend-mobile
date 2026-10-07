@@ -13,7 +13,7 @@ export default function AppLogo({ size = 120, compact = false, containerStyle }:
       <Image
         source={require('../assets/images/app-logo.png')}
         style={{ width: size, height: size, resizeMode: 'contain' }}
-        accessibilityLabel="Green Ride App Logo"
+        accessibilityLabel="Flow logo"
       />
     </View>
   );
