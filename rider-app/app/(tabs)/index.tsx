@@ -16,7 +16,7 @@ import Constants from "expo-constants";
 
 import AppLogo from "../../components/app-logo";
 import { useAuth } from "../../contexts/AuthContext";
-import { driversAPI, ridesAPI } from "../../services/api";
+import { driversAPI, friendsAPI, ridesAPI, type FriendsGroup } from "../../services/api";
 import { Colors, Radius, Spacing } from "../../constants/theme";
 import { useColorScheme } from "../../hooks/use-color-scheme";
 
@@ -48,15 +48,26 @@ export default function HomeScreen() {
   // False until the first answer, so "no drivers" isn't shown while loading.
   const [nearbyLoaded, setNearbyLoaded] = useState(false);
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
+  // A friends ride still gathering opens its own screen, not active-ride.
+  const [gatheringGroupId, setGatheringGroupId] = useState<number | null>(null);
+  const [invitations, setInvitations] = useState<FriendsGroup[]>([]);
 
-  // Show a "current ride" banner whenever the rider has an open ride.
+  // Show a "current ride" banner whenever the rider has an open ride, and any
+  // open invitations to share a ride.
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
       ridesAPI
         .getActiveRide(token)
-        .then(({ ride }) => setActiveRideStatus(ride?.status ?? null))
+        .then(({ ride }) => {
+          setActiveRideStatus(ride?.status ?? null);
+          setGatheringGroupId(ride?.status === "gathering" ? ride.share?.groupId ?? null : null);
+        })
         .catch(() => setActiveRideStatus(null));
+      friendsAPI
+        .myInvitations(token)
+        .then(({ invitations: open }) => setInvitations(open ?? []))
+        .catch(() => setInvitations([]));
     }, [token]),
   );
   const hasAndroidMapsKey =
@@ -246,14 +257,30 @@ export default function HomeScreen() {
           { backgroundColor: theme.surface, borderColor: theme.border },
         ]}
       >
+        {invitations.map((inv) => (
+          <TouchableOpacity
+            key={inv.invitation?.id ?? inv.groupId}
+            style={[styles.activeRideCard, { backgroundColor: theme.text }]}
+            onPress={() => router.push(`/invitation/${inv.invitation?.id}`)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.activeRideTitle}>{inv.host.firstName} invited you to share a ride</Text>
+            <Text style={styles.activeRideHint}>
+              To {inv.dropoff} · {inv.myPrice.toLocaleString()} {inv.currency} · Tap to answer
+            </Text>
+          </TouchableOpacity>
+        ))}
+
         {activeRideStatus && (
           <TouchableOpacity
             style={[styles.activeRideCard, { backgroundColor: theme.tint }]}
-            onPress={() => router.push("/active-ride")}
+            onPress={() => router.push(gatheringGroupId ? `/friends-ride/${gatheringGroupId}` : "/active-ride")}
             accessibilityRole="button"
           >
             <Text style={styles.activeRideTitle}>
-              {activeRideStatus === "pending" ? "Finding your driver…" : "Your ride is in progress"}
+              {activeRideStatus === "gathering"
+                ? "Waiting for your friends…"
+                : activeRideStatus === "pending" ? "Finding your driver…" : "Your ride is in progress"}
             </Text>
             <Text style={styles.activeRideHint}>Tap to follow your ride</Text>
           </TouchableOpacity>
@@ -332,6 +359,17 @@ export default function HomeScreen() {
             accessibilityRole="button"
           >
             <Text style={[styles.pillText, { color: theme.text }]}>Safety</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.pill,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+            onPress={() => router.push("/join")}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.pillText, { color: theme.text }]}>Join a ride</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

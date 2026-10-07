@@ -1,16 +1,18 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, usePathname, useRouter, useSegments } from 'expo-router';
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
-import { registerForPush, routeForNotification } from '@/services/push';
+import { pushSupported, registerForPush, routeForNotification, useNotificationTaps } from '@/services/push';
+import { notificationsAPI } from '@/services/api';
+import { signalingClient } from '@/services/signalingClient';
 
 // Screens a shared link or a notification can open; kept through sign-in.
 const LINKABLE = ['join', 'invitation', 'friends-ride'];
@@ -30,7 +32,6 @@ function RootNavigator() {
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
   // A ride link opened while signed out: open it once the rider has signed in.
   const pendingLink = useRef<string | null>(null);
-  const lastNotification = Notifications.useLastNotificationResponse();
 
   useEffect(() => {
     AsyncStorage.getItem('riderHasOnboarded')
@@ -85,18 +86,35 @@ function RootNavigator() {
     if (token) registerForPush(token);
   }, [token]);
 
-  // A tapped notification opens its screen (also when it started the app).
-  const handledNotification = useRef<string | null>(null);
+  // A tapped push notification opens its screen (also when it started the app).
+  const signedIn = Boolean(user && token);
+  const openRoute = useCallback(
+    (route: string) => {
+      if (signedIn) router.push(route as any);
+      else pendingLink.current = route;
+    },
+    [signedIn, router],
+  );
+  useNotificationTaps(openRoute);
+
+  // Without pushes (Expo Go): show new notifications as they arrive over the
+  // live connection, with a button to open the screen they are about.
   useEffect(() => {
-    if (bootstrapping || !lastNotification) return;
-    const id = lastNotification.notification.request.identifier;
-    if (handledNotification.current === id) return;
-    handledNotification.current = id;
-    const route = routeForNotification(lastNotification.notification.request.content.data as any);
-    if (!route) return;
-    if (user && token) router.push(route as any);
-    else pendingLink.current = route;
-  }, [bootstrapping, lastNotification, user, token, router]);
+    if (pushSupported || !token) return undefined;
+    return signalingClient.on('notification', async (msg: { id?: number }) => {
+      try {
+        const { notifications } = await notificationsAPI.getNotifications(token);
+        const note = notifications?.find((n: any) => n.id === msg?.id);
+        if (!note) return;
+        const route = routeForNotification(note.data);
+        Alert.alert('Flow', note.message, route
+          ? [{ text: 'Later', style: 'cancel' }, { text: 'Open', onPress: () => router.push(route as any) }]
+          : [{ text: 'OK' }]);
+      } catch {
+        // The notification is still in the list; nothing else to do.
+      }
+    });
+  }, [token, router]);
 
   if (bootstrapping) return null;
 

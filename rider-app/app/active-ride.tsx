@@ -19,7 +19,7 @@ const POLL_MS = 4000;
 
 type Ride = {
   id: number;
-  status: 'pending' | 'accepted' | 'arrived' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'gathering' | 'pending' | 'accepted' | 'arrived' | 'in_progress' | 'completed' | 'cancelled';
   pickup: string;
   dropoff: string;
   fare: number;
@@ -27,14 +27,23 @@ type Ride = {
   driver_name: string | null;
   is_shared: boolean;
   rating: number | null;
-  share: null | { groupId: number; status: string; ridersCount: number; maxRiders: number };
+  share: null | {
+    groupId: number;
+    status: string;
+    ridersCount: number;
+    maxRiders: number;
+    mode?: 'friends' | 'others';
+    role?: 'host' | 'guest';
+  };
 };
 
-const CANCELLABLE = ['pending', 'accepted', 'arrived'];
+const CANCELLABLE = ['gathering', 'pending', 'accepted', 'arrived'];
 
 function headline(ride: Ride): { title: string; detail: string } {
   const driver = ride.driver_name ?? 'Your driver';
   switch (ride.status) {
+    case 'gathering':
+      return { title: 'Waiting for your friends…', detail: 'The driver is requested once your group is ready.' };
     case 'pending':
       return { title: 'Finding a driver…', detail: 'We are offering your ride to nearby drivers.' };
     case 'accepted':
@@ -97,7 +106,10 @@ export default function ActiveRideScreen() {
 
   const cancel = () => {
     if (!ride || !token) return;
-    Alert.alert('Cancel ride?', 'The held fare will be returned to your wallet.', [
+    const hostOfGroup = ride.share?.mode === 'friends' && ride.share.role === 'host';
+    Alert.alert('Cancel ride?', hostOfGroup
+      ? 'This cancels the ride for your whole group. Everyone gets their money back.'
+      : 'The held fare will be returned to your wallet.', [
       { text: 'Keep ride', style: 'cancel' },
       {
         text: 'Cancel ride',
@@ -178,7 +190,19 @@ export default function ActiveRideScreen() {
         {ride.driver_name && <Row label="Driver" value={ride.driver_name} />}
       </View>
 
-      {ride.is_shared && ride.share && ride.status === 'pending' && (
+      {ride.share?.mode === 'friends' && ride.status !== 'cancelled' && (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push(`/friends-ride/${ride.share!.groupId}`)}
+        >
+          <Text style={styles.cardTitle}>Ride with friends</Text>
+          <Text style={styles.detail}>
+            {ride.share.ridersCount} of {ride.share.maxRiders} riders. Tap to see the group.
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {ride.is_shared && ride.share && ride.share.mode !== 'friends' && ride.status === 'pending' && (
         <TouchableOpacity
           style={styles.card}
           onPress={() => router.push({ pathname: '/shared-ride', params: { groupId: String(ride.share!.groupId) } })}

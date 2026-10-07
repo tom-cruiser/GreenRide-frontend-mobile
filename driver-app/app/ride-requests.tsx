@@ -20,7 +20,13 @@ type RideRequest = {
   dropoff?: string;
   fare?: number | string;
   distance?: number;
+  // A "share with friends" group arrives as one request.
+  share_mode?: "friends" | "others" | null;
+  riders_count?: number;
+  group_fare?: number;
 };
+
+const isGroup = (req: RideRequest) => req.share_mode === "friends" && (req.riders_count ?? 1) > 1;
 
 const formatFare = (fare: RideRequest["fare"]) => {
   if (typeof fare === "number") return `${fare.toLocaleString()} FBU`;
@@ -56,7 +62,8 @@ export default function RideRequestsScreen() {
   }, [token]);
 
   useEffect(() => {
-    load();
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(load);
   }, [load]);
 
   const onRefresh = () => {
@@ -114,7 +121,17 @@ export default function RideRequestsScreen() {
 
       {requests.map((req) => (
         <View key={req.id} style={styles.card}>
-          <Text style={styles.rider}>{req.rider || `Rider #${req.id}`}</Text>
+          <Text style={styles.rider}>
+            {req.rider || `Rider #${req.id}`}
+            {isGroup(req) ? ` + ${(req.riders_count ?? 1) - 1} friend${(req.riders_count ?? 1) > 2 ? "s" : ""}` : ""}
+          </Text>
+          {req.share_mode === "friends" && (
+            <View style={styles.groupChip}>
+              <Text style={styles.groupChipText}>
+                {isGroup(req) ? `Group of ${req.riders_count} riders · one pickup, one drop-off` : "Booked as a group ride"}
+              </Text>
+            </View>
+          )}
           {req.pickup && (
             <Text style={styles.detail}>Pickup: {req.pickup}</Text>
           )}
@@ -124,7 +141,12 @@ export default function RideRequestsScreen() {
           {typeof req.distance === "number" && (
             <Text style={styles.detail}>Distance: {req.distance} km</Text>
           )}
-          <Text style={styles.fare}>{formatFare(req.fare)}</Text>
+          <Text style={styles.fare}>{formatFare(isGroup(req) ? req.group_fare : req.fare)}</Text>
+          {isGroup(req) && (
+            <Text style={styles.detail}>
+              Total for {req.riders_count} riders ({formatFare(req.fare)} each)
+            </Text>
+          )}
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.acceptBtn, pendingId === req.id && styles.btnDisabled]}
@@ -164,6 +186,8 @@ export default function RideRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
+  groupChip: { alignSelf: "flex-start", backgroundColor: "#e3f2fd", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, marginVertical: 4 },
+  groupChipText: { color: "#0d47a1", fontWeight: "700", fontSize: 12 },
   container: { flex: 1, backgroundColor: "#e3f2fd" },
   content: { padding: 24, paddingBottom: 40 },
   title: {

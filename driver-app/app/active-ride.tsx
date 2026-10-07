@@ -27,6 +27,8 @@ type Ride = {
   distance: number;
   rider_name: string;
   is_shared: boolean;
+  // A "share with friends" group: one pickup and drop-off for everyone.
+  share?: null | { mode?: 'friends' | 'others'; ridersCount?: number; groupFare?: number };
 };
 
 // The next step for each status, and what the driver should be doing.
@@ -165,12 +167,19 @@ export default function ActiveRideScreen() {
   }
 
   const step = NEXT_STEP[ride.status];
+  const group = ride.share?.mode === 'friends' && (ride.share.ridersCount ?? 1) > 1
+    ? { riders: ride.share.ridersCount ?? 1, fare: ride.share.groupFare ?? ride.fare }
+    : null;
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.container}>
       <View style={styles.statusCard}>
         <Text style={styles.statusLabel}>{ride.status === 'in_progress' ? 'On trip' : ride.status === 'arrived' ? 'At pickup' : 'Going to pickup'}</Text>
-        <Text style={styles.title}>{ride.rider_name}</Text>
+        <Text style={styles.title}>
+          {ride.rider_name}
+          {group ? ` + ${group.riders - 1} friend${group.riders > 2 ? 's' : ''}` : ''}
+        </Text>
+        {group && <Text style={styles.hint}>Pick up all {group.riders} riders at the same place.</Text>}
         {step && <Text style={styles.hint}>{step.hint}</Text>}
         <CallRideButton rideId={ride.id} label="Call rider" />
       </View>
@@ -179,8 +188,15 @@ export default function ActiveRideScreen() {
         <Row label="Pickup" value={ride.pickup} />
         <Row label="Destination" value={ride.dropoff} />
         <Row label="Distance" value={`~${Number(ride.distance).toFixed(1)} km`} />
-        <Row label="Fare" value={`${ride.fare.toLocaleString()} FBU`} />
-        {ride.is_shared && <Row label="Type" value="Shared ride" />}
+        {group ? (
+          <>
+            <Row label="Riders" value={String(group.riders)} />
+            <Row label="Group fare" value={`${group.fare.toLocaleString()} FBU`} />
+          </>
+        ) : (
+          <Row label="Fare" value={`${ride.fare.toLocaleString()} FBU`} />
+        )}
+        {ride.is_shared && <Row label="Type" value={group ? 'Group ride (friends)' : 'Shared ride'} />}
       </View>
 
       <TouchableOpacity style={styles.secondaryBtn} onPress={() => openDirections(ride)}>

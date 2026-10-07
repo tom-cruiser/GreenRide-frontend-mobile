@@ -23,6 +23,9 @@ type RideRequest = {
   pickup_lng?: number;
   rider?: string;
   fare?: string | number;
+  share_mode?: "friends" | "others" | null;
+  riders_count?: number;
+  group_fare?: number;
 };
 
 export default function DriverMapScreen() {
@@ -129,7 +132,11 @@ export default function DriverMapScreen() {
                 longitude: req.pickup_lng as number,
               }}
               title={req.rider ? `Rider: ${req.rider}` : `Request ${req.id}`}
-              description={req.pickup}
+              description={
+                req.share_mode === "friends" && (req.riders_count ?? 1) > 1
+                  ? `${req.pickup} · group of ${req.riders_count} · ${Number(req.group_fare).toLocaleString()} FBU`
+                  : req.pickup
+              }
             >
               <TouchableOpacity
                 style={styles.acceptBtn}

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-
-type Router = ReturnType<typeof useRouter>;
 import { signalingClient } from '../services/signalingClient';
 import { isInsufficientBalance, type FriendsPerson } from '../services/api';
+
+type Router = ReturnType<typeof useRouter>;
 
 // Shared pieces for the "share with friends" screens, in the app's usual
 // green-on-white style (same as the active-ride screen).

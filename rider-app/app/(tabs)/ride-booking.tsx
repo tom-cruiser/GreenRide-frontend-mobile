@@ -17,7 +17,7 @@ import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import AppLogo from "../../components/app-logo";
 import { useAuth } from "../../contexts/AuthContext";
-import { ridesAPI, driversAPI } from "../../services/api";
+import { ridesAPI, driversAPI, friendsAPI } from "../../services/api";
 
 type Coords = { latitude: number; longitude: number };
 
@@ -26,6 +26,8 @@ const MAX_TRIP_KM = 200;
 
 type Estimate = {
   fare: number;
+  // Share with friends: the solo fare, paid while the host is still alone.
+  soloFare?: number;
   distanceKm: number;
   pickupCoords: Coords;
 };
@@ -84,6 +86,9 @@ export default function RideBookingScreen() {
   const [isBooking, setIsBooking] = useState(false);
   const [isSharedRide, setIsSharedRide] = useState(false);
   const [maxCoRiders, setMaxCoRiders] = useState(1);
+  // Shared rides: matched with nearby riders, or with people the rider invites.
+  const [shareMode, setShareMode] = useState<"others" | "friends">("others");
+  const withFriends = isSharedRide && shareMode === "friends";
 
   useEffect(() => {
     let cancelled = false;
@@ -117,12 +122,6 @@ export default function RideBookingScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!location || !token) return;
-    loadNearbyDrivers(location.latitude, location.longitude);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, token]);
-
   const loadNearbyDrivers = async (lat: number, lng: number) => {
     try {
       const response = await driversAPI.getNearbyDrivers(token!, lat, lng);
@@ -132,6 +131,13 @@ export default function RideBookingScreen() {
       setNearbyDrivers([]);
     }
   };
+
+  useEffect(() => {
+    if (!location || !token) return;
+    const { latitude, longitude } = location;
+    Promise.resolve().then(() => loadNearbyDrivers(latitude, longitude));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, token]);
 
   const resetEstimate = () => {
     setEstimate(null);
@@ -175,7 +181,9 @@ export default function RideBookingScreen() {
         return;
       }
       const result = await ridesAPI.estimate(token, { distance: km, is_shared: isSharedRide });
-      setEstimate({ fare: result.fare, distanceKm: km, pickupCoords });
+      // With friends the host pays the solo fare until someone joins.
+      const solo = withFriends ? await ridesAPI.estimate(token, { distance: km, is_shared: false }) : null;
+      setEstimate({ fare: result.fare, soloFare: solo?.fare, distanceKm: km, pickupCoords });
       setBookingStep("confirmation");
     } catch (error) {
       Alert.alert(
@@ -214,6 +222,22 @@ export default function RideBookingScreen() {
 
     setIsBooking(true);
     try {
+      if (withFriends) {
+        const { group } = await friendsAPI.create(token, {
+          pickup: pickup.trim(),
+          dropoff: dropoff.trim(),
+          distance: estimate.distanceKm,
+          pickup_lat: estimate.pickupCoords.latitude,
+          pickup_lng: estimate.pickupCoords.longitude,
+        });
+        setConfirmationModalVisible(false);
+        resetEstimate();
+        setPickup("");
+        setDropoff("");
+        // Share the code, invite friends, then request the driver.
+        router.replace(`/friends-ride/${group.groupId}`);
+        return;
+      }
       await ridesAPI.bookRide(token, {
         pickup: pickup.trim(),
         dropoff: dropoff.trim(),
@@ -328,7 +352,7 @@ export default function RideBookingScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.sharedTitle}>Shared ride</Text>
           <Text style={styles.sharedSubtitle}>
-            Pay less by matching nearby riders
+            Pay less by riding with friends or nearby riders
           </Text>
         </View>
         <Switch
@@ -343,6 +367,29 @@ export default function RideBookingScreen() {
       </View>
 
       {isSharedRide && (
+        <View style={styles.modeRow}>
+          {([
+            ["friends", "Share with friends", "Invite people you know"],
+            ["others", "Share with others", "Match with nearby riders"],
+          ] as const).map(([mode, label, hint]) => (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.modeOption, shareMode === mode && styles.modeOptionActive]}
+              onPress={() => {
+                setShareMode(mode);
+                resetEstimate();
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: shareMode === mode }}
+            >
+              <Text style={[styles.modeLabel, shareMode === mode && styles.modeLabelActive]}>{label}</Text>
+              <Text style={styles.modeHint}>{hint}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {isSharedRide && shareMode === "others" && (
         <View style={styles.coRidersCard}>
           <Text style={styles.coRidersTitle}>Max co-riders</Text>
           <View style={styles.stepperRow}>
@@ -386,8 +433,13 @@ export default function RideBookingScreen() {
       {estimate && bookingStep === "confirmation" && (
         <View style={styles.confirmationSection}>
           <View style={styles.fareCard}>
-            <Text style={styles.fareLabel}>Estimated Fare</Text>
+            <Text style={styles.fareLabel}>{withFriends ? "Each rider pays" : "Estimated Fare"}</Text>
             <Text style={styles.fareAmount}>{estimate.fare.toLocaleString()} FBU</Text>
+            {withFriends && estimate.soloFare != null && (
+              <Text style={styles.fareNote}>
+                Until a friend joins you pay the solo price, {estimate.soloFare.toLocaleString()} FBU. Up to 4 riders.
+              </Text>
+            )}
           </View>
 
           <View style={styles.tripSummary}>
@@ -409,7 +461,7 @@ export default function RideBookingScreen() {
           </View>
 
           <TouchableOpacity style={styles.bookButton} onPress={handleBookRide}>
-            <Text style={styles.bookText}>Confirm Booking</Text>
+            <Text style={styles.bookText}>{withFriends ? "Continue and invite friends" : "Confirm Booking"}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -428,14 +480,18 @@ export default function RideBookingScreen() {
             {estimate && (
               <View style={styles.modalTripSummary}>
                 <Text style={styles.modalFare}>
-                  Total: {estimate.fare.toLocaleString()} FBU
+                  {withFriends && estimate.soloFare != null
+                    ? `Now: ${estimate.soloFare.toLocaleString()} FBU`
+                    : `Total: ${estimate.fare.toLocaleString()} FBU`}
                 </Text>
                 <Text style={styles.modalRoute}>
                   {pickup} → {dropoff}
                 </Text>
                 {isSharedRide && (
                   <Text style={styles.modalRoute}>
-                    Shared ride with up to {maxCoRiders} co-rider(s)
+                    {withFriends
+                      ? `Drops to ${estimate.fare.toLocaleString()} FBU each when friends join. You get a code to share; the driver is requested when you are ready.`
+                      : `Shared ride with up to ${maxCoRiders} co-rider(s)`}
                   </Text>
                 )}
                 <Text style={styles.modalRoute}>
@@ -533,6 +589,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  modeRow: { flexDirection: "row", gap: 10, width: "100%", marginBottom: 12 },
+  modeOption: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, backgroundColor: "#fff" },
+  modeOptionActive: { borderColor: "#43a047", backgroundColor: "#f0fdf4" },
+  modeLabel: { fontWeight: "700", color: "#111827" },
+  modeLabelActive: { color: "#1b5e20" },
+  modeHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
+  fareNote: { color: "#4b5563", fontSize: 13, marginTop: 6, textAlign: "center" },
   sharedRow: {
     flexDirection: "row",
     alignItems: "center",

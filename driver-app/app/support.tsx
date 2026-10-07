@@ -53,7 +53,8 @@ export default function SupportScreen() {
   }, [token]);
 
   useEffect(() => {
-    loadTickets();
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(loadTickets);
   }, [loadTickets]);
 
   const submit = async () => {

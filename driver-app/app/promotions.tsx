@@ -45,7 +45,8 @@ export default function PromotionsScreen() {
   }, [token]);
 
   useEffect(() => {
-    load();
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(load);
   }, [load]);
 
   const onRefresh = () => {

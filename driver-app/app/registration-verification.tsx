@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -34,15 +34,17 @@ export default function RegistrationVerificationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        vehicle_make: profile.vehicle_make ?? '',
-        vehicle_model: profile.vehicle_model ?? '',
-        license_number: profile.license_number ?? '',
-      });
-    }
-  }, [profile]);
+  // Fill the form from the profile whenever a new profile arrives
+  // (adjusting state while rendering, instead of in an effect).
+  const [formFor, setFormFor] = useState<typeof profile | null>(null);
+  if (profile && profile !== formFor) {
+    setFormFor(profile);
+    setForm({
+      vehicle_make: profile.vehicle_make ?? '',
+      vehicle_model: profile.vehicle_model ?? '',
+      license_number: profile.license_number ?? '',
+    });
+  }
 
   const onRefresh = async () => {
     setRefreshing(true);

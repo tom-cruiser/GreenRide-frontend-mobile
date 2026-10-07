@@ -48,7 +48,8 @@ type BackendRide = {
     status: string;
     ridersCount: number;
     maxRiders: number | null;
-    coRiders: { id: number; name: string }[];
+    coRiders: { id?: number; name?: string; firstName?: string }[];
+    mode?: "friends" | "others";
   };
 };
 
@@ -73,7 +74,7 @@ export default function RideHistoryScreen() {
 
     const mapped: HistoryItem[] = backendRides.map((r) => {
       const shareLabel = r.is_shared && r.share
-        ? `Shared • ${r.share.ridersCount}/${r.share.maxRiders ?? r.share.ridersCount}`
+        ? `${r.share.mode === 'friends' ? 'With friends' : 'Shared'} • ${r.share.ridersCount}/${r.share.maxRiders ?? r.share.ridersCount}`
         : undefined;
 
       return {
@@ -97,7 +98,8 @@ export default function RideHistoryScreen() {
   };
 
   useEffect(() => {
-    fetchHistory().catch((e) => {
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(fetchHistory).catch((e) => {
       const message = e instanceof Error ? e.message : 'Failed to load ride history.';
       setLoadError(message);
     });

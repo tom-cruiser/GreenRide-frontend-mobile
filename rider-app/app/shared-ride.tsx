@@ -40,7 +40,8 @@ export default function SharedRideScreen() {
   }, [groupId, token]);
 
   useEffect(() => {
-    load().catch((e) => {
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(load).catch((e) => {
       const message = e instanceof Error ? e.message : 'Failed to load shared ride status.';
       setError(message);
     });
