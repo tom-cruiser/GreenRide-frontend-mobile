@@ -28,11 +28,11 @@ export default function SafetyScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#dbeafe' },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
   item: { color: '#334155', marginBottom: 8 },
   emergencyBtn: { backgroundColor: '#b91c1c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },

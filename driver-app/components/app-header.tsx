@@ -8,7 +8,7 @@ export default function AppHeader({ onNotificationsPress }) {
     <View style={styles.header}>
       <Image source={require('../assets/images/icon.png')} style={styles.logo} />
       <TouchableOpacity onPress={onNotificationsPress} style={styles.notificationsBtn}>
-        <Feather name="bell" size={28} color="#1976d2" />
+        <Feather name="bell" size={28} color="#111111" />
       </TouchableOpacity>
     </View>
   );
@@ -22,9 +22,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 32,
     paddingBottom: 12,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#F3F4F6',
     borderBottomWidth: 1,
-    borderBottomColor: '#c8e6c9',
+    borderBottomColor: '#E5E7EB',
   },
   logo: {
     width: 40,

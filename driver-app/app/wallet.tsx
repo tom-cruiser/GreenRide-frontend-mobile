@@ -60,7 +60,7 @@ export default function WalletScreen() {
       <Text style={styles.balance}>{formatAmount(walletBalance)}</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
-      {loading && <ActivityIndicator color="#1976d2" style={{ marginVertical: 12 }} />}
+      {loading && <ActivityIndicator color="#111111" style={{ marginVertical: 12 }} />}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -94,7 +94,7 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: {
     padding: 24,
     alignItems: 'center',
@@ -102,18 +102,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1976d2',
+    color: '#111111',
     marginBottom: 16,
   },
   balanceLabel: {
     fontSize: 16,
-    color: '#1976d2',
+    color: '#111111',
     fontWeight: '600',
     marginBottom: 4,
   },
   balance: {
     fontSize: 32,
-    color: '#43a047',
+    color: '#111111',
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: '#F3F4F6',
   },
   sectionTitle: {
     fontSize: 16,
@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
   txDate: { fontSize: 12, color: '#64748b', marginTop: 2 },
   txAmount: { fontSize: 14, fontWeight: '700' },
   txDebit: { color: '#b91c1c' },
-  txCredit: { color: '#15803d' },
+  txCredit: { color: '#111111' },
 });

@@ -58,7 +58,7 @@ export function CallRideButton({ rideId, label = 'Call' }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#111111',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 14,

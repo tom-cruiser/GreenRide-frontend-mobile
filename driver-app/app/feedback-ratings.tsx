@@ -30,14 +30,14 @@ export default function FeedbackRatingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
-  summaryCard: { backgroundColor: '#ecfdf5', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#86efac' },
-  summaryLabel: { color: '#166534', fontWeight: '700' },
-  summaryValue: { marginTop: 4, fontSize: 26, color: '#14532d', fontWeight: '800' },
-  feedbackCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#dbeafe' },
+  summaryCard: { backgroundColor: '#F3F4F6', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#D1D5DB' },
+  summaryLabel: { color: '#111111', fontWeight: '700' },
+  summaryValue: { marginTop: 4, fontSize: 26, color: '#0B0B0B', fontWeight: '800' },
+  feedbackCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   rider: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
   score: { marginTop: 4, color: '#334155', fontWeight: '600' },
   note: { marginTop: 4, color: '#475569' },

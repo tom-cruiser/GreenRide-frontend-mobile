@@ -51,7 +51,7 @@ export default function OperationsCenterScreen() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#F3F4F6',
   },
   container: {
     padding: 20,
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#0d47a1',
+    color: '#0B0B0B',
     marginBottom: 6,
   },
   subtitle: {
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: '#F3F4F6',
   },
   cardTitle: {
     fontSize: 16,

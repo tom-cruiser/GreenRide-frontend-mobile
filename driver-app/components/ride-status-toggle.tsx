@@ -10,7 +10,7 @@ export default function RideStatusToggle({ status, onToggle, busy = false, disab
       <Text style={styles.label}>Ride Status</Text>
       <View style={styles.row}>
         <View style={styles.statusText}>
-          <Text style={{ color: status ? '#43a047' : '#9e9e9e', fontWeight: 'bold' }}>
+          <Text style={{ color: status ? '#111111' : '#9e9e9e', fontWeight: 'bold' }}>
             {status ? 'Online' : 'Offline'}
           </Text>
           <Text style={styles.hint}>
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: '#1976d2',
+    color: '#111111',
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e53935',
   },
   inactive: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#111111',
   },
   disabled: {
     backgroundColor: '#bdbdbd',

@@ -75,7 +75,7 @@ export default function NotificationsScreen() {
       <Text style={styles.title}>Notifications</Text>
       <Text style={styles.subtitle}>Ride requests and operational updates.</Text>
 
-      {loading && <ActivityIndicator color="#1976d2" />}
+      {loading && <ActivityIndicator color="#111111" />}
       {error && <Text style={styles.error}>{error}</Text>}
       {!loading && items.length === 0 && (
         <Text style={styles.empty}>No notifications yet.</Text>
@@ -97,9 +97,9 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
   error: {
     color: '#b91c1c',
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: '#F3F4F6',
   },
   cardRead: { opacity: 0.6 },
   cardTitle: { color: '#0f172a', fontWeight: '700', marginBottom: 4 },

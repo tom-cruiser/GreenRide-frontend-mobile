@@ -31,15 +31,15 @@ export default function SharedRidesScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#dbeafe' },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
   meta: { color: '#64748b', fontSize: 12 },
   item: { color: '#334155', marginBottom: 4 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  routeBtn: { marginTop: 8, backgroundColor: '#1d4ed8', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  routeBtn: { marginTop: 8, backgroundColor: '#111111', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   routeText: { color: '#fff', fontWeight: '700' },
 });

@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appLabel: {
-    color: '#4CAF50',
+    color: '#111111',
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 1,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e53935',
   },
   acceptBtn: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#111111',
   },
   actionIcon: {
     color: '#fff',

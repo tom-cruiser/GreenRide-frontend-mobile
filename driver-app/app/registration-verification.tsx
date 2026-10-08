@@ -98,7 +98,7 @@ export default function RegistrationVerificationScreen() {
         <Step number={2} label="Approval" done={status === 'verified'} />
       </View>
 
-      {status === 'loading' && <ActivityIndicator size="large" color="#1976d2" style={styles.loader} />}
+      {status === 'loading' && <ActivityIndicator size="large" color="#111111" style={styles.loader} />}
 
       {status === 'error' && (
         <View style={styles.card}>
@@ -198,9 +198,9 @@ function Step({ number, label, done }: { number: number; label: string; done: bo
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 16, color: '#334155' },
   loader: { marginVertical: 24 },
   steps: { flexDirection: 'row', gap: 16, marginBottom: 16 },
@@ -210,22 +210,22 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#93c5fd',
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
   },
-  stepDotDone: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-  stepNumber: { fontWeight: '700', color: '#1e3a8a' },
+  stepDotDone: { backgroundColor: '#111111', borderColor: '#111111' },
+  stepNumber: { fontWeight: '700', color: '#0B0B0B' },
   stepNumberDone: { color: '#fff' },
-  stepLabel: { fontWeight: '600', color: '#1e3a8a' },
+  stepLabel: { fontWeight: '600', color: '#0B0B0B' },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#E5E7EB',
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
   item: { color: '#334155', marginBottom: 4 },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   primaryBtn: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#111111',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -258,11 +258,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#E5E7EB',
   },
-  secondaryBtnText: { color: '#1565c0', fontWeight: '700' },
+  secondaryBtnText: { color: '#111111', fontWeight: '700' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: { fontSize: 12, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, overflow: 'hidden' },
-  badgeDone: { color: '#166534', backgroundColor: '#dcfce7' },
+  badgeDone: { color: '#111111', backgroundColor: '#F3F4F6' },
   badgePending: { color: '#b45309', backgroundColor: '#fef3c7' },
 });

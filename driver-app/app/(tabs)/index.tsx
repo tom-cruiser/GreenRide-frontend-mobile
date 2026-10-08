@@ -153,7 +153,7 @@ export default function DriverDashboard() {
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#F3F4F6',
   },
   container: {
     padding: 20,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1976d2',
+    color: '#111111',
     marginBottom: 6,
   },
   sectionSubtitle: {
@@ -185,25 +185,25 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionCard: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#F3F4F6',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#a5d6a7',
+    borderColor: '#D1D5DB',
   },
   actionLabel: {
-    color: '#1b5e20',
+    color: '#0B0B0B',
     fontWeight: '700',
   },
   activeRide: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#111111',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
   },
   activeRideTitle: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 2 },
-  activeRideText: { color: '#e3f2fd' },
+  activeRideText: { color: '#F3F4F6' },
   banner: {
     backgroundColor: '#fef3c7',
     borderColor: '#fcd34d',

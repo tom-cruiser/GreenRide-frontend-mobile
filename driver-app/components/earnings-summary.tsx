@@ -35,18 +35,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: '#1976d2',
+    color: '#111111',
     fontWeight: '600',
     marginBottom: 8,
   },
   amount: {
     fontSize: 28,
-    color: '#43a047',
+    color: '#111111',
     fontWeight: 'bold',
     marginBottom: 8,
   },
   historyBtn: {
-    backgroundColor: '#1976d2',
+    backgroundColor: '#111111',
     borderRadius: 8,
     padding: 10,
     alignItems: 'center',

@@ -71,7 +71,7 @@ export default function RideHistoryScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Ride History</Text>
-      {loading && <ActivityIndicator size="large" color="#1976d2" />}
+      {loading && <ActivityIndicator size="large" color="#111111" />}
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
         data={rides}
@@ -121,11 +121,11 @@ export default function RideHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e3f2fd', padding: 24 },
+  container: { flex: 1, backgroundColor: '#F3F4F6', padding: 24 },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1976d2',
+    color: '#111111',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -150,26 +150,26 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 15,
-    color: '#1976d2',
+    color: '#111111',
     fontWeight: '600',
     marginBottom: 4,
   },
   detail: { fontSize: 15, color: '#555', marginBottom: 2 },
   fare: {
     fontSize: 16,
-    color: '#43a047',
+    color: '#111111',
     fontWeight: 'bold',
     marginVertical: 4,
   },
-  status: { fontSize: 14, color: '#43a047', fontWeight: '600' },
+  status: { fontSize: 14, color: '#111111', fontWeight: '600' },
   feedbackBtn: {
     marginTop: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#F7F7F7',
     borderWidth: 1,
-    borderColor: '#93c5fd',
+    borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  feedbackText: { color: '#1d4ed8', fontWeight: '700', fontSize: 13 },
+  feedbackText: { color: '#111111', fontWeight: '700', fontSize: 13 },
 });

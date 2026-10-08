@@ -151,7 +151,7 @@ export default function DriverMapScreen() {
       {loading && (
         <ActivityIndicator
           size="large"
-          color="#1976d2"
+          color="#111111"
           style={styles.loading}
         />
       )}
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   fallbackTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
   fallbackText: { textAlign: "center", color: "#444" },
   acceptBtn: {
-    backgroundColor: "#43a047",
+    backgroundColor: "#111111",
     borderRadius: 8,
     padding: 8,
     alignItems: "center",
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 20,
     left: 16,
-    backgroundColor: "#1e3a8a",
+    backgroundColor: "#0B0B0B",
     borderRadius: 16,
     paddingVertical: 8,
     paddingHorizontal: 12,

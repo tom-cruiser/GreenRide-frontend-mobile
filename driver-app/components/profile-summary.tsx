@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1976d2',
+    color: '#111111',
   },
   vehicle: {
     fontSize: 15,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   status: {
     fontSize: 14,
-    color: '#43a047',
+    color: '#111111',
     marginTop: 2,
     fontWeight: '600',
   },

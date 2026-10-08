@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   appLabel: {
-    color: '#4CAF50',
+    color: '#111111',
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 1,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },

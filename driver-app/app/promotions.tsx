@@ -63,7 +63,7 @@ export default function PromotionsScreen() {
       <Text style={styles.title}>Promotions & Incentives</Text>
       <Text style={styles.subtitle}>Track active offers and maximize earnings.</Text>
 
-      {loading && <ActivityIndicator color="#1976d2" />}
+      {loading && <ActivityIndicator color="#111111" />}
       {error && <Text style={styles.error}>{error}</Text>}
       {!loading && !error && promotions.length === 0 && (
         <Text style={styles.empty}>No active promotions right now.</Text>
@@ -85,9 +85,9 @@ export default function PromotionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#e3f2fd' },
+  page: { flex: 1, backgroundColor: '#F3F4F6' },
   container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0d47a1' },
+  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
   subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
   error: {
     color: '#b91c1c',
@@ -103,9 +103,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: '#F3F4F6',
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 4 },
   cardDetail: { color: '#334155' },
-  code: { color: '#1d4ed8', fontWeight: '700', marginTop: 6 },
+  code: { color: '#111111', fontWeight: '700', marginTop: 6 },
 });

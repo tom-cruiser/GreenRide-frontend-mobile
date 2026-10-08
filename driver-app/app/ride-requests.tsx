@@ -113,7 +113,7 @@ export default function RideRequestsScreen() {
     >
       <Text style={styles.title}>Incoming Ride Requests</Text>
 
-      {loading && <ActivityIndicator size="large" color="#1976d2" />}
+      {loading && <ActivityIndicator size="large" color="#111111" />}
       {error && <Text style={styles.errorText}>{error}</Text>}
       {!loading && !error && requests.length === 0 && (
         <Text style={styles.emptyText}>No requests right now. Stay online.</Text>
@@ -186,14 +186,14 @@ export default function RideRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  groupChip: { alignSelf: "flex-start", backgroundColor: "#e3f2fd", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, marginVertical: 4 },
-  groupChipText: { color: "#0d47a1", fontWeight: "700", fontSize: 12 },
-  container: { flex: 1, backgroundColor: "#e3f2fd" },
+  groupChip: { alignSelf: "flex-start", backgroundColor: "#F3F4F6", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, marginVertical: 4 },
+  groupChipText: { color: "#0B0B0B", fontWeight: "700", fontSize: 12 },
+  container: { flex: 1, backgroundColor: "#F3F4F6" },
   content: { padding: 24, paddingBottom: 40 },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1976d2",
+    color: "#111111",
     marginBottom: 24,
     textAlign: "center",
   },
@@ -229,14 +229,14 @@ const styles = StyleSheet.create({
   detail: { fontSize: 15, color: "#555", marginBottom: 2 },
   fare: {
     fontSize: 16,
-    color: "#43a047",
+    color: "#111111",
     fontWeight: "bold",
     marginVertical: 8,
   },
   actions: { flexDirection: "row", justifyContent: "space-between" },
   actionsSecondary: { flexDirection: "row", gap: 8, marginTop: 8 },
   acceptBtn: {
-    backgroundColor: "#43a047",
+    backgroundColor: "#111111",
     borderRadius: 8,
     padding: 12,
     flex: 1,
@@ -255,13 +255,13 @@ const styles = StyleSheet.create({
   declineText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   btnDisabled: { opacity: 0.6 },
   secondaryBtn: {
-    backgroundColor: "#eff6ff",
+    backgroundColor: "#F7F7F7",
     borderRadius: 8,
     padding: 10,
     flex: 1,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#93c5fd",
+    borderColor: "#D1D5DB",
   },
-  secondaryText: { color: "#1d4ed8", fontWeight: "700", fontSize: 14 },
+  secondaryText: { color: "#111111", fontWeight: "700", fontSize: 14 },
 });
