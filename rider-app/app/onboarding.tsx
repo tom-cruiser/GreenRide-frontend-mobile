@@ -125,14 +125,14 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f5fff7' },
+  safe: { flex: 1, backgroundColor: '#F7F7F7' },
   skipRow: {
     height: 32,
     paddingHorizontal: 20,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  skipText: { color: '#2e7d32', fontWeight: '600', fontSize: 14 },
+  skipText: { color: '#111111', fontWeight: '600', fontSize: 14 },
   slide: {
     width: SCREEN_WIDTH,
     alignItems: 'center',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#1b5e20',
+    color: '#0B0B0B',
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -171,12 +171,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#c8e6c9',
+    backgroundColor: '#E5E7EB',
   },
-  dotActive: { backgroundColor: '#43a047', width: 22 },
+  dotActive: { backgroundColor: '#111111', width: 22 },
   footer: { paddingHorizontal: 24, paddingBottom: 12 },
   primaryBtn: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#111111',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',

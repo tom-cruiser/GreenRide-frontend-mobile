@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, type FriendsGroup } from '@/services/api';
-import { Avatar, BackButton, GREEN, Row, StatusChip, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
+import { Avatar, BackButton, ACCENT, Row, StatusChip, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
 
 // A "share with friends" ride. The host shares the code, invites by phone,
 // sees friends join live, can remove a guest, and requests the driver.
@@ -65,7 +65,7 @@ export default function FriendsRideScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          <ActivityIndicator size="large" color={GREEN} />
+          <ActivityIndicator size="large" color={ACCENT} />
         )}
       </View>
     );
@@ -147,7 +147,7 @@ export default function FriendsRideScreen() {
       <BackButton onPress={() => router.replace('/(tabs)')} />
 
       <View style={ui.statusCard}>
-        {gathering && !group.expired && <ActivityIndicator color={GREEN} style={{ marginBottom: 8 }} />}
+        {gathering && !group.expired && <ActivityIndicator color={ACCENT} style={{ marginBottom: 8 }} />}
         <Text style={ui.title}>{header.title}</Text>
         <Text style={ui.detail}>{header.detail}</Text>
         <Text style={ui.price}>{money(group.myPrice, group.currency)}</Text>
@@ -261,8 +261,8 @@ export default function FriendsRideScreen() {
 const styles = StyleSheet.create({
   codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   code: { fontSize: 30, fontWeight: '800', letterSpacing: 3, color: '#111827', fontVariant: ['tabular-nums'] },
-  smallBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
-  smallBtnText: { color: '#166534', fontWeight: '700' },
+  smallBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F3F4F6' },
+  smallBtnText: { color: '#111111', fontWeight: '700' },
   guest: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   guestName: { fontSize: 16, fontWeight: '700', color: '#111827' },
   removeBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#fecaca' },

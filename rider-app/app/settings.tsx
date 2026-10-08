@@ -154,7 +154,7 @@ export default function SettingsScreen() {
     return (
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          {icon && <IconSymbol name={icon} size={20} color="#43a047" style={styles.settingIcon} />}
+          {icon && <IconSymbol name={icon} size={20} color="#111111" style={styles.settingIcon} />}
         <View style={styles.settingContent}>
           <Text style={styles.settingTitle}>{title}</Text>
           <Text style={styles.settingDescription}>{description}</Text>
@@ -163,7 +163,7 @@ export default function SettingsScreen() {
       <Switch
         value={value}
         onValueChange={() => handleToggle(section, key)}
-        trackColor={{ false: '#e0e0e0', true: '#43a047' }}
+        trackColor={{ false: '#e0e0e0', true: '#111111' }}
         thumbColor={value ? '#fff' : '#f4f3f4'}
       />
       </View>
@@ -173,7 +173,7 @@ export default function SettingsScreen() {
   const renderSelectItem = (title: string, description: string, value: string, onPress: () => void, icon?: SymbolViewProps['name']) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        {icon && <IconSymbol name={icon} size={20} color="#43a047" style={styles.settingIcon} />}
+        {icon && <IconSymbol name={icon} size={20} color="#111111" style={styles.settingIcon} />}
         <View style={styles.settingContent}>
           <Text style={styles.settingTitle}>{title}</Text>
           <Text style={styles.settingDescription}>{description}</Text>
@@ -189,7 +189,7 @@ export default function SettingsScreen() {
   const renderActionItem = (title: string, description: string, onPress: () => void, icon?: SymbolViewProps['name'], color?: string) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        {icon && <IconSymbol name={icon} size={20} color={color || "#43a047"} style={styles.settingIcon} />}
+        {icon && <IconSymbol name={icon} size={20} color={color || "#111111"} style={styles.settingIcon} />}
         <View style={styles.settingContent}>
           <Text style={[styles.settingTitle, color && { color }]}>{title}</Text>
           <Text style={styles.settingDescription}>{description}</Text>
@@ -203,7 +203,7 @@ export default function SettingsScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#43a047" />
+          <IconSymbol name="chevron.left" size={24} color="#111111" />
           <Text style={styles.goBackText}>Back</Text>
         </TouchableOpacity>
         <AppLogo size={40} />
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goBackText: {
-    color: '#43a047',
+    color: '#111111',
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#43a047',
+    color: '#111111',
     marginBottom: 4,
   },
   subtitle: {
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 14,
-    color: '#43a047',
+    color: '#111111',
     fontWeight: '600',
   },
   footer: {

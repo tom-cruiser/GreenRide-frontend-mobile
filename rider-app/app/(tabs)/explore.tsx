@@ -53,7 +53,7 @@ export default function MoreScreen() {
             style={styles.menuItem}
             onPress={() => handleFeature(item.feature)}
           >
-            <IconSymbol name={item.icon} size={24} color="#43a047" />
+            <IconSymbol name={item.icon} size={24} color="#111111" />
             <Text style={styles.menuText}>{item.title}</Text>
             <IconSymbol name="chevron.right" size={16} color="#888" />
           </TouchableOpacity>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#43a047',
+    color: '#111111',
     marginTop: 10,
   },
   menuContainer: {

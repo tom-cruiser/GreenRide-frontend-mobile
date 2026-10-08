@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, type FriendsGroup } from '@/services/api';
-import { Avatar, BackButton, GREEN, Row, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
+import { Avatar, BackButton, ACCENT, Row, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
 
 // Opened from an invitation notification: who invited, the ride, the price, Accept / Decline.
 export default function InvitationScreen() {
@@ -28,7 +28,7 @@ export default function InvitationScreen() {
   if (!group) {
     return (
       <View style={[ui.page, ui.center]}>
-        {error ? <Text style={ui.detail}>{error}</Text> : <ActivityIndicator size="large" color={GREEN} />}
+        {error ? <Text style={ui.detail}>{error}</Text> : <ActivityIndicator size="large" color={ACCENT} />}
       </View>
     );
   }

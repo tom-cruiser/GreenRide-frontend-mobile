@@ -149,7 +149,7 @@ export default function ActiveRideScreen() {
   if (loading) {
     return (
       <View style={[styles.page, styles.center]}>
-        <ActivityIndicator size="large" color="#43a047" />
+        <ActivityIndicator size="large" color="#111111" />
       </View>
     );
   }
@@ -176,7 +176,7 @@ export default function ActiveRideScreen() {
       </TouchableOpacity>
 
       <View style={styles.statusCard}>
-        {ride.status === 'pending' && <ActivityIndicator color="#43a047" style={styles.spinner} />}
+        {ride.status === 'pending' && <ActivityIndicator color="#111111" style={styles.spinner} />}
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.detail}>{detail}</Text>
         {hasDriver && <CallRideButton rideId={ride.id} label="Call driver" />}
@@ -267,14 +267,14 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#f5fff7' },
+  page: { flex: 1, backgroundColor: '#F7F7F7' },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   container: { padding: 20, paddingTop: 56, paddingBottom: 40 },
   goBack: { alignSelf: 'flex-start', marginBottom: 12, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#F6F6F6' },
   goBackText: { color: '#0B0B0B', fontWeight: '700', fontSize: 15 },
-  statusCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: '#bbf7d0', alignItems: 'center' },
+  statusCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
   spinner: { marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: '#1b5e20', textAlign: 'center' },
+  title: { fontSize: 22, fontWeight: '800', color: '#0B0B0B', textAlign: 'center' },
   detail: { color: '#4b5563', textAlign: 'center', marginTop: 6 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 },
@@ -282,11 +282,11 @@ const styles = StyleSheet.create({
   rowLabel: { color: '#6b7280' },
   rowValue: { color: '#111827', fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   stars: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: 8 },
-  input: { borderWidth: 1, borderColor: '#d1fae5', borderRadius: 10, padding: 12, minHeight: 60, color: '#0f172a', marginBottom: 8, textAlignVertical: 'top' },
-  primaryBtn: { backgroundColor: '#43a047', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, alignItems: 'center', marginTop: 8 },
+  input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 12, minHeight: 60, color: '#0f172a', marginBottom: 8, textAlignVertical: 'top' },
+  primaryBtn: { backgroundColor: '#111111', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, alignItems: 'center', marginTop: 8 },
   primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondaryBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0', backgroundColor: '#fff' },
-  secondaryBtnText: { color: '#2e7d32', fontWeight: '700', fontSize: 16 },
+  secondaryBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
+  secondaryBtnText: { color: '#111111', fontWeight: '700', fontSize: 16 },
   cancelBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff' },
   cancelText: { color: '#b91c1c', fontWeight: '700', fontSize: 16 },
   disabled: { opacity: 0.5 },

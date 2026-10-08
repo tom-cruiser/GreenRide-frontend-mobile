@@ -101,7 +101,7 @@ export default function MessagingScreen() {
           style={styles.callButton}
           onPress={() => Alert.alert('Calling', 'Calling Jean Pierre...')}
         >
-          <IconSymbol name="phone.fill" size={20} color="#43a047" />
+          <IconSymbol name="phone.fill" size={20} color="#111111" />
         </TouchableOpacity>
       </View>
 
@@ -161,14 +161,14 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#43a047',
+    color: '#111111',
     marginTop: 2,
   },
   callButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e8f5e8',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },

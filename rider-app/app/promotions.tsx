@@ -27,7 +27,7 @@ const PROMOTIONS: Promotion[] = [
     discountLabel: 'FREE',
     validUntil: 'March 15, 2026',
     isActive: true,
-    accent: '#43a047',
+    accent: '#111111',
   },
   {
     id: 2,
@@ -142,7 +142,7 @@ export default function PromotionsScreen() {
             autoCapitalize="characters"
           />
           <TouchableOpacity style={[styles.applyBtn, { backgroundColor: theme.tint }]} onPress={handleApplyPromo} accessibilityRole="button">
-            <Text style={styles.applyBtnText}>Apply</Text>
+            <Text style={[styles.applyBtnText, { color: theme.background }]}>Apply</Text>
           </TouchableOpacity>
         </View>
       </View>

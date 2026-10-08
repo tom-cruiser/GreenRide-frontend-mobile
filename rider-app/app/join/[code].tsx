@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, type CodeLookup } from '@/services/api';
-import { Avatar, BackButton, GREEN, Row, money, showError, ui } from '@/components/friends-ui';
+import { Avatar, BackButton, ACCENT, Row, money, showError, ui } from '@/components/friends-ui';
 
 // A ride found by its code (typed in, or opened from riderapp://join/<code>).
 export default function JoinByCodeScreen() {
@@ -46,7 +46,7 @@ export default function JoinByCodeScreen() {
               <Text style={ui.detail}>Check the code with your friend.</Text>
             </>
           ) : (
-            <ActivityIndicator size="large" color={GREEN} />
+            <ActivityIndicator size="large" color={ACCENT} />
           )}
         </View>
       ) : (

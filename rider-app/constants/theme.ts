@@ -5,9 +5,9 @@
 
 import { Platform } from 'react-native';
 
-// Neutral base with brand accent (matches More tab green)
-const tintColorLight = '#43a047';
-const tintColorDark = '#43a047';
+// Black and white: the accent is black in light mode and white in dark mode.
+const tintColorLight = '#0B0B0B';
+const tintColorDark = '#FFFFFF';
 
 export const Colors = {
   light: {
@@ -24,7 +24,7 @@ export const Colors = {
     muted: '#6B7280',
     border: '#E5E7EB',
     danger: '#DC2626',
-    success: '#16A34A',
+    success: '#111111',
   },
   dark: {
     text: '#F3F4F6',
@@ -40,7 +40,7 @@ export const Colors = {
     muted: '#9CA3AF',
     border: '#262626',
     danger: '#F87171',
-    success: '#4ADE80',
+    success: '#F3F4F6',
   },
 };
 

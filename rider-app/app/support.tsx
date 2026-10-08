@@ -171,7 +171,7 @@ export default function SupportScreen() {
         <Text style={styles.contactTitle}>Other Ways to Reach Us</Text>
         
         <TouchableOpacity style={styles.contactItem}>
-          <IconSymbol name="phone.fill" size={20} color="#43a047" />
+          <IconSymbol name="phone.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>Phone Support</Text>
             <Text style={styles.contactValue}>+257 79 000 000</Text>
@@ -179,7 +179,7 @@ export default function SupportScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.contactItem}>
-          <IconSymbol name="envelope.fill" size={20} color="#43a047" />
+          <IconSymbol name="envelope.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>Email Support</Text>
             <Text style={styles.contactValue}>support@greenrider.bi</Text>
@@ -187,7 +187,7 @@ export default function SupportScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.contactItem}>
-          <IconSymbol name="clock.fill" size={20} color="#43a047" />
+          <IconSymbol name="clock.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>Support Hours</Text>
             <Text style={styles.contactValue}>24/7 Available</Text>

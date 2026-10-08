@@ -329,8 +329,8 @@ const styles = StyleSheet.create({
   sharedBadge: {
     marginTop: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#E8F5E9',
-    color: '#1B5E20',
+    backgroundColor: '#F3F4F6',
+    color: '#0B0B0B',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,

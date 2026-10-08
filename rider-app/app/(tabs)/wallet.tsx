@@ -179,7 +179,7 @@ export default function WalletScreen() {
               <Text
                 style={[
                   styles.txnAmount,
-                  row.direction === 'incoming' ? { color: '#16A34A' } : { color: '#DC2626' },
+                  row.direction === 'incoming' ? { color: '#111111' } : { color: '#DC2626' },
                 ]}
               >
                 {row.direction === 'incoming' ? '+' : '-'}{row.amount.toLocaleString()} FBU

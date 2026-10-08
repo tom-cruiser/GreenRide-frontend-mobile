@@ -64,7 +64,7 @@ export default function SafetyScreen() {
       description: 'View safety guidelines and best practices',
       icon: 'lightbulb.fill',
       action: () => Alert.alert('Safety Tips', 'Safety tips feature coming soon'),
-      color: '#43a047',
+      color: '#111111',
     },
   ] as const;
 
@@ -95,7 +95,7 @@ export default function SafetyScreen() {
           <Text style={styles.statusText}>
             Emergency contacts sharing: {emergencySharing ? 'ON' : 'OFF'}
           </Text>
-          <View style={[styles.statusIndicator, { backgroundColor: emergencySharing ? '#43a047' : '#888' }]} />
+          <View style={[styles.statusIndicator, { backgroundColor: emergencySharing ? '#111111' : '#888' }]} />
         </View>
       </View>
 
@@ -132,7 +132,7 @@ export default function SafetyScreen() {
               <Text style={styles.contactDescription}>{contact.description}</Text>
             </View>
             <Text style={styles.contactNumber}>{contact.number}</Text>
-            <IconSymbol name="phone.fill" size={20} color="#43a047" />
+            <IconSymbol name="phone.fill" size={20} color="#111111" />
           </TouchableOpacity>
         ))}
       </View>
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#43a047',
+    borderLeftColor: '#111111',
   },
   statusTitle: {
     fontSize: 16,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   contactNumber: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#43a047',
+    color: '#111111',
     marginRight: 8,
   },
   helpSection: {

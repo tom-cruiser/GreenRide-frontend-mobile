@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#43a047',
+    color: '#111111',
     textTransform: 'capitalize',
   },
   meta: {
@@ -170,12 +170,12 @@ const styles = StyleSheet.create({
   },
   confirmedPill: {
     marginTop: 12,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     padding: 12,
   },
   confirmedText: {
-    color: '#1B5E20',
+    color: '#0B0B0B',
     fontWeight: '800',
   },
   listTitle: {

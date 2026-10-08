@@ -264,8 +264,8 @@ export default function HomeScreen() {
             onPress={() => router.push(`/invitation/${inv.invitation?.id}`)}
             accessibilityRole="button"
           >
-            <Text style={styles.activeRideTitle}>{inv.host.firstName} invited you to share a ride</Text>
-            <Text style={styles.activeRideHint}>
+            <Text style={[styles.activeRideTitle, { color: theme.background }]}>{inv.host.firstName} invited you to share a ride</Text>
+            <Text style={[styles.activeRideHint, { color: theme.background }]}>
               To {inv.dropoff} · {inv.myPrice.toLocaleString()} {inv.currency} · Tap to answer
             </Text>
           </TouchableOpacity>
@@ -273,16 +273,16 @@ export default function HomeScreen() {
 
         {activeRideStatus && (
           <TouchableOpacity
-            style={[styles.activeRideCard, { backgroundColor: theme.tint }]}
+            style={[styles.activeRideCard, { backgroundColor: theme.text }]}
             onPress={() => router.push(gatheringGroupId ? `/friends-ride/${gatheringGroupId}` : "/active-ride")}
             accessibilityRole="button"
           >
-            <Text style={styles.activeRideTitle}>
+            <Text style={[styles.activeRideTitle, { color: theme.background }]}>
               {activeRideStatus === "gathering"
                 ? "Waiting for your friends…"
                 : activeRideStatus === "pending" ? "Finding your driver…" : "Your ride is in progress"}
             </Text>
-            <Text style={styles.activeRideHint}>Tap to follow your ride</Text>
+            <Text style={[styles.activeRideHint, { color: theme.background }]}>Tap to follow your ride</Text>
           </TouchableOpacity>
         )}
 
@@ -401,7 +401,7 @@ export default function HomeScreen() {
           style={[
             styles.banner,
             {
-              backgroundColor: surge ? "#E8F5E9" : theme.surface,
+              backgroundColor: surge ? "#F3F4F6" : theme.surface,
               borderColor: theme.border,
             },
           ]}

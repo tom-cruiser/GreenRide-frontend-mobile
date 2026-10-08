@@ -307,7 +307,7 @@ export default function RideBookingScreen() {
           <Marker
             coordinate={{ latitude: userLat, longitude: userLng }}
             title="You"
-            pinColor="#43a047"
+            pinColor="#111111"
           />
           {nearbyDrivers.map((driver) => (
             <Marker
@@ -361,8 +361,8 @@ export default function RideBookingScreen() {
             setIsSharedRide(v);
             resetEstimate();
           }}
-          trackColor={{ false: "#E5E7EB", true: "#BDECC0" }}
-          thumbColor={isSharedRide ? "#43a047" : "#9CA3AF"}
+          trackColor={{ false: "#E5E7EB", true: "#D1D5DB" }}
+          thumbColor={isSharedRide ? "#111111" : "#9CA3AF"}
         />
       </View>
 
@@ -591,9 +591,9 @@ const styles = StyleSheet.create({
   },
   modeRow: { flexDirection: "row", gap: 10, width: "100%", marginBottom: 12 },
   modeOption: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, backgroundColor: "#fff" },
-  modeOptionActive: { borderColor: "#43a047", backgroundColor: "#f0fdf4" },
+  modeOptionActive: { borderColor: "#111111", backgroundColor: "#F3F4F6" },
   modeLabel: { fontWeight: "700", color: "#111827" },
-  modeLabelActive: { color: "#1b5e20" },
+  modeLabelActive: { color: "#0B0B0B" },
   modeHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
   fareNote: { color: "#4b5563", fontSize: 13, marginTop: 6, textAlign: "center" },
   sharedRow: {

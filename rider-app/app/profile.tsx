@@ -36,7 +36,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#43a047" />
+          <IconSymbol name="chevron.left" size={24} color="#111111" />
           <Text style={styles.goBackText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.editButton} onPress={handleEditToggle}>
@@ -119,19 +119,19 @@ export default function ProfileScreen() {
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionItem}>
-          <IconSymbol name="creditcard.fill" size={24} color="#43a047" />
+          <IconSymbol name="creditcard.fill" size={24} color="#111111" />
           <Text style={styles.actionText}>Payment Methods</Text>
           <IconSymbol name="chevron.right" size={16} color="#888" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionItem}>
-          <IconSymbol name="location.fill" size={24} color="#43a047" />
+          <IconSymbol name="location.fill" size={24} color="#111111" />
           <Text style={styles.actionText}>Saved Addresses</Text>
           <IconSymbol name="chevron.right" size={16} color="#888" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionItem}>
-          <IconSymbol name="star.fill" size={24} color="#43a047" />
+          <IconSymbol name="star.fill" size={24} color="#111111" />
           <Text style={styles.actionText}>My Ratings</Text>
           <IconSymbol name="chevron.right" size={16} color="#888" />
         </TouchableOpacity>
@@ -159,12 +159,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goBackText: {
-    color: '#43a047',
+    color: '#111111',
     fontWeight: '600',
     marginLeft: 4,
   },
   editButton: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#111111',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   saveButton: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#111111',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
