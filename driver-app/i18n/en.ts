@@ -90,7 +90,7 @@ export const en: Strings = {
     today: 'Today',
     week: 'This week',
     month: 'This month',
-    trips: 'Rides',
+    trips: 'Rides today',
     acceptance: 'Acceptance',
     rating: 'Rating',
     noRating: 'No rating yet',
@@ -103,7 +103,6 @@ export const en: Strings = {
   },
   withdraw: {
     title: 'Withdraw',
-    balance: 'Available: {amount}',
     amount: 'Amount (FBU)',
     phone: 'Mobile money number',
     phoneHint: 'With your country code, for example +257 79 12 34 56',
@@ -152,7 +151,7 @@ export const en: Strings = {
     pending: 'Under review',
     rejected: 'Refused',
     notOnboarded: 'Sign-up to finish',
-    ratingLine: '{rating} ★ · {count} reviews',
+    ratingLine: '{rating} ★ ({count})',
   },
   profile: { title: 'Profile', name: 'Full name', phone: 'Phone', email: 'Email' },
   car: {

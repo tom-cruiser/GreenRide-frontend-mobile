@@ -1,201 +1,60 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  ListRenderItem,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+import { Button, colors, Icon, type IconName, Screen, space, Text } from '@/design';
+import { useT, type TKey } from '@/i18n';
 
-type Slide = {
-  key: string;
-  title: string;
-  description: string;
-  image?: any;
-  icon?: keyof typeof Ionicons.glyphMap;
-};
-
-const SLIDES: Slide[] = [
-  {
-    key: 'welcome',
-    title: 'Drive with Green Ride',
-    description: 'Join a network of eco-friendly drivers and turn your time on the road into steady income.',
-    image: require('../assets/images/app-logo.png'),
-  },
-  {
-    key: 'requests',
-    title: 'Rides come to you',
-    description: 'Go online when it suits you. Nearby ride requests appear instantly — accept the ones you want.',
-    image: require('../assets/images/onboarding-visual.png'),
-  },
-  {
-    key: 'earnings',
-    title: 'Get paid, fast',
-    description: 'Fares land straight in your wallet. See daily earnings, trip history and ratings at a glance.',
-    icon: 'wallet-outline',
-  },
+const SLIDES: { icon: IconName; title: TKey; text: TKey }[] = [
+  { icon: 'navigation', title: 'onboarding.s1Title', text: 'onboarding.s1Text' },
+  { icon: 'bar-chart-2', title: 'onboarding.s2Title', text: 'onboarding.s2Text' },
+  { icon: 'shield', title: 'onboarding.s3Title', text: 'onboarding.s3Text' },
 ];
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-export default function DriverOnboarding() {
+// Three short slides, shown once.
+export default function OnboardingScreen() {
   const router = useRouter();
-  const listRef = useRef<FlatList<Slide>>(null);
-  const [index, setIndex] = useState(0);
+  const { t } = useT();
+  const [i, setI] = useState(0);
+  const last = i === SLIDES.length - 1;
 
-  const finish = useCallback(async () => {
-    try {
-      await AsyncStorage.setItem('driverHasOnboarded', 'true');
-    } catch {}
+  const finish = async () => {
+    await AsyncStorage.setItem('driverHasOnboarded', 'true').catch(() => {});
     router.replace('/(auth)/login');
-  }, [router]);
+  };
 
-  const goNext = useCallback(() => {
-    if (index >= SLIDES.length - 1) {
-      finish();
-      return;
-    }
-    const next = index + 1;
-    listRef.current?.scrollToIndex({ index: next, animated: true });
-    setIndex(next);
-  }, [index, finish]);
-
-  const onMomentumScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    if (newIndex !== index) setIndex(newIndex);
-  }, [index]);
-
-  const renderItem: ListRenderItem<Slide> = useCallback(({ item }) => (
-    <View style={styles.slide}>
-      <View style={styles.imageWrap}>
-        {item.image ? (
-          <Image source={item.image} style={styles.image} accessibilityLabel={item.title} />
-        ) : (
-          <View style={styles.iconCircle}>
-            <Ionicons name={item.icon ?? 'leaf-outline'} size={96} color="#111111" />
-          </View>
-        )}
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  ), []);
-
-  const isLast = index === SLIDES.length - 1;
-  const dots = useMemo(() => SLIDES.map((s, i) => (
-    <View key={s.key} style={[styles.dot, i === index && styles.dotActive]} />
-  )), [index]);
-
+  const slide = SLIDES[i];
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.skipRow}>
-        {!isLast ? (
-          <TouchableOpacity onPress={finish} hitSlop={12}>
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
+    <Screen dark scroll={false} edges={['top', 'bottom']}>
+      <View style={styles.top}>
+        <Image source={require('@/assets/images/app-logo.png')} style={styles.logo} />
+        {!last && <Button size="md" variant="ghostDark" label={t('onboarding.skip')} onPress={finish} style={{ paddingHorizontal: 0 }} />}
+      </View>
+      <View style={styles.middle}>
+        {i === 0 ? (
+          <Image source={require('@/assets/images/onboarding-visual.png')} style={styles.visual} resizeMode="contain" />
         ) : (
-          <View />
+          <View style={styles.iconCircle}><Icon name={slide.icon} size={56} color={colors.ink} /></View>
         )}
       </View>
-
-      <FlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.key}
-        renderItem={renderItem}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        getItemLayout={(_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i })}
-      />
-
-      <View style={styles.dotsRow}>{dots}</View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryBtn} onPress={goNext}>
-          <Text style={styles.primaryBtnText}>
-            {isLast ? 'Start driving' : 'Next'}
-          </Text>
-        </TouchableOpacity>
+      <Text color={colors.onDark} weight="bold" style={{ fontSize: 40, lineHeight: 44, letterSpacing: -1.2 }}>{t(slide.title)}</Text>
+      <Text color={colors.onDarkMuted} style={{ marginTop: space.md, fontSize: 18, lineHeight: 26 }}>{t(slide.text)}</Text>
+      <View style={styles.dots}>
+        {SLIDES.map((s, n) => <View key={s.title} style={[styles.dot, n === i && styles.dotOn]} />)}
       </View>
-    </SafeAreaView>
+      <Button size="xl" variant="light" label={last ? t('onboarding.start') : t('onboarding.next')} icon={last ? undefined : 'arrow-right'}
+        onPress={() => (last ? finish() : setI(i + 1))} />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F7F7F7' },
-  skipRow: {
-    height: 32,
-    paddingHorizontal: 20,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  skipText: { color: '#111111', fontWeight: '600', fontSize: 14 },
-  slide: {
-    width: SCREEN_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  imageWrap: {
-    width: 240,
-    height: 240,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  image: { width: '100%', height: '100%', resizeMode: 'contain' },
-  iconCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0B0B0B',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#4b5563',
-    textAlign: 'center',
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
-  },
-  dotActive: { backgroundColor: '#111111', width: 22 },
-  footer: { paddingHorizontal: 24, paddingBottom: 12 },
-  primaryBtn: {
-    backgroundColor: '#111111',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logo: { width: 48, height: 48, borderRadius: 24 },
+  middle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  visual: { width: '100%', height: '90%' },
+  iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: colors.onDark, alignItems: 'center', justifyContent: 'center' },
+  dots: { flexDirection: 'row', gap: 8, marginVertical: space.xxl },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)' },
+  dotOn: { width: 28, backgroundColor: colors.onDark },
 });

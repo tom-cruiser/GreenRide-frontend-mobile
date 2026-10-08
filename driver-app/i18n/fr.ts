@@ -89,7 +89,7 @@ export const fr = {
     today: "Aujourd'hui",
     week: 'Cette semaine',
     month: 'Ce mois',
-    trips: 'Courses',
+    trips: 'Courses aujourd\'hui',
     acceptance: 'Acceptation',
     rating: 'Note',
     noRating: 'Pas encore de note',
@@ -102,7 +102,6 @@ export const fr = {
   },
   withdraw: {
     title: 'Retirer',
-    balance: 'Disponible : {amount}',
     amount: 'Montant (FBU)',
     phone: 'Numéro mobile money',
     phoneHint: "Avec l'indicatif du pays, par exemple +257 79 12 34 56",
@@ -151,7 +150,7 @@ export const fr = {
     pending: 'En vérification',
     rejected: 'Refusé',
     notOnboarded: 'Inscription à terminer',
-    ratingLine: '{rating} ★ · {count} avis',
+    ratingLine: '{rating} ★ ({count} avis)',
   },
   profile: { title: 'Profil', name: 'Nom complet', phone: 'Téléphone', email: 'E-mail' },
   car: {

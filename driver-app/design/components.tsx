@@ -120,8 +120,10 @@ export function Card({ children, style, dark = false, padded = true, onPress }: 
       borderRadius: radius.xl,
       borderWidth: dark ? 0 : 1,
       borderColor: colors.line,
-      padding: padded ? space.xl : 0,
     },
+    // Only set when padded, so a caller's paddingHorizontal/Vertical wins
+    // (on the web a 0 shorthand would override them).
+    padded && { padding: space.xl },
     !dark && shadow.card,
     style,
   ];
@@ -141,13 +143,14 @@ export function Divider({ dark = false }: { dark?: boolean }) {
 
 // ── Buttons ───────────────────────────────────────────────────────────────
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'light';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'ghostDark' | 'danger' | 'light';
 type ButtonSize = 'md' | 'lg' | 'xl';
 
 const BUTTON: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
   primary: { bg: colors.ink, fg: colors.onDark },
   secondary: { bg: colors.surface, fg: colors.ink, border: colors.line },
   ghost: { bg: 'transparent', fg: colors.ink },
+  ghostDark: { bg: 'transparent', fg: colors.onDark }, // text button on dark panels
   danger: { bg: colors.surface, fg: colors.danger, border: '#FCA5A5' },
   light: { bg: colors.onDark, fg: colors.ink }, // white button on dark panels
 };
@@ -312,20 +315,28 @@ export function Stat({ label, value, dark = false }: { label: string; value: str
   );
 }
 
-export function Field({ label, hint, error, style, ...input }: TextInputProps & { label: string; hint?: string; error?: string | null }) {
+// `dark`: for dark screens (sign-in), as on the website: white label,
+// faint white field.
+export function Field({ label, hint, error, dark = false, style, ...input }: TextInputProps & {
+  label: string; hint?: string; error?: string | null; dark?: boolean;
+}) {
   const { text: k, touch } = useScale();
   return (
     <View style={{ gap: 6 }}>
-      <Text variant="label">{label}</Text>
+      <Text variant="label" color={dark ? colors.onDark : colors.ink}>{label}</Text>
       <TextInput
-        placeholderTextColor={colors.muted}
+        accessibilityLabel={label}
+        placeholderTextColor={dark ? 'rgba(255,255,255,0.35)' : colors.muted}
         {...input}
         style={[{
-          height: 52 * touch, borderRadius: radius.md, borderWidth: 1.5, borderColor: error ? colors.danger : colors.line,
-          backgroundColor: colors.surface, paddingHorizontal: space.lg, fontSize: 16 * k, color: colors.ink, fontFamily: fonts.regular,
+          height: 52 * touch, borderRadius: radius.md, borderWidth: 1.5,
+          borderColor: error ? colors.danger : dark ? 'rgba(255,255,255,0.14)' : colors.line,
+          backgroundColor: dark ? 'rgba(255,255,255,0.05)' : colors.surface,
+          paddingHorizontal: space.lg, fontSize: 16 * k, color: dark ? colors.onDark : colors.ink, fontFamily: fonts.regular,
         }, style]}
       />
-      {error ? <Text variant="caption" color={colors.danger}>{error}</Text> : hint ? <Text variant="caption" color={colors.muted}>{hint}</Text> : null}
+      {error ? <Text variant="caption" color={colors.danger}>{error}</Text>
+        : hint ? <Text variant="caption" color={dark ? colors.onDarkMuted : colors.muted}>{hint}</Text> : null}
     </View>
   );
 }

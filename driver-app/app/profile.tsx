@@ -1,84 +1,44 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, Button, colors, Field, Header, Screen, space, Text } from '@/design';
+import { useT } from '@/i18n';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
-  const [showRiderRating, setShowRiderRating] = useState(true);
+  const router = useRouter();
+  const { t } = useT();
+  const { user, updateProfile } = useAuth();
+  const [name, setName] = useState(user?.name ?? '');
+  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [saving, setSaving] = useState(false);
 
-  // The route guard sends the user back to the login screen once logged out.
-  const confirmLogout = () =>
-    Alert.alert('Log out', 'Do you want to log out of GreenRide Driver?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log out', style: 'destructive', onPress: () => logout() },
-    ]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({ name: name.trim(), phone: phone.trim() || undefined });
+      Alert.alert(t('common.saved'));
+    } catch (e) {
+      Alert.alert(t('common.error'), e instanceof Error ? e.message : undefined);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Profile Management</Text>
-      <Text style={styles.subtitle}>Personal profile, vehicle details, and credential status.</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
-        <Text style={styles.item}>Name: {user?.name ?? '—'}</Text>
-        <Text style={styles.item}>Email: {user?.email ?? '—'}</Text>
-        <Text style={styles.item}>Phone: {user?.phone || 'Not set'}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Vehicle</Text>
-        <Text style={styles.item}>Model: Toyota Prius 2018</Text>
-        <Text style={styles.item}>Plate: KJA-230HD</Text>
-        <Text style={styles.item}>Color: Silver</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Verification Health</Text>
-        <Text style={styles.item}>Driver License: Verified</Text>
-        <Text style={styles.item}>Vehicle Registration: Verified</Text>
-        <Text style={styles.item}>Insurance: Expires in 39 days</Text>
-      </View>
-
-      <View style={[styles.card, styles.rowBetween]}>
-        <View>
-          <Text style={styles.sectionTitle}>Passenger Rating Prompt</Text>
-          <Text style={styles.meta}>Ask driver to rate passenger at ride end.</Text>
+    <Screen>
+      <Header title={t('profile.title')} onBack={() => router.back()} backLabel={t('common.back')} />
+      <View style={{ alignItems: 'center', marginBottom: space.xl }}><Avatar name={name} size={80} /></View>
+      <View style={{ gap: space.lg }}>
+        <Field label={t('profile.name')} value={name} onChangeText={setName} autoComplete="name" />
+        <Field label={t('profile.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel"
+          hint={t('auth.phoneHint')} />
+        <View style={{ gap: 6 }}>
+          <Text variant="label">{t('profile.email')}</Text>
+          <Text color={colors.ink3}>{user?.email}</Text>
         </View>
-        <Switch value={showRiderRating} onValueChange={setShowRiderRating} />
+        <Button size="xl" label={t('common.save')} onPress={save} loading={saving} disabled={!name.trim()} />
       </View>
-
-      <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout} accessibilityRole="button">
-        <Text style={styles.logoutText}>Log out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F3F4F6' },
-  container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
-  subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
-  item: { color: '#334155', marginBottom: 4 },
-  meta: { color: '#64748b', fontSize: 12, marginTop: 2 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logoutBtn: {
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fff',
-  },
-  logoutText: { color: '#b91c1c', fontWeight: '700', fontSize: 16 },
-});
