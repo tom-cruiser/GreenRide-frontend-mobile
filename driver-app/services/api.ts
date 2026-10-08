@@ -45,7 +45,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
 const authHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 export const authAPI = {
-  register: (userData: { name: string; email: string; password: string; role?: string }) =>
+  register: (userData: { name: string; email: string; password: string; phone?: string; role?: string }) =>
     apiCall('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ ...userData, role: 'driver' }),
@@ -157,6 +157,25 @@ export const driversAPI = {
       body: JSON.stringify(body),
     }),
 
+  // Earnings (today, week, month), trips, rating, acceptance and today's rides.
+  getStats: (token: string) => apiCall('/drivers/me/stats', { headers: authHeader(token) }),
+
+  getDocuments: (token: string) => apiCall('/drivers/me/documents', { headers: authHeader(token) }),
+
+  // One photo per document type; a new upload replaces the old one.
+  uploadDocument: async (token: string, type: string, file: { uri: string; name: string; mimeType: string }) => {
+    const body = new FormData();
+    body.append('type', type);
+    body.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+    const res = await fetch(`${getApiBase()}/drivers/me/documents`, { method: 'POST', headers: authHeader(token), body });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) onUnauthorized?.();
+      throw new ApiError((data as any).error || `HTTP ${res.status}`, res.status);
+    }
+    return res.json();
+  },
+
   updateLocation: (token: string, position: { lat: number; lng: number }) =>
     apiCall('/drivers/me/location', {
       method: 'PUT',
@@ -171,11 +190,22 @@ export const walletAPI = {
 
   getTransactions: (token: string) =>
     apiCall('/wallet/transactions', { headers: authHeader(token) }),
+
+  // To mobile money; the backend checks the minimum and the balance.
+  withdraw: (token: string, amount: number, phone: string) =>
+    apiCall('/wallet/withdraw', {
+      method: 'POST',
+      headers: authHeader(token),
+      body: JSON.stringify({ amount, phone }),
+    }),
 };
 
 export const notificationsAPI = {
   getNotifications: (token: string) =>
     apiCall('/notifications', { headers: authHeader(token) }),
+
+  markAllAsRead: (token: string) =>
+    apiCall('/notifications/read-all', { method: 'POST', headers: authHeader(token) }),
 
   markAsRead: (token: string, notificationId: string | number) =>
     apiCall(`/notifications/${notificationId}/read`, {

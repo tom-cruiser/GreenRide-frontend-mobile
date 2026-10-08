@@ -1,24 +1,33 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { DriverAvailabilityProvider } from '@/contexts/DriverAvailabilityContext';
-import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
+import { DriverWorkProvider, useDriverWork } from '@/contexts/DriverWorkContext';
+import { colors, DesignProvider, useFlowFonts } from '@/design';
+import { I18nProvider } from '@/i18n';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+export const unstable_settings = { anchor: '(tabs)' };
 
-function AppStack() {
-  const colorScheme = useColorScheme();
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Light, high-contrast theme for the navigator (screen backgrounds).
+const navTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg, text: colors.ink, primary: colors.ink } };
+
+// Screens a ride in progress may show; anything else is replaced by the ride.
+const DURING_RIDE = ['ride', 'call'];
+
+function Guard() {
   const router = useRouter();
   const segments = useSegments();
   const { user, token, isLoading } = useAuth();
+  const { activeRide } = useDriverWork();
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -27,90 +36,91 @@ function AppStack() {
       .catch(() => setHasOnboarded(false));
   }, []);
 
-  const bootstrapping = isLoading || hasOnboarded === null;
-
-  // Route guard: onboarding once, then sign-in before anything else.
+  const ready = !isLoading && hasOnboarded !== null;
   useEffect(() => {
-    if (bootstrapping) return;
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
 
-    const first = segments[0];
-    const inAuthGroup = first === '(auth)';
-    const onOnboarding = first === 'onboarding';
-    const isAuthed = !!user && !!token;
+  useEffect(() => {
+    if (!ready) return;
+    const first = segments[0] as string | undefined;
+    const isAuthed = Boolean(user && token);
 
     if (!hasOnboarded) {
-      // The onboarding screen saves the flag and then navigates away, so
-      // re-read it before sending the user back to onboarding.
-      if (!onOnboarding) {
+      // The onboarding screen saves the flag, then navigates away.
+      if (first !== 'onboarding') {
         AsyncStorage.getItem('driverHasOnboarded')
-          .then((value) => {
-            if (value === 'true') setHasOnboarded(true);
-            else router.replace('/onboarding');
-          })
+          .then((value) => (value === 'true' ? setHasOnboarded(true) : router.replace('/onboarding')))
           .catch(() => router.replace('/onboarding'));
       }
       return;
     }
-
-    if (!isAuthed && !inAuthGroup) {
-      router.replace('/(auth)/login');
+    if (!isAuthed) {
+      if (first !== '(auth)') router.replace('/(auth)/login');
       return;
     }
-
-    if (isAuthed && (inAuthGroup || onOnboarding)) {
+    if (first === '(auth)' || first === 'onboarding') {
       router.replace('/(tabs)');
+      return;
     }
-  }, [bootstrapping, hasOnboarded, user, token, segments, router]);
+    // On a ride: only the ride (and the call) — no tabs, nothing else.
+    if (activeRide && !DURING_RIDE.includes(first ?? '')) router.replace('/ride');
+  }, [ready, hasOnboarded, user, token, segments, router, activeRide]);
 
-  if (bootstrapping) return null;
-
-  // CallProvider is always mounted so the navigator isn't rebuilt on login;
-  // with no user it stays idle and doesn't connect to call signaling.
+  if (!ready) return null;
   return (
-    <CallProvider
-      userId={user && token ? String(user.id) : ''}
-      displayName={user?.name ?? ''}
-      authToken={token ?? ''}
-    >
+    <ThemeProvider value={navTheme}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        {/* A new request opens on top of everything. */}
+        <Stack.Screen name="request/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
+        {/* The ride takes over the screen until it ends. */}
+        <Stack.Screen name="ride" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="call" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="trip/[id]" />
+        <Stack.Screen name="withdraw" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="car" />
+        <Stack.Screen name="documents" />
+        <Stack.Screen name="help" />
+        <Stack.Screen name="promotions" />
+        <Stack.Screen name="messaging" />
+        <Stack.Screen name="safety" />
+      </Stack>
+      <StatusBar style="dark" />
+      <IncomingCallOverlay />
+    </ThemeProvider>
+  );
+}
+
+function Providers() {
+  const { user, token } = useAuth();
+  // CallProvider stays mounted so the navigator isn't rebuilt on login; with
+  // no user it stays idle and doesn't connect to call signaling.
+  return (
+    <CallProvider userId={user && token ? String(user.id) : ''} displayName={user?.name ?? ''} authToken={token ?? ''}>
       <DriverAvailabilityProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="registration-verification" options={{ title: 'Registration & Verification' }} />
-            <Stack.Screen name="profile" options={{ title: 'Profile Management' }} />
-            <Stack.Screen name="messaging" options={{ title: 'In-App Messaging' }} />
-            <Stack.Screen name="safety" options={{ title: 'Safety Center' }} />
-            <Stack.Screen name="support" options={{ title: 'Support & Help' }} />
-            <Stack.Screen name="feedback-ratings" options={{ title: 'Feedback & Ratings' }} />
-            <Stack.Screen name="shared-rides" options={{ title: 'Shared Rides' }} />
-            <Stack.Screen name="promotions" options={{ title: 'Promotions' }} />
-            <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-            <Stack.Screen name="analytics" options={{ title: 'Analytics' }} />
-            <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
-            <Stack.Screen name="wallet" options={{ title: 'Wallet' }} />
-            <Stack.Screen name="ride-requests" options={{ title: 'Ride Requests' }} />
-            <Stack.Screen name="ride-history" options={{ title: 'Ride History' }} />
-            <Stack.Screen name="active-ride" options={{ title: 'Current Ride' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen
-              name="call"
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-          <IncomingCallOverlay />
-        </ThemeProvider>
+        <DriverWorkProvider>
+          <Guard />
+        </DriverWorkProvider>
       </DriverAvailabilityProvider>
     </CallProvider>
   );
 }
 
 export default function RootLayout() {
+  const fontsReady = useFlowFonts();
+  if (!fontsReady) return null;
   return (
     <AuthProvider>
-      <AppStack />
+      <I18nProvider>
+        <DesignProvider density="driver">
+          <Providers />
+        </DesignProvider>
+      </I18nProvider>
     </AuthProvider>
   );
 }

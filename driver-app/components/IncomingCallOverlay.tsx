@@ -37,7 +37,7 @@ export function IncomingCallOverlay() {
       <View style={styles.backdrop}>
         <View style={styles.card}>
           {/* Header */}
-          <Text style={styles.appLabel}>GreenRider Call</Text>
+          <Text style={styles.appLabel}>Flow</Text>
 
           {/* Caller info */}
           <View style={styles.avatarCircle}>

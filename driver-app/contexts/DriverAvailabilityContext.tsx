@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Alert, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError, driversAPI } from '@/services/api';
+import { useT } from '@/i18n';
 
 // While online and the app is open, the position is sent this often. The
 // backend hides drivers whose position is older than 5 minutes, so a closed
@@ -35,6 +36,7 @@ async function currentPosition(ask: boolean) {
 
 export function DriverAvailabilityProvider({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuth();
+  const { t } = useT();
   const [online, setOnline] = useState(false);
   const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -120,10 +122,8 @@ export function DriverAvailabilityProvider({ children }: { children: React.React
 
   const toggle = useCallback(async () => {
     if (!token || busy) return;
-    if (!online && !approved) {
-      Alert.alert('Not approved yet', 'You can go online once the GreenRide team approves your account.');
-      return;
-    }
+    // Not approved: Home shows the approval card instead of the button.
+    if (!online && !approved) return;
     setBusy(true);
     try {
       if (online) {
@@ -134,19 +134,16 @@ export function DriverAvailabilityProvider({ children }: { children: React.React
         await AsyncStorage.setItem(PREFERENCE_KEY, 'true').catch(() => {});
         const ok = await goOnline(true);
         if (!ok) {
-          Alert.alert(
-            'Location needed',
-            'Allow location access for GreenRide in your phone settings so riders near you can find you.',
-          );
+          Alert.alert(t('home.locationTitle'), t('home.locationText'));
         }
       }
     } catch (e) {
-      const message = e instanceof ApiError ? e.message : 'Please check your connection and try again.';
-      Alert.alert('Could not change your status', message);
+      const message = e instanceof ApiError ? e.message : t('common.network');
+      Alert.alert(t('home.statusError'), message);
     } finally {
       setBusy(false);
     }
-  }, [token, busy, online, approved, goOnline]);
+  }, [token, busy, online, approved, goOnline, t]);
 
   return (
     // Signed out: never online, whatever the last state was.
