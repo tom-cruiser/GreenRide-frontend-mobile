@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Modal, TextInput, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, FlatList, Alert, Modal, RefreshControl } from 'react-native';
+import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -81,7 +82,7 @@ export default function RideHistoryScreen() {
         id: r.id,
         type: 'Ride',
         date: new Date(r.date).toDateString(),
-        amount: `-${Number(r.fare).toLocaleString()} FBU`,
+        amount: `-${formatMoney(Number(r.fare))}`,
         from: r.pickup,
         to: r.dropoff,
         driverName: r.driverName ?? (r.status === 'pending' ? 'Searching…' : '—'),

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { Text, TextInputFlow as TextInput } from '@/design';
 import { useRouter } from 'expo-router';
 import { BackButton, ui } from '@/components/friends-ui';
 

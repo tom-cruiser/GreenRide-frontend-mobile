@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { Text, TextInputFlow as TextInput } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';

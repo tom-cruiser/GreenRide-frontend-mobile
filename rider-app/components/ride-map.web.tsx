@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text } from '@/design';
 
 type WebMapViewProps = {
   style?: StyleProp<ViewStyle>;

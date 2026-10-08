@@ -1,17 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -84,7 +73,7 @@ export default function WalletScreen() {
         updateWalletBalance();
         loadTransactions();
         closeTopUp();
-        Alert.alert('Top-up complete', `${settled.amount.toLocaleString()} FBU was added to your wallet.`);
+        Alert.alert('Top-up complete', `${formatMoney(settled.amount)} was added to your wallet.`);
       } else {
         Alert.alert('Top-up failed', settled.failure_reason ?? 'The payment was not completed.');
         setPayment(null);
@@ -154,7 +143,7 @@ export default function WalletScreen() {
       </View>
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Current Balance</Text>
-        <Text style={styles.balanceAmount}>{walletBalance.toLocaleString()} FBU</Text>
+        <Text style={styles.balanceAmount}>{formatMoney(walletBalance)}</Text>
         <Text style={styles.bonus}>Includes bonuses (if any)</Text>
       </View>
       <TouchableOpacity style={styles.topUpButton} onPress={() => setTopUpVisible(true)}>
@@ -182,7 +171,7 @@ export default function WalletScreen() {
                   row.direction === 'incoming' ? { color: '#111111' } : { color: '#DC2626' },
                 ]}
               >
-                {row.direction === 'incoming' ? '+' : '-'}{row.amount.toLocaleString()} FBU
+                {row.direction === 'incoming' ? '+' : '-'}{formatMoney(row.amount)}
               </Text>
             </View>
           ))
@@ -203,7 +192,7 @@ export default function WalletScreen() {
                       onPress={() => setAmount(String(value))}
                     >
                       <Text style={[styles.chipText, amount === String(value) && styles.chipTextSelected]}>
-                        {value.toLocaleString()}
+                        {formatMoney(value, '').trim()}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -243,7 +232,7 @@ export default function WalletScreen() {
                 <Text style={styles.modalTitle}>Waiting for approval</Text>
                 <ActivityIndicator color="#0B0B0B" style={{ marginVertical: 12 }} />
                 <Text style={styles.modalHint}>
-                  Approve the payment of {payment.amount.toLocaleString()} FBU on your phone. Your balance updates
+                  Approve the payment of {formatMoney(payment.amount)} on your phone. Your balance updates
                   automatically once it is confirmed.
                 </Text>
                 {payment.provider === 'fake' && (

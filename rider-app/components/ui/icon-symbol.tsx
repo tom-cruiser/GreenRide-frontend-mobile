@@ -4,7 +4,10 @@ import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
-type IconMapping = Partial<Record<SymbolViewProps['name'], MaterialIconName>>;
+// SF Symbol names (strings) to Material Icons; newer expo-symbols types also
+// allow per-platform objects, which this app never uses.
+export type SymbolName = Extract<SymbolViewProps['name'], string>;
+type IconMapping = Partial<Record<SymbolName, MaterialIconName>>;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -66,7 +69,7 @@ export function IconSymbol({
   color,
   style,
 }: {
-  name: SymbolViewProps['name'];
+  name: SymbolName;
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;

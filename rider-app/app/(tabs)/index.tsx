@@ -1,13 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -159,7 +152,7 @@ export default function HomeScreen() {
     const baseRatePerKm = 7000;
     const estimatedFare = Math.max(baseRatePerKm * estimatedDistanceKm, 3500);
 
-    setFare(`${estimatedFare.toLocaleString()} FBU`);
+    setFare(`${formatMoney(estimatedFare)}`);
   };
 
   const topPadding = Platform.select({ android: 48, default: 64 });
@@ -266,7 +259,7 @@ export default function HomeScreen() {
           >
             <Text style={[styles.activeRideTitle, { color: theme.background }]}>{inv.host.firstName} invited you to share a ride</Text>
             <Text style={[styles.activeRideHint, { color: theme.background }]}>
-              To {inv.dropoff} · {inv.myPrice.toLocaleString()} {inv.currency} · Tap to answer
+              To {inv.dropoff} · {formatMoney(inv.myPrice, inv.currency)} · Tap to answer
             </Text>
           </TouchableOpacity>
         ))}
@@ -299,7 +292,7 @@ export default function HomeScreen() {
             <Text style={[styles.walletAmount, { color: theme.tint }]}>
               {walletBalance == null
                 ? "—"
-                : `${Number(walletBalance).toLocaleString()} FBU`}
+                : `${formatMoney(Number(walletBalance))}`}
             </Text>
           </View>
 

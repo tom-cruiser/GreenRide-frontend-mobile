@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Modal,
-  Switch,
-  Platform,
-  ScrollView,
-} from "react-native";
+import { View, StyleSheet, TouchableOpacity, Alert, Modal, Switch, Platform, ScrollView } from 'react-native';
+import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -205,7 +195,7 @@ export default function RideBookingScreen() {
     if (walletBalance < estimate.fare) {
       Alert.alert(
         "Insufficient Balance",
-        `This ride costs ${estimate.fare.toLocaleString()} FBU. Please top up your wallet.`,
+        `This ride costs ${formatMoney(estimate.fare)}. Please top up your wallet.`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Top up", onPress: () => router.push("/(tabs)/wallet") },
@@ -434,10 +424,10 @@ export default function RideBookingScreen() {
         <View style={styles.confirmationSection}>
           <View style={styles.fareCard}>
             <Text style={styles.fareLabel}>{withFriends ? "Each rider pays" : "Estimated Fare"}</Text>
-            <Text style={styles.fareAmount}>{estimate.fare.toLocaleString()} FBU</Text>
+            <Text style={styles.fareAmount}>{formatMoney(estimate.fare)}</Text>
             {withFriends && estimate.soloFare != null && (
               <Text style={styles.fareNote}>
-                Until a friend joins you pay the solo price, {estimate.soloFare.toLocaleString()} FBU. Up to 4 riders.
+                Until a friend joins you pay the solo price, {formatMoney(estimate.soloFare)}. Up to 4 riders.
               </Text>
             )}
           </View>
@@ -481,8 +471,8 @@ export default function RideBookingScreen() {
               <View style={styles.modalTripSummary}>
                 <Text style={styles.modalFare}>
                   {withFriends && estimate.soloFare != null
-                    ? `Now: ${estimate.soloFare.toLocaleString()} FBU`
-                    : `Total: ${estimate.fare.toLocaleString()} FBU`}
+                    ? `Now: ${formatMoney(estimate.soloFare)}`
+                    : `Total: ${formatMoney(estimate.fare)}`}
                 </Text>
                 <Text style={styles.modalRoute}>
                   {pickup} → {dropoff}
@@ -490,7 +480,7 @@ export default function RideBookingScreen() {
                 {isSharedRide && (
                   <Text style={styles.modalRoute}>
                     {withFriends
-                      ? `Drops to ${estimate.fare.toLocaleString()} FBU each when friends join. You get a code to share; the driver is requested when you are ready.`
+                      ? `Drops to ${formatMoney(estimate.fare)} each when friends join. You get a code to share; the driver is requested when you are ready.`
                       : `Shared ride with up to ${maxCoRiders} co-rider(s)`}
                   </Text>
                 )}

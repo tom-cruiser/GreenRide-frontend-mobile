@@ -1,14 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CallRideButton } from '@/components/CallRideButton';
@@ -53,7 +45,7 @@ function headline(ride: Ride): { title: string; detail: string } {
     case 'in_progress':
       return { title: 'On your trip', detail: `Heading to ${ride.dropoff}.` };
     case 'completed':
-      return { title: 'You have arrived', detail: `${ride.fare.toLocaleString()} FBU was paid from your wallet.` };
+      return { title: 'You have arrived', detail: `${formatMoney(ride.fare)} was paid from your wallet.` };
     default:
       return { title: 'Ride cancelled', detail: 'The held fare was returned to your wallet.' };
   }
@@ -186,7 +178,7 @@ export default function ActiveRideScreen() {
         <Row label="From" value={ride.pickup} />
         <Row label="To" value={ride.dropoff} />
         <Row label="Distance" value={`~${Number(ride.distance).toFixed(1)} km`} />
-        <Row label="Fare" value={`${ride.fare.toLocaleString()} FBU`} />
+        <Row label="Fare" value={`${formatMoney(ride.fare)}`} />
         {ride.driver_name && <Row label="Driver" value={ride.driver_name} />}
       </View>
 

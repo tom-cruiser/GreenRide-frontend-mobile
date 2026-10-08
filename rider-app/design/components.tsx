@@ -81,6 +81,13 @@ export function Text({ variant = 'body', weight, color, align, style, ...props }
   );
 }
 
+// Inter for typed text too: a drop-in for react-native's TextInput.
+export const TextInputFlow = React.forwardRef<TextInput, TextInputProps>(function TextInputFlow({ style, ...props }, ref) {
+  const flat = StyleSheet.flatten(style) ?? {};
+  const family = flat.fontWeight ? WEIGHT_FAMILY[String(flat.fontWeight)] : fonts.regular;
+  return <TextInput ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined }]} />;
+});
+
 // ── Layout ────────────────────────────────────────────────────────────────
 
 export function Screen({

@@ -92,7 +92,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 export const authAPI = {
-  register: async (userData: { name: string; email: string; password: string }) =>
+  register: async (userData: { name: string; email: string; password: string; phone?: string }) =>
     apiCall('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
 
   login: async (credentials: { email: string; password: string }) =>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
+import { Avatar as DesignAvatar, Badge, colors, IconButton, radius, shadow, space, formatMoney } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { signalingClient } from '../services/signalingClient';
 import { isInsufficientBalance, type FriendsPerson } from '../services/api';
@@ -7,36 +8,28 @@ import { isInsufficientBalance, type FriendsPerson } from '../services/api';
 type Router = ReturnType<typeof useRouter>;
 
 // Shared pieces for the "share with friends" screens, in the app's usual
-// green-on-white style (same as the active-ride screen).
+// black-and-white Flow style, built on the shared design system.
 
-export const ACCENT = '#111111';
+export const ACCENT = colors.ink;
 
-export const money = (amount: number, currency = 'FBU') => `${amount.toLocaleString()} ${currency}`;
+export const money = (amount: number, currency = 'FBU') => formatMoney(amount, currency);
 
 // Riders see each other's first name and initials only (photos come later).
 export function Avatar({ person, size = 44 }: { person: FriendsPerson; size?: number }) {
-  return (
-    <View style={[ui.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={[ui.avatarText, { fontSize: size * 0.38 }]}>{person.initials}</Text>
-    </View>
-  );
+  return <DesignAvatar name={person.initials.split('').join(' ')} size={size} />;
 }
 
-const CHIP: Record<string, [string, string, string]> = {
-  invited: ['Invited', '#fef3c7', '#92400e'],
-  accepted: ['Joined', '#F3F4F6', '#111111'],
-  declined: ['Declined', '#f3f4f6', '#4b5563'],
-  expired: ['Expired', '#f3f4f6', '#4b5563'],
-  removed: ['Removed', '#fee2e2', '#991b1b'],
-  left: ['Left', '#f3f4f6', '#4b5563'],
+const CHIP: Record<string, [string, 'neutral' | 'dark' | 'warning' | 'danger']> = {
+  invited: ['Invited', 'warning'],
+  accepted: ['Joined', 'dark'],
+  declined: ['Declined', 'neutral'],
+  expired: ['Expired', 'neutral'],
+  removed: ['Removed', 'danger'],
+  left: ['Left', 'neutral'],
 };
 export function StatusChip({ status }: { status: string }) {
-  const [label, bg, fg] = CHIP[status] ?? [status, '#f3f4f6', '#4b5563'];
-  return (
-    <View style={[ui.chip, { backgroundColor: bg }]}>
-      <Text style={[ui.chipText, { color: fg }]}>{label}</Text>
-    </View>
-  );
+  const [label, tone] = CHIP[status] ?? [status, 'neutral'];
+  return <Badge label={label} tone={tone} />;
 }
 
 // "8:42" until the time runs out, then null.
@@ -87,49 +80,36 @@ export function showError(router: Router, title: string, e: unknown) {
   Alert.alert(title, e instanceof Error ? e.message : 'Please try again.');
 }
 
-export function Row({ label, value }: { label: string; value: string }) {
+export { Row } from '@/design';
+
+export function BackButton({ onPress, label = 'Home' }: { onPress: () => void; label?: string }) {
   return (
-    <View style={ui.row}>
-      <Text style={ui.rowLabel}>{label}</Text>
-      <Text style={ui.rowValue}>{value}</Text>
+    <View style={{ marginBottom: space.md, alignSelf: 'flex-start' }}>
+      <IconButton icon="chevron-left" label={label} onPress={onPress} />
     </View>
   );
 }
 
-export function BackButton({ onPress, label = '< Home' }: { onPress: () => void; label?: string }) {
-  return (
-    <TouchableOpacity style={ui.goBack} onPress={onPress}>
-      <Text style={ui.goBackText}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 export const ui = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F7F7F7' },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
-  container: { padding: 20, paddingTop: 56, paddingBottom: 40 },
-  goBack: { alignSelf: 'flex-start', marginBottom: 12, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#F6F6F6' },
-  goBackText: { color: '#0B0B0B', fontWeight: '700', fontSize: 15 },
-  statusCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '800', color: '#0B0B0B', textAlign: 'center' },
-  detail: { color: '#4b5563', textAlign: 'center', marginTop: 6 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  hint: { color: '#6b7280', fontSize: 13, marginTop: 4 },
+  page: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center', padding: space.xxl },
+  container: { padding: space.xl, paddingTop: 56, paddingBottom: 40 },
+  statusCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.xl, marginBottom: space.md, borderWidth: 1, borderColor: colors.line, alignItems: 'center', ...shadow.card },
+  title: { fontSize: 24, fontWeight: '700', color: colors.ink, textAlign: 'center', letterSpacing: -0.4 },
+  detail: { color: colors.ink3, textAlign: 'center', marginTop: 6 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.lg, marginBottom: space.md, borderWidth: 1, borderColor: colors.line, ...shadow.card },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.ink, marginBottom: 8 },
+  hint: { color: colors.muted, fontSize: 13, marginTop: 4 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, gap: 12 },
-  rowLabel: { color: '#6b7280' },
-  rowValue: { color: '#111827', fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  price: { fontSize: 28, fontWeight: '800', color: '#0B0B0B', marginTop: 4 },
-  input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: '#0f172a', backgroundColor: '#fff', fontSize: 16 },
-  primaryBtn: { backgroundColor: ACCENT, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondaryBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff', marginTop: 8 },
-  secondaryBtnText: { color: '#111111', fontWeight: '700', fontSize: 16 },
-  cancelBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff', marginTop: 8 },
-  cancelText: { color: '#b91c1c', fontWeight: '700', fontSize: 16 },
+  rowLabel: { color: colors.ink3 },
+  rowValue: { color: colors.ink, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+  price: { fontSize: 32, fontWeight: '800', color: colors.ink, marginTop: 4, letterSpacing: -0.8 },
+  input: { borderWidth: 1.5, borderColor: colors.line, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13, color: colors.ink, backgroundColor: colors.surface, fontSize: 16 },
+  primaryBtn: { backgroundColor: colors.ink, height: 54, paddingHorizontal: 24, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  primaryBtnText: { color: colors.onDark, fontWeight: '700', fontSize: 16 },
+  secondaryBtn: { height: 54, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.line, backgroundColor: colors.surface, marginTop: 8 },
+  secondaryBtnText: { color: colors.ink, fontWeight: '700', fontSize: 16 },
+  cancelBtn: { height: 54, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FCA5A5', backgroundColor: colors.surface, marginTop: 8 },
+  cancelText: { color: colors.danger, fontWeight: '700', fontSize: 16 },
   disabled: { opacity: 0.5 },
-  avatar: { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#111111', fontWeight: '800' },
-  chip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  chipText: { fontSize: 12, fontWeight: '700' },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -61,7 +62,7 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>GreenRider v1.0.0</Text>
+        <Text style={styles.footerText}>Flow v1.0.0</Text>
         <Text style={styles.footerSubtext}>Eco-friendly rides for everyone</Text>
       </View>
     </ScrollView>

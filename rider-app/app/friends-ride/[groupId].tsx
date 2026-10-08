@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Share, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Share, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TextInputFlow as TextInput } from '@/design';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';

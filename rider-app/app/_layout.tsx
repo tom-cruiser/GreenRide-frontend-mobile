@@ -13,6 +13,7 @@ import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
 import { pushSupported, registerForPush, routeForNotification, useNotificationTaps } from '@/services/push';
 import { notificationsAPI } from '@/services/api';
 import { signalingClient } from '@/services/signalingClient';
+import { DesignProvider, useFlowFonts } from '@/design';
 
 // Screens a shared link or a notification can open; kept through sign-in.
 const LINKABLE = ['join', 'invitation', 'friends-ride'];
@@ -153,9 +154,14 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  // Inter, from the shared design system, before anything is drawn.
+  const fontsReady = useFlowFonts();
+  if (!fontsReady) return null;
   return (
     <AuthProvider>
-      <RootNavigator />
+      <DesignProvider density="rider">
+        <RootNavigator />
+      </DesignProvider>
     </AuthProvider>
   );
 }

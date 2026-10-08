@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text, TextInputFlow as TextInput } from '@/design';
 import { useRouter } from 'expo-router';
 
 import AppLogo from '../components/app-logo';

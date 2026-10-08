@@ -1,13 +1,6 @@
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  StatusBar,
-} from 'react-native';
+import { Modal, View, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import { useCall } from '@/hooks/useCall';
 
@@ -37,7 +30,7 @@ export function IncomingCallOverlay() {
       <View style={styles.backdrop}>
         <View style={styles.card}>
           {/* Header */}
-          <Text style={styles.appLabel}>GreenRider Call</Text>
+          <Text style={styles.appLabel}>Flow</Text>
 
           {/* Caller info */}
           <View style={styles.avatarCircle}>

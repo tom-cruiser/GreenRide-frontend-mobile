@@ -1,12 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import { useCall } from '@/hooks/useCall';
 
@@ -50,7 +44,7 @@ export default function CallScreenContent() {
       <StatusBar barStyle="light-content" backgroundColor="#0d1117" />
 
       <View style={styles.top}>
-        <Text style={styles.appLabel}>GreenRider Call</Text>
+        <Text style={styles.appLabel}>Flow</Text>
       </View>
 
       <View style={styles.peerSection}>

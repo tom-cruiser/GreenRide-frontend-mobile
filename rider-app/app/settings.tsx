@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import type { SymbolViewProps } from 'expo-symbols';
+import { IconSymbol, type SymbolName } from '@/components/ui/icon-symbol';
 
 type SettingsState = {
   notifications: {
@@ -147,7 +139,7 @@ export default function SettingsScreen() {
     description: string,
     section: S,
     key: keyof SettingsState[S],
-    icon?: SymbolViewProps['name']
+    icon?: SymbolName
   ) => {
     const value = settings[section][key] as boolean;
 
@@ -170,7 +162,7 @@ export default function SettingsScreen() {
     );
   };
 
-  const renderSelectItem = (title: string, description: string, value: string, onPress: () => void, icon?: SymbolViewProps['name']) => (
+  const renderSelectItem = (title: string, description: string, value: string, onPress: () => void, icon?: SymbolName) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
         {icon && <IconSymbol name={icon} size={20} color="#111111" style={styles.settingIcon} />}
@@ -186,7 +178,7 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
-  const renderActionItem = (title: string, description: string, onPress: () => void, icon?: SymbolViewProps['name'], color?: string) => (
+  const renderActionItem = (title: string, description: string, onPress: () => void, icon?: SymbolName, color?: string) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
         {icon && <IconSymbol name={icon} size={20} color={color || "#111111"} style={styles.settingIcon} />}
@@ -260,8 +252,8 @@ export default function SettingsScreen() {
       ))}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>GreenRider v1.0.0</Text>
-        <Text style={styles.footerSubtext}>© 2026 GreenRider. All rights reserved.</Text>
+        <Text style={styles.footerText}>Flow v1.0.0</Text>
+        <Text style={styles.footerSubtext}>© 2026 Flow. All rights reserved.</Text>
       </View>
     </ScrollView>
   );

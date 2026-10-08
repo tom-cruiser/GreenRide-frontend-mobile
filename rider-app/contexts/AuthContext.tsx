@@ -18,7 +18,7 @@ interface AuthContextType {
   walletBalance: number;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { name: string; email: string; password: string }) => Promise<void>;
+  register: (userData: { name: string; email: string; password: string; phone?: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateWalletBalance: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (userData: { name: string; email: string; password: string }) => {
+  const register = async (userData: { name: string; email: string; password: string; phone?: string }) => {
     try {
       setIsLoading(true);
       const response = await authAPI.register(userData);

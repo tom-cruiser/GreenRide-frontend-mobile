@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCall } from '@/hooks/useCall';

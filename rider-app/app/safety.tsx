@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Linking,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
+import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -71,7 +64,7 @@ export default function SafetyScreen() {
   const emergencyContacts = [
     { name: 'Police', number: '911', description: 'Local police emergency line' },
     { name: 'Medical Emergency', number: '911', description: 'Medical emergency services' },
-    { name: 'GreenRider Support', number: '+257 79 000 000', description: '24/7 customer support' },
+    { name: 'Flow support', number: '+257 79 000 000', description: '24/7 customer support' },
   ];
 
   return (

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, View, Text } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text } from '@/design';
 
 export default function OnboardingVisual() {
   return (
@@ -9,7 +10,7 @@ export default function OnboardingVisual() {
         style={styles.image}
         accessibilityLabel="Onboarding Visual"
       />
-      <Text style={styles.text}>Welcome to Green Ride!
+      <Text style={styles.text}>Welcome to Flow!
 Experience seamless, eco-friendly rides with instant wallet payments.</Text>
     </View>
   );
