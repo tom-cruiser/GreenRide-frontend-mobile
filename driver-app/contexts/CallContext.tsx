@@ -162,7 +162,7 @@ async function requestMicPermission(): Promise<boolean> {
     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
     {
       title: 'Microphone Permission',
-      message: 'GreenRider needs microphone access for calls.',
+      message: 'Flow needs the microphone for calls.',
       buttonPositive: 'Allow',
     },
   );
@@ -285,7 +285,7 @@ export function CallProvider({
       const { phase } = stateRef.current;
       if (phase !== 'idle' && phase !== 'ended') return false;
       if (!callsSupported) {
-        Alert.alert('Calls unavailable', "Calls need the full GreenRide app build; they don't work in Expo Go.");
+        Alert.alert('Calls unavailable', "Calls need the full Flow app build; they don't work in Expo Go.");
         return false;
       }
       if (!signalingClient.connected) {

@@ -1,210 +1,59 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import AppLogo from '@/components/app-logo';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button, colors, Field, Header, Screen, space, Text } from '@/design';
+import { useT } from '@/i18n';
 
+// Driver account first; the car and documents come next (the app opens the
+// car screen from Home's "Finish signing up" card).
 export default function RegisterScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { register } = useAuth();
-
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const onSubmit = async () => {
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim().toLowerCase();
-
-    if (!trimmedName || !trimmedEmail || !password || !confirm) {
-      Alert.alert('Missing fields', 'Please fill in all fields.');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Weak password', 'Use at least 6 characters.');
-      return;
-    }
-    if (password !== confirm) {
-      Alert.alert('Passwords do not match', 'Please re-enter your password.');
-      return;
-    }
-
-    setSubmitting(true);
+  const submit = async () => {
+    if (!name.trim() || !email.trim() || !password) return setError(t('auth.missing'));
+    if (password.length < 6) return setError(t('auth.short'));
+    if (password !== confirm) return setError(t('auth.mismatch'));
+    setBusy(true);
+    setError(null);
     try {
-      await register({ name: trimmedName, email: trimmedEmail, password });
-      // New drivers can't accept rides until their documents are approved.
-      router.replace('/registration-verification');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
-      Alert.alert('Registration failed', message);
+      await register({ name: name.trim(), email: email.trim(), password, phone: phone.trim() || undefined });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'));
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          <AppLogo size={84} />
-
-          <Text style={styles.title}>Become a driver</Text>
-          <Text style={styles.subtitle}>Create your account, then add your vehicle and documents for approval.</Text>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Full name</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Jean Driver"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="words"
-              autoComplete="name"
-              style={styles.input}
-              returnKeyType="next"
-            />
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Screen dark edges={['top', 'bottom']}>
+        <Header onBack={() => router.back()} backLabel={t('common.back')} dark />
+        <Text color={colors.onDark} weight="bold" style={{ fontSize: 44, lineHeight: 48, letterSpacing: -1.4 }}>{t('auth.registerTitle')}</Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: space.sm, marginBottom: space.xxl }}>{t('auth.registerText')}</Text>
+        <View style={{ gap: space.lg }}>
+          <Field dark label={t('auth.name')} value={name} onChangeText={setName} autoComplete="name" />
+          <Field dark label={t('auth.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
+          <Field dark label={t('auth.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" hint={t('auth.phoneHint')} />
+          <Field dark label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" hint={t('auth.short')} />
+          <Field dark label={t('auth.confirm')} value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" />
+          {error && <Text color="#FCA5A5">{error}</Text>}
+          <Button size="xl" variant="light" label={t('auth.register')} onPress={submit} loading={busy} />
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
+            <Text color={colors.onDarkMuted}>{t('auth.haveAccount')}</Text>
+            <Button size="md" variant="ghostDark" label={t('auth.login')} onPress={() => router.back()} style={{ paddingHorizontal: space.sm }} />
           </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              style={styles.input}
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="At least 6 characters"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password-new"
-              style={styles.input}
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Confirm password</Text>
-            <TextInput
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Re-enter your password"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password-new"
-              style={styles.input}
-              returnKeyType="go"
-              onSubmitEditing={onSubmit}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, submitting && styles.btnDisabled]}
-            onPress={onSubmit}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryBtnText}>Create account</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account?</Text>
-            <Link href="/(auth)/login" replace asChild>
-              <TouchableOpacity>
-                <Text style={styles.footerLink}>Sign in</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+      </Screen>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F3F4F6' },
-  flex: { flex: 1 },
-  scroll: { padding: 24, paddingBottom: 40 },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0B0B0B',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#4b5563',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 20,
-  },
-  field: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#0f172a',
-  },
-  primaryBtn: {
-    backgroundColor: '#111111',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  btnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    gap: 6,
-  },
-  footerText: { color: '#4b5563' },
-  footerLink: { color: '#111111', fontWeight: '700' },
-});

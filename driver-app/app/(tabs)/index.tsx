@@ -1,222 +1,183 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl } from 'react-native';
+import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
-import AppHeader from '../../components/app-header';
-import ProfileSummary from '../../components/profile-summary';
-import SafetySupportBar from '../../components/safety-support-bar';
-import EarningsSummary from '../../components/earnings-summary';
-import RideStatusToggle from '../../components/ride-status-toggle';
-import { useAuth } from '../../contexts/AuthContext';
-import { ridesAPI } from '../../services/api';
-import { STATUS_LABELS, useDriverProfile } from '../../hooks/useDriverProfile';
-import { useDriverAvailability } from '../../contexts/DriverAvailabilityContext';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDriverAvailability } from '@/contexts/DriverAvailabilityContext';
+import { driverEarns, useDriverWork, type RideRequest } from '@/contexts/DriverWorkContext';
+import { Badge, Button, Card, colors, formatKm, formatMoney, Icon, IconButton, radius, shadow, space, Text } from '@/design';
+import { useT } from '@/i18n';
+import { driversAPI } from '@/services/api';
 
-export default function DriverDashboard() {
+// react-native-maps is native; without it (some builds) the map is a plain panel.
+const maps = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const m = require('react-native-maps');
+    return { MapView: m.default, Marker: m.Marker };
+  } catch {
+    return null;
+  }
+})();
+
+// Default centre until the phone's position is known.
+const FALLBACK = { latitude: -3.3822, longitude: 29.3644 };
+
+export default function HomeScreen() {
   const router = useRouter();
-  const { user, token, walletBalance, updateWalletBalance } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
-  const { profile, status, reload: reloadProfile } = useDriverProfile();
-  const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
-  const availability = useDriverAvailability();
+  const { t } = useT();
+  const { token } = useAuth();
+  const { online, busy, toggle } = useDriverAvailability();
+  const { approval, profile, requests, payoutPercent, unread, reloadProfile } = useDriverWork();
+  const [today, setToday] = useState<number | null>(null);
+  const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  const loadActiveRide = useCallback(async () => {
-    if (!token) return;
-    try {
-      const { ride } = await ridesAPI.getActiveRide(token);
-      setActiveRideStatus(ride?.status ?? null);
-    } catch {
-      setActiveRideStatus(null);
-    }
-  }, [token]);
-
-  // Re-check approval and the current ride whenever the dashboard comes back into view.
   useFocusEffect(
     useCallback(() => {
-      reloadProfile();
-      loadActiveRide();
-    }, [reloadProfile, loadActiveRide]),
+      if (!token) return;
+      driversAPI.getStats(token).then((s) => setToday(s?.earnings?.today ?? 0)).catch(() => {});
+      Location.getForegroundPermissionsAsync()
+        .then((p) => (p.status === 'granted' ? Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }) : null))
+        .then((pos) => pos && setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }))
+        .catch(() => {});
+    }, [token]),
   );
 
-  useEffect(() => {
-    if (token) updateWalletBalance();
-  }, [token, updateWalletBalance]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([updateWalletBalance(), reloadProfile(), loadActiveRide()]);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const quickActions = [
-    { label: 'Registration', route: '/registration-verification' },
-    { label: 'Requests', route: '/ride-requests' },
-    { label: 'Messages', route: '/messaging' },
-    { label: 'Promotions', route: '/promotions' },
-    { label: 'Analytics', route: '/analytics' },
-    { label: 'Settings', route: '/settings' },
-  ];
+  const region = useMemo(() => ({ ...(here ?? FALLBACK), latitudeDelta: 0.03, longitudeDelta: 0.03 }), [here]);
+  const verified = approval === 'verified';
 
   return (
-    <View style={styles.bg}>
-      <AppHeader onNotificationsPress={() => router.push('/notifications')} />
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <ProfileSummary
-          name={user?.name}
-          status={STATUS_LABELS[status]}
-          vehicle={profile ? `${profile.vehicle_make} ${profile.vehicle_model}` : undefined}
-          onProfilePress={() => router.push('/profile')}
-        />
-        {activeRideStatus && (
-          <TouchableOpacity style={styles.activeRide} onPress={() => router.push('/active-ride')}>
-            <Text style={styles.activeRideTitle}>
-              {activeRideStatus === 'in_progress' ? 'Trip in progress' : 'You have a rider waiting'}
-            </Text>
-            <Text style={styles.activeRideText}>Tap to open your current ride</Text>
-          </TouchableOpacity>
-        )}
-        {(status === 'not_onboarded' || status === 'pending') && (
-          <TouchableOpacity
-            style={styles.banner}
-            onPress={() => router.push('/registration-verification')}
-          >
-            <Text style={styles.bannerTitle}>
-              {status === 'not_onboarded' ? 'Finish your registration' : 'Waiting for approval'}
-            </Text>
-            <Text style={styles.bannerText}>
-              {status === 'not_onboarded'
-                ? 'Add your vehicle details so we can approve you to accept rides.'
-                : "You can accept rides once the GreenRide team approves your account."}
-            </Text>
-          </TouchableOpacity>
-        )}
-        <RideStatusToggle
-          status={availability.online}
-          busy={availability.busy}
-          disabled={status !== 'verified'}
-          locationDenied={availability.locationDenied}
-          onToggle={availability.toggle}
-        />
-        <EarningsSummary
-          label="Wallet balance"
-          today={walletBalance}
-          onViewHistory={() => router.push('/wallet')}
-        />
-        <SafetySupportBar onEmergency={() => router.push('/safety')} onSupport={() => router.push('/support')} />
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Driver Dashboard</Text>
-          <Text style={styles.sectionSubtitle}>
-            Live requests, earnings overview, status toggle, and operational shortcuts.
-          </Text>
-          <View style={styles.actionGrid}>
-            {quickActions.map((item) => (
-              <TouchableOpacity
-                key={item.label}
-                style={styles.actionCard}
-                onPress={() => router.push(item.route as never)}>
-                <Text style={styles.actionLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Map: the driver's position and, while online, where requests start. */}
+      {maps ? (
+        <maps.MapView style={StyleSheet.absoluteFill} region={region} showsUserLocation showsMyLocationButton={false}>
+          {online && requests.filter((r) => r.pickup_lat != null && r.pickup_lng != null).map((r) => (
+            <maps.Marker key={r.id} coordinate={{ latitude: r.pickup_lat!, longitude: r.pickup_lng! }} pinColor={colors.ink}
+              onPress={() => router.push(`/request/${r.id}`)} />
+          ))}
+        </maps.MapView>
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.noMap]}>
+          <Icon name="map" size={32} color={colors.muted} />
+          <Text color={colors.muted} style={{ marginTop: space.sm }}>{t('home.mapOff')}</Text>
         </View>
+      )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>All Features Included</Text>
-          <Text style={styles.featureItem}>1. Registration & verification workflow</Text>
-          <Text style={styles.featureItem}>2. Driver dashboard with online/offline status</Text>
-          <Text style={styles.featureItem}>3. Real-time ride request management</Text>
-          <Text style={styles.featureItem}>4. Navigation map with pickup/drop flow</Text>
-          <Text style={styles.featureItem}>5. Earnings tracker with commission and payouts</Text>
-          <Text style={styles.featureItem}>6. In-app messaging and rider call actions</Text>
-          <Text style={styles.featureItem}>7. Availability toggle</Text>
-          <Text style={styles.featureItem}>8. Profile and document management</Text>
-          <Text style={styles.featureItem}>9. Ride history with ratings</Text>
-          <Text style={styles.featureItem}>10. Safety and incident reporting</Text>
-          <Text style={styles.featureItem}>11. Support and help center</Text>
-          <Text style={styles.featureItem}>12. Feedback and ratings</Text>
-          <Text style={styles.featureItem}>13. Shared ride coordination</Text>
-          <Text style={styles.featureItem}>14. Promotions and incentives</Text>
-          <Text style={styles.featureItem}>15. Settings and preferences</Text>
-          <Text style={styles.featureItem}>16. Analytics dashboard</Text>
+      {/* Top: today's earnings and the bell */}
+      <SafeAreaView edges={['top']} style={styles.top} pointerEvents="box-none">
+        <View style={styles.topRow} pointerEvents="box-none">
+          <Card style={styles.todayCard} padded={false} onPress={() => router.push('/(tabs)/earnings')}>
+            <Text variant="caption" color={colors.muted}>{t('home.today')}</Text>
+            <Text variant="heading" weight="bold">{today == null ? '—' : formatMoney(today)}</Text>
+          </Card>
+          <IconButton icon="bell" label={t('home.notifications')} count={unread} onPress={() => router.push('/notifications')} size={52} />
         </View>
-      </ScrollView>
+      </SafeAreaView>
+
+      {/* Bottom sheet: status, the big button, requests */}
+      <View style={styles.sheet}>
+        {approval === 'loading' ? (
+          <ActivityIndicator color={colors.ink} style={{ paddingVertical: space.xxl }} />
+        ) : !verified ? (
+          <ApprovalCard approval={approval} reason={profile?.rejection_reason} onRetry={reloadProfile} />
+        ) : (
+          <>
+            <View style={styles.statusRow}>
+              <View style={[styles.dot, { backgroundColor: online ? colors.ink : colors.muted }]} />
+              <View style={{ flex: 1 }}>
+                <Text variant="title">{online ? t('home.online') : t('home.offline')}</Text>
+                <Text color={colors.ink3}>{online ? t('home.onlineHint') : t('home.offlineHint')}</Text>
+              </View>
+              {online && <ActivityIndicator color={colors.ink} />}
+            </View>
+            <Button
+              size="xl"
+              label={online ? t('home.goOffline') : t('home.goOnline')}
+              variant={online ? 'secondary' : 'primary'}
+              icon={online ? 'pause-circle' : 'power'}
+              loading={busy}
+              onPress={toggle}
+              style={{ marginTop: space.lg }}
+            />
+            {online && (
+              <View style={{ marginTop: space.xl }}>
+                <Text variant="overline" color={colors.muted}>{t('home.requests')}</Text>
+                {requests.length === 0 ? (
+                  <Text color={colors.ink3} style={{ marginTop: space.sm }}>{t('home.noRequests')}</Text>
+                ) : (
+                  <ScrollView style={{ maxHeight: 240, marginTop: space.sm }} contentContainerStyle={{ gap: space.sm }}>
+                    {requests.map((r) => (
+                      <RequestRow key={r.id} req={r} earn={driverEarns(r, payoutPercent)} onPress={() => router.push(`/request/${r.id}`)} />
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function RequestRow({ req, earn, onPress }: { req: RideRequest; earn: number; onPress: () => void }) {
+  const { t } = useT();
+  const group = (req.riders_count ?? 1) > 1;
+  return (
+    <Card onPress={onPress} style={styles.reqRow} padded={false}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text weight="semibold" numberOfLines={1}>{req.pickup} → {req.dropoff}</Text>
+        <Text variant="caption" color={colors.muted}>
+          {formatKm(req.distance)}{group ? ` · ${t('request.group', { n: req.riders_count ?? 1 })}` : ''}
+        </Text>
+      </View>
+      <Text variant="heading" weight="bold">{formatMoney(earn)}</Text>
+    </Card>
+  );
+}
+
+function ApprovalCard({ approval, reason, onRetry }: { approval: string; reason?: string | null; onRetry: () => void }) {
+  const router = useRouter();
+  const { t } = useT();
+  if (approval === 'error') {
+    return (
+      <View style={{ gap: space.md }}>
+        <Text color={colors.ink3}>{t('common.network')}</Text>
+        <Button label={t('common.retry')} variant="secondary" onPress={onRetry} />
+      </View>
+    );
+  }
+  const map = {
+    not_onboarded: { icon: 'file-plus' as const, title: t('approval.notOnboardedTitle'), text: t('approval.notOnboardedText'), action: t('approval.notOnboardedAction'), tone: 'neutral' as const },
+    pending: { icon: 'clock' as const, title: t('approval.pendingTitle'), text: t('approval.pendingText'), action: t('approval.pendingAction'), tone: 'warning' as const },
+    rejected: {
+      icon: 'alert-circle' as const, title: t('approval.rejectedTitle'),
+      text: reason ? t('approval.rejectedText', { reason }) : t('approval.rejectedNoReason'),
+      action: t('approval.rejectedAction'), tone: 'danger' as const,
+    },
+  }[approval as 'not_onboarded' | 'pending' | 'rejected'];
+  if (!map) return null;
+  return (
+    <View style={{ gap: space.md }}>
+      <Badge label={t(`account.${approval === 'not_onboarded' ? 'notOnboarded' : (approval as 'pending' | 'rejected')}`)} tone={map.tone} icon={map.icon} />
+      <Text variant="title">{map.title}</Text>
+      <Text color={colors.ink3}>{map.text}</Text>
+      <Button size="xl" label={map.action} icon="arrow-right" onPress={() => router.push('/car')} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
+  noMap: { backgroundColor: colors.soft2, alignItems: 'center', justifyContent: 'center' },
+  top: { position: 'absolute', left: 0, right: 0, top: 0 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: space.lg, paddingTop: space.sm },
+  todayCard: { paddingVertical: space.md, paddingHorizontal: space.lg, borderRadius: radius.lg },
+  sheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, padding: space.xl, paddingBottom: space.xl, ...shadow.float,
   },
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  section: {
-    marginBottom: 24,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111111',
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    color: '#4b5563',
-    marginBottom: 12,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  actionCard: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  actionLabel: {
-    color: '#0B0B0B',
-    fontWeight: '700',
-  },
-  activeRide: {
-    backgroundColor: '#111111',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  activeRideTitle: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 2 },
-  activeRideText: { color: '#F3F4F6' },
-  banner: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fcd34d',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  bannerTitle: { fontWeight: '700', color: '#92400e', marginBottom: 4 },
-  bannerText: { color: '#78350f' },
-  featureItem: {
-    fontSize: 14,
-    color: '#1f2937',
-    marginBottom: 4,
-  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  dot: { width: 14, height: 14, borderRadius: 7 },
+  reqRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg },
 });

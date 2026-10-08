@@ -1,124 +1,69 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { notificationsAPI } from '../services/api';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { FlatList, RefreshControl, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDriverWork } from '@/contexts/DriverWorkContext';
+import { Button, Card, colors, EmptyState, formatDateTime, Header, Icon, space, Text } from '@/design';
+import { useT } from '@/i18n';
+import { notificationsAPI } from '@/services/api';
 
-type Notification = {
-  id: number | string;
-  title?: string;
-  message?: string;
-  body?: string;
-  created_at?: string;
-  read?: boolean;
-};
+type Note = { id: number; message: string; read_at: string | null; created_at: string };
 
 export default function NotificationsScreen() {
+  const router = useRouter();
+  const { t, locale } = useT();
   const { token } = useAuth();
-  const [items, setItems] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { refreshUnread } = useDriverWork();
+  const [notes, setNotes] = useState<Note[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!token) {
-      setError('Please sign in to view notifications');
-      setLoading(false);
-      return;
-    }
-    try {
-      const data = await notificationsAPI.getNotifications(token);
-      setItems((data?.notifications as Notification[]) || []);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load notifications');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    // Deferred a tick so no state is set during the effect itself.
-    Promise.resolve().then(load);
-  }, [load]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
-
-  const markRead = async (id: Notification['id']) => {
     if (!token) return;
-    try {
-      await notificationsAPI.markAsRead(token, id);
-      setItems((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-      );
-    } catch {
-      // Non-fatal; UI will catch up on next refresh.
-    }
+    const { notifications } = await notificationsAPI.getNotifications(token).catch(() => ({ notifications: [] }));
+    setNotes(notifications ?? []);
+  }, [token]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const read = async (id: number) => {
+    if (!token) return;
+    await notificationsAPI.markAsRead(token, id).catch(() => {});
+    setNotes((list) => list?.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)) ?? null);
+    refreshUnread();
   };
+  const readAll = async () => {
+    if (!token) return;
+    await notificationsAPI.markAllAsRead(token).catch(() => {});
+    await load();
+    refreshUnread();
+  };
+  const unread = (notes ?? []).filter((n) => !n.read_at).length;
 
   return (
-    <ScrollView
-      style={styles.page}
-      contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <Text style={styles.title}>Notifications</Text>
-      <Text style={styles.subtitle}>Ride requests and operational updates.</Text>
-
-      {loading && <ActivityIndicator color="#111111" />}
-      {error && <Text style={styles.error}>{error}</Text>}
-      {!loading && items.length === 0 && (
-        <Text style={styles.empty}>No notifications yet.</Text>
-      )}
-
-      {items.map((n) => (
-        <TouchableOpacity
-          key={n.id}
-          style={[styles.card, n.read && styles.cardRead]}
-          onPress={() => !n.read && markRead(n.id)}
-        >
-          {n.title && <Text style={styles.cardTitle}>{n.title}</Text>}
-          <Text style={styles.item}>{n.message || n.body || ''}</Text>
-          {n.created_at && <Text style={styles.date}>{n.created_at}</Text>}
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      <FlatList
+        data={notes ?? []}
+        keyExtractor={(n) => String(n.id)}
+        contentContainerStyle={{ padding: space.xl, paddingBottom: space.xxxl * 2, gap: space.md }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
+        ListHeaderComponent={
+          <View>
+            <Header title={t('notifications.title')} onBack={() => router.back()} backLabel={t('common.back')} />
+            {unread > 0 && <Button size="md" variant="secondary" label={t('notifications.markAll')} onPress={readAll} style={{ marginBottom: space.md }} />}
+          </View>
+        }
+        ListEmptyComponent={notes ? <EmptyState icon="bell" title={t('notifications.none')} /> : null}
+        renderItem={({ item }) => (
+          <Card onPress={item.read_at ? undefined : () => read(item.id)}
+            style={[{ flexDirection: 'row', gap: space.md }, !item.read_at && { borderColor: colors.ink, borderWidth: 1.5 }]}>
+            <Icon name="bell" size={20} color={item.read_at ? colors.muted : colors.ink} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text weight={item.read_at ? 'regular' : 'semibold'}>{item.message}</Text>
+              <Text variant="caption" color={colors.muted}>{formatDateTime(item.created_at, locale)}</Text>
+            </View>
+          </Card>
+        )}
+      />
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F3F4F6' },
-  container: { padding: 20, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '800', color: '#0B0B0B' },
-  subtitle: { marginTop: 6, marginBottom: 14, color: '#334155' },
-  error: {
-    color: '#b91c1c',
-    backgroundColor: '#fee2e2',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  empty: { color: '#475569', textAlign: 'center', marginTop: 20 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  cardRead: { opacity: 0.6 },
-  cardTitle: { color: '#0f172a', fontWeight: '700', marginBottom: 4 },
-  item: { color: '#0f172a' },
-  date: { color: '#64748b', fontSize: 12, marginTop: 4 },
-});

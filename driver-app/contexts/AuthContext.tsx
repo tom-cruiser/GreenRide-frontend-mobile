@@ -17,7 +17,7 @@ interface AuthContextType {
   walletBalance: number;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { name: string; email: string; password: string }) => Promise<void>;
+  register: (userData: { name: string; email: string; password: string; phone?: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateWalletBalance: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
@@ -67,7 +67,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const response = await authAPI.login({ email, password });
     if (!response.user || !response.token) throw new Error('Invalid response from server');
     if (response.user.role !== 'driver') {
-      throw new Error('This is not a driver account. Use the GreenRide rider app instead.');
+      // The screen shows this in the driver's language.
+      throw new Error('NOT_DRIVER');
     }
     setUser(response.user);
     setToken(response.token);
@@ -75,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await AsyncStorage.setItem('driverUserData', JSON.stringify(response.user));
   };
 
-  const register = async (userData: { name: string; email: string; password: string }) => {
+  const register = async (userData: { name: string; email: string; password: string; phone?: string }) => {
     const response = await authAPI.register(userData);
     if (!response.user) throw new Error('Registration failed');
     await login(userData.email, userData.password);
