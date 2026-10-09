@@ -10,8 +10,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
-import { pushSupported, registerForPush, routeForNotification, useNotificationTaps } from '@/services/push';
-import { notificationsAPI } from '@/services/api';
+import { type PushAction, pushSupported, registerForPush, routeForNotification, useNotificationTaps } from '@/services/push';
+import { friendsAPI, notificationsAPI, socialAPI } from '@/services/api';
+import { showError } from '@/components/friends-ui';
 import { signalingClient } from '@/services/signalingClient';
 import { DesignProvider, useFlowFonts } from '@/design';
 
@@ -96,7 +97,52 @@ function RootNavigator() {
     },
     [signedIn, router],
   );
-  useNotificationTaps(openRoute);
+
+  // Accept or Decline pressed on a notification. If the app was closed, the
+  // session may still be loading: the answer waits for it.
+  const pendingAction = useRef<{ action: PushAction; data: Record<string, any> } | null>(null);
+  const answer = useCallback(
+    async (action: PushAction, data: Record<string, any>) => {
+      if (!token) {
+        pendingAction.current = { action, data };
+        return;
+      }
+      const accept = action === 'accept';
+      try {
+        if (data.type === 'friends.invited' && data.invitationId) {
+          if (accept) {
+            const { group } = await friendsAPI.accept(token, data.invitationId);
+            router.push(`/friends-ride/${group.groupId}` as any);
+          } else {
+            await friendsAPI.decline(token, data.invitationId);
+            Alert.alert('Invitation declined', data.host?.firstName ? `${data.host.firstName} will see you can't come.` : undefined);
+          }
+        } else if (data.type === 'friends.request' && data.requestId) {
+          await (accept ? socialAPI.accept(token, data.requestId) : socialAPI.decline(token, data.requestId));
+          if (accept) router.push('/join' as any);
+          else Alert.alert('Request declined');
+        } else {
+          const route = routeForNotification(data);
+          if (route) router.push(route as any);
+        }
+      } catch (e) {
+        // Expired, already answered, not enough balance…: say why, then show
+        // the screen it is about.
+        showError(router, accept ? 'Could not accept' : 'Could not decline', e);
+        const route = routeForNotification(data);
+        if (route) router.push(route as any);
+      }
+    },
+    [token, router],
+  );
+  useEffect(() => {
+    if (!bootstrapping && token && pendingAction.current) {
+      const { action, data } = pendingAction.current;
+      pendingAction.current = null;
+      answer(action, data);
+    }
+  }, [bootstrapping, token, answer]);
+  useNotificationTaps(openRoute, answer);
 
   // Without pushes (Expo Go): show new notifications as they arrive over the
   // live connection, with a button to open the screen they are about.
