@@ -16,3 +16,6 @@ web-build/
 
 # OS
 .DS_Store
+
+# Firebase service account keys are secrets.
+*firebase-adminsdk*.json
