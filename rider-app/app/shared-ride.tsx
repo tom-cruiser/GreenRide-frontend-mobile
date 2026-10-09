@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
-import { Text } from '@/design';
+import { Text, IconButton } from '@/design';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ridesAPI } from '../services/api';
@@ -62,9 +62,9 @@ export default function SharedRideScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.goBack} onPress={() => router.replace('/(tabs)')}>
-        <Text style={styles.goBackText}>{'< Go Back'}</Text>
-      </TouchableOpacity>
+      <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+        <IconButton icon="chevron-left" label="Back" onPress={() => router.replace('/(tabs)')} />
+      </View>
 
       <AppLogo size={52} />
       <Text style={styles.title}>Shared Ride</Text>
@@ -115,19 +115,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     padding: 20,
-  },
-  goBack: {
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F6F6F6',
-  },
-  goBackText: {
-    color: '#0B0B0B',
-    fontWeight: '700',
-    fontSize: 15,
   },
   title: {
     fontSize: 24,

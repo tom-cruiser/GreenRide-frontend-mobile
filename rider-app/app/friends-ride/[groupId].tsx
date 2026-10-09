@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Share, TouchableOpacity, View, StyleSheet } from 'react-native';
-import { Text, TextInputFlow as TextInput } from '@/design';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Share, View, StyleSheet } from 'react-native';
+import { Badge, Button, Card, colors, Field, Header, Icon, Row, Screen, space, Text } from '@/design';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, socialAPI, type FriendsGroup, type SocialPerson } from '@/services/api';
 import { PersonAvatar } from '@/components/person-avatar';
-import { Avatar, BackButton, ACCENT, Row, StatusChip, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
+import { StatusChip, money, showError, useCountdown, useLiveGroup } from '@/components/friends-ui';
 
 // A "share with friends" ride. The host shares the code, invites by phone,
 // sees friends join live, can remove a guest, and requests the driver.
@@ -63,19 +63,18 @@ export default function FriendsRideScreen() {
 
   if (!group) {
     return (
-      <View style={[ui.page, ui.center]}>
+      <Screen scroll={false} contentStyle={styles.center}>
         {error ? (
           <>
-            <Text style={ui.title}>Ride not available</Text>
-            <Text style={ui.detail}>{error}</Text>
-            <TouchableOpacity style={ui.primaryBtn} onPress={() => router.replace('/(tabs)')}>
-              <Text style={ui.primaryBtnText}>Home</Text>
-            </TouchableOpacity>
+            <Icon name="slash" size={32} color={colors.muted} />
+            <Text variant="title" align="center" style={{ marginTop: space.lg }}>Ride not available</Text>
+            <Text color={colors.ink3} align="center" style={{ marginTop: space.xs }}>{error}</Text>
+            <Button label="Home" onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
           </>
         ) : (
-          <ActivityIndicator size="large" color={ACCENT} />
+          <ActivityIndicator size="large" color={colors.ink} />
         )}
-      </View>
+      </Screen>
     );
   }
 
@@ -150,152 +149,136 @@ export default function FriendsRideScreen() {
           : { title: 'Invite your friends', detail: countdown ? `Invitations close in ${countdown}` : 'Waiting for friends' }
         : { title: `Riding with ${group.host.firstName}`, detail: `${group.host.firstName} will request the driver.` };
 
+  // The host alone pays the solo fare; it drops once a friend joins.
+  const alone = isHost && group.ridersCount <= 1;
+  const dropsTo = group.priceIfJoined?.host ?? group.price.guest;
+
   return (
-    <ScrollView style={ui.page} contentContainerStyle={ui.container} keyboardShouldPersistTaps="handled">
-      <BackButton onPress={() => router.replace('/(tabs)')} />
+    <Screen>
+      <Header title={isHost ? 'Ride with friends' : 'Shared ride'} onBack={() => router.replace('/(tabs)')} backLabel="Home" />
 
-      <View style={ui.statusCard}>
-        {gathering && !group.expired && <ActivityIndicator color={ACCENT} style={{ marginBottom: 8 }} />}
-        <Text style={ui.title}>{header.title}</Text>
-        <Text style={ui.detail}>{header.detail}</Text>
-        <Text style={ui.price}>{money(group.myPrice, group.currency)}</Text>
-        <Text style={ui.hint}>
-          {group.ridersCount > 1 || !isHost
-            ? `Your price with ${group.ridersCount} riders`
-            : `Your price alone. It drops to ${money(group.price.guest, group.currency)} when a friend joins.`}
+      {/* Status and your price */}
+      <Card dark>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          {gathering && !group.expired && <ActivityIndicator color={colors.onDark} />}
+          <Text variant="overline" color={colors.onDarkMuted}>{header.detail}</Text>
+        </View>
+        <Text variant="title" color={colors.onDark} style={{ marginTop: space.xs }}>{header.title}</Text>
+        <View style={{ marginTop: space.sm }}>
+          <Badge tone="light" label={group.visibility === 'public' ? 'Public: riders nearby can join' : 'Friends only'} icon={group.visibility === 'public' ? 'globe' : 'lock'} />
+        </View>
+        <Text color={colors.onDarkMuted} style={{ marginTop: space.lg }}>{alone ? 'Your price alone' : `Your price with ${group.ridersCount} riders`}</Text>
+        <Text color={colors.onDark} weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
+          {money(group.myPrice, group.currency)}
         </Text>
-      </View>
+        {alone && gathering && dropsTo < group.myPrice && (
+          <Text color={colors.onDarkMuted}>Drops to {money(dropsTo, group.currency)} when a friend joins.</Text>
+        )}
+      </Card>
 
-      <View style={ui.card}>
+      {/* Trip */}
+      <Card style={{ marginTop: space.md }}>
         <Row label="From" value={group.pickup} />
         <Row label="To" value={group.dropoff} />
         <Row label="Riders" value={`${group.ridersCount} of ${group.maxRiders}`} />
-        <Row label="Who can join" value={group.visibility === 'public' ? 'Public: riders nearby' : 'Friends only'} />
         {!isHost && (
-          <View style={[ui.row, { alignItems: 'center' }]}>
-            <Text style={ui.rowLabel}>Host</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Avatar person={group.host} size={28} />
-              <Text style={ui.rowValue}>{group.host.firstName}</Text>
+          <View style={styles.hostRow}>
+            <Text color={colors.ink3}>Host</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+              <PersonAvatar person={group.host} size={28} />
+              <Text weight="semibold">{group.host.firstName}</Text>
             </View>
           </View>
         )}
-      </View>
+      </Card>
 
+      {/* Invite: friends in one tap, the code, or a phone number */}
       {isHost && gathering && !group.expired && (
-        <View style={ui.card}>
-          <Text style={ui.cardTitle}>Ride code</Text>
-          <View style={styles.codeRow}>
-            <Text style={styles.code} selectable>{group.code}</Text>
-            <TouchableOpacity style={styles.smallBtn} onPress={copyCode} accessibilityLabel="Copy the ride code">
-              <Text style={styles.smallBtnText}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={ui.primaryBtn} onPress={share}>
-            <Text style={ui.primaryBtnText}>Share by WhatsApp or SMS</Text>
-          </TouchableOpacity>
-          <Text style={ui.hint}>Friends enter the code in Flow under “Join a ride”.</Text>
-
+        <Card style={{ marginTop: space.md }}>
           {friends.length > 0 && (
             <>
-              <Text style={[ui.cardTitle, { marginTop: 18 }]}>Invite friends</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingVertical: 4 }}>
+              <Text variant="heading">Invite friends</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: space.md, marginHorizontal: -space.xl }}
+                contentContainerStyle={{ gap: space.lg, paddingHorizontal: space.xl }}>
                 {friends.map((f) => {
-                  const invited = invitedHandles.includes(f.handle);
+                  const done = invitedHandles.includes(f.handle);
                   return (
-                    <TouchableOpacity key={f.handle} disabled={invited || busy === `friend-${f.handle}`} style={{ alignItems: 'center', gap: 6, width: 64, opacity: invited ? 0.45 : 1 }}
-                      accessibilityLabel={`Invite ${f.firstName}`}
+                    <Pressable key={f.handle} disabled={done || busy === `friend-${f.handle}`} accessibilityRole="button" accessibilityLabel={`Invite ${f.firstName}`}
+                      style={{ alignItems: 'center', gap: 6, width: 68, opacity: done ? 0.45 : 1 }}
                       onPress={() => run(`friend-${f.handle}`, async () => {
                         await friendsAPI.inviteFriend(token!, group.groupId, f.handle);
                         setInvitedHandles((list) => [...list, f.handle]);
                       }, 'Could not invite')}>
                       <PersonAvatar person={f} size={56} ring />
-                      <Text style={{ fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{invited ? 'Invited' : f.firstName}</Text>
-                    </TouchableOpacity>
+                      <Text variant="caption" weight="semibold" numberOfLines={1}>{done ? 'Invited' : f.firstName}</Text>
+                    </Pressable>
                   );
                 })}
               </ScrollView>
+              <View style={styles.divider} />
             </>
           )}
 
-          <Text style={[ui.cardTitle, { marginTop: 18 }]}>Invite by phone number</Text>
-          <TextInput
-            style={ui.input}
-            placeholder="+257 79 123 456"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-            onSubmitEditing={invite}
-          />
-          <TouchableOpacity style={[ui.secondaryBtn, (!phone.trim() || busy === 'invite') && ui.disabled]} onPress={invite} disabled={!phone.trim() || busy === 'invite'}>
-            <Text style={ui.secondaryBtnText}>{busy === 'invite' ? 'Inviting…' : 'Invite'}</Text>
-          </TouchableOpacity>
-          <Text style={ui.hint}>They must have a Flow rider account with this number.</Text>
-        </View>
+          <Text variant="heading">Ride code</Text>
+          <View style={styles.codeRow}>
+            <Text weight="extrabold" style={{ fontSize: 24, lineHeight: 30, letterSpacing: 1.5, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit selectable>{group.code}</Text>
+            <Button size="md" variant="secondary" icon="copy" label="Copy" onPress={copyCode} />
+          </View>
+          <Button label="Share by WhatsApp or SMS" icon="share-2" onPress={share} style={{ marginTop: space.md }} />
+          <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Friends enter the code in Flow under “Join a ride”.</Text>
+
+          <View style={styles.divider} />
+          <Field label="Invite by phone number" placeholder="+257 79 123 456" keyboardType="phone-pad" value={phone}
+            onChangeText={setPhone} onSubmitEditing={invite} hint="They need a Flow rider account with this number." />
+          <Button label="Invite" variant="secondary" icon="send" onPress={invite} loading={busy === 'invite'} disabled={!phone.trim()} style={{ marginTop: space.md }} />
+        </Card>
       )}
 
+      {/* Who's in */}
       {isHost && (group.guests?.length ?? 0) > 0 && (
-        <View style={ui.card}>
-          <Text style={ui.cardTitle}>Friends</Text>
+        <Card style={{ marginTop: space.md }}>
+          <Text variant="heading">Friends</Text>
           {[...joined, ...invited, ...others].map((guest) => (
             <View key={guest.invitationId} style={styles.guest}>
-              <Avatar person={guest} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.guestName}>{guest.firstName}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, alignItems: 'center' }}>
+              <PersonAvatar person={guest} size={44} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text weight="semibold">{guest.firstName}</Text>
+                <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
                   <StatusChip status={guest.status} />
-                  {guest.price != null && <Text style={ui.hint}>{money(guest.price, group.currency)}</Text>}
+                  {guest.price != null && <Text variant="caption" color={colors.muted}>{money(guest.price, group.currency)}</Text>}
                 </View>
               </View>
               {gathering && ['accepted', 'invited'].includes(guest.status) && (
-                <TouchableOpacity
-                  style={[styles.removeBtn, busy === `remove-${guest.invitationId}` && ui.disabled]}
-                  onPress={() => remove(guest.invitationId, guest.firstName)}
-                  disabled={busy === `remove-${guest.invitationId}`}
-                >
-                  <Text style={styles.removeText}>Remove</Text>
-                </TouchableOpacity>
+                <Button size="md" variant="danger" label="Remove" onPress={() => remove(guest.invitationId, guest.firstName)}
+                  loading={busy === `remove-${guest.invitationId}`} />
               )}
             </View>
           ))}
-        </View>
+        </Card>
       )}
 
-      {isHost && gathering && (
-        joined.length > 0 ? (
-          <TouchableOpacity style={[ui.primaryBtn, busy === 'request' && ui.disabled]} onPress={() => request(false)} disabled={busy === 'request'}>
-            <Text style={ui.primaryBtnText}>{busy === 'request' ? 'Requesting…' : `Request driver (${group.ridersCount} riders)`}</Text>
-          </TouchableOpacity>
+      {/* Next step */}
+      <View style={{ gap: space.sm, marginTop: space.xl }}>
+        {isHost && gathering && (joined.length > 0 ? (
+          <Button size="lg" label={`Request driver (${group.ridersCount} riders)`} icon="navigation" onPress={() => request(false)} loading={busy === 'request'} />
         ) : (
-          <TouchableOpacity style={[ui.secondaryBtn, busy === 'request' && ui.disabled]} onPress={() => request(true)} disabled={busy === 'request'}>
-            <Text style={ui.secondaryBtnText}>Go alone</Text>
-          </TouchableOpacity>
-        )
-      )}
-
-      {group.status === 'requested' && (
-        <TouchableOpacity style={ui.primaryBtn} onPress={() => router.replace('/active-ride')}>
-          <Text style={ui.primaryBtnText}>Follow the ride</Text>
-        </TouchableOpacity>
-      )}
-
-      {group.status !== 'cancelled' && group.myRideId != null && (
-        <TouchableOpacity style={[ui.cancelBtn, busy === 'leave' && ui.disabled]} onPress={leave} disabled={busy === 'leave'}>
-          <Text style={ui.cancelText}>{isHost ? 'Cancel ride' : 'Leave ride'}</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+          <Button size="lg" variant="secondary" label={`Go alone · ${money(group.price.host, group.currency)}`} onPress={() => request(true)} loading={busy === 'request'} />
+        ))}
+        {group.status === 'requested' && (
+          <Button size="lg" label="Follow the ride" icon="arrow-right" onPress={() => router.replace('/active-ride')} />
+        )}
+        {group.status !== 'cancelled' && group.myRideId != null && (
+          <Button variant="danger" label={isHost ? 'Cancel ride' : 'Leave ride'} onPress={leave} loading={busy === 'leave'} />
+        )}
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  code: { fontSize: 30, fontWeight: '800', letterSpacing: 3, color: '#111827', fontVariant: ['tabular-nums'] },
-  smallBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F3F4F6' },
-  smallBtnText: { color: '#111111', fontWeight: '700' },
-  guest: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  guestName: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  removeBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#fecaca' },
-  removeText: { color: '#b91c1c', fontWeight: '700' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xxl },
+  hostRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
+  divider: { height: 1, backgroundColor: colors.line, marginVertical: space.lg },
+  guest: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingTop: space.md },
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { Text, TextInputFlow as TextInput } from '@/design';
+import { Text, TextInputFlow as TextInput, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -79,10 +79,9 @@ export default function SupportScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#1976d2" />
-          <Text style={styles.goBackText}>Back</Text>
-        </TouchableOpacity>
+        <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+      </View>
         <AppLogo size={40} />
       </View>
 
@@ -204,15 +203,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     backgroundColor: '#fff',
-  },
-  goBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  goBackText: {
-    color: '#1976d2',
-    fontWeight: '600',
-    marginLeft: 4,
   },
   titleContainer: {
     backgroundColor: '#fff',

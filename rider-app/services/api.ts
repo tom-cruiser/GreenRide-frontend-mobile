@@ -234,6 +234,7 @@ export type FriendsGroup = {
   maxRiders: number;
   seatsLeft: number;
   price: { host: number; guest: number };
+  priceIfJoined?: { host: number; guest: number };
   myPrice: number;
   myRideId: number | null;
   invitation: { id: number; status: FriendsGuest['status']; expiresAt: string } | null;

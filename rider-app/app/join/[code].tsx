@@ -38,7 +38,7 @@ export default function JoinByCodeScreen() {
 
   return (
     <ScrollView style={ui.page} contentContainerStyle={ui.container}>
-      <BackButton onPress={() => router.replace('/join')} label="< Back" />
+      <BackButton onPress={() => router.replace('/join')} label="Back" />
       {!ride ? (
         <View style={ui.statusCard}>
           {error ? (

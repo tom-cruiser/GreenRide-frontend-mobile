@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { Text, TextInputFlow as TextInput } from '@/design';
+import { Text, TextInputFlow as TextInput, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -82,10 +82,9 @@ export default function MessagingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#1976d2" />
-          <Text style={styles.goBackText}>Back</Text>
-        </TouchableOpacity>
+        <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+      </View>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Chat with Driver</Text>
           <Text style={styles.headerSubtitle}>Jean Pierre • Online</Text>
@@ -133,16 +132,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-  },
-  goBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  goBackText: {
-    color: '#1976d2',
-    fontWeight: '600',
-    marginLeft: 4,
   },
   headerInfo: {
     flex: 1,

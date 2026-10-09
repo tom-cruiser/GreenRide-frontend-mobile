@@ -362,6 +362,17 @@ export default function RideBookingScreen() {
           </View>
         )}
 
+        {withFriends && (
+          <Pressable onPress={() => router.push("/join")} accessibilityRole="button" style={styles.joinLink}>
+            <Icon name="users" size={18} />
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold">Joining a friend's ride?</Text>
+              <Text variant="caption" color={colors.muted}>Use their code or tap their public ride</Text>
+            </View>
+            <Icon name="chevron-right" color={colors.muted} />
+          </Pressable>
+        )}
+
         {isSharedRide && shareMode === "others" && (
           <View style={styles.stepper}>
             <Text color={colors.ink3} style={{ flex: 1 }}>You + up to {maxCoRiders} co-rider{maxCoRiders > 1 ? "s" : ""}</Text>
@@ -449,6 +460,10 @@ const styles = StyleSheet.create({
   modeRow: { flexDirection: "row", gap: space.sm, marginTop: space.lg },
   modeOption: { flex: 1, borderWidth: 1.5, borderColor: colors.line, borderRadius: radius.lg, padding: space.md, backgroundColor: colors.surface },
   modeOptionOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  joinLink: {
+    flexDirection: "row", alignItems: "center", gap: space.md, marginTop: space.md, padding: space.md,
+    borderRadius: radius.lg, backgroundColor: colors.soft,
+  },
   stepper: { flexDirection: "row", alignItems: "center", gap: space.md, marginTop: space.lg },
   stepBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.soft, alignItems: "center", justifyContent: "center" },
   overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },

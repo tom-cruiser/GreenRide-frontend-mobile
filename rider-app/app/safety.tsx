@@ -1,301 +1,174 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
-import { Text } from '@/design';
-import { useRouter } from 'expo-router';
-import AppLogo from '../components/app-logo';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, FlatList, Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { PersonAvatar } from '@/components/person-avatar';
+import { EMERGENCY } from '@/config/safety';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button, colors, firstName, Icon, IconButton, type IconName, radius, shadow, space, Text } from '@/design';
+import { ridesAPI, socialAPI, type SocialPerson } from '@/services/api';
+
+// Safety, in the same style as "Join a ride": help first (emergency call,
+// your emergency contact), your circle with "Share my trip", tips as cards,
+// and reporting a problem to the Flow team.
+
+type ActiveRide = { id: number; status: string; pickup: string; dropoff: string; driver_name: string | null };
+
+const TIPS: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'eye', title: 'Check the car', text: 'Match the driver and the car in the app before you get in.' },
+  { icon: 'share-2', title: 'Share your trip', text: 'Send your ride to someone you trust, every time.' },
+  { icon: 'user', title: 'Sit in the back', text: 'It gives you and the driver some space.' },
+  { icon: 'alert-triangle', title: 'Trust yourself', text: 'Feel unsafe? Ask to stop in a busy place and call for help.' },
+];
 
 export default function SafetyScreen() {
   const router = useRouter();
-  const [emergencySharing, setEmergencySharing] = useState(false);
+  const { token, user, refreshUser } = useAuth();
+  const [friends, setFriends] = useState<SocialPerson[]>([]);
+  const [ride, setRide] = useState<ActiveRide | null>(null);
 
-  const handleEmergencyCall = () => {
-    Alert.alert(
-      'Emergency Call',
-      'This will call emergency services immediately.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call 911', onPress: () => Linking.openURL('tel:911') },
-      ]
-    );
+  useFocusEffect(useCallback(() => {
+    refreshUser();
+    if (!token) return;
+    socialAPI.overview(token).then((o) => setFriends(o.friends)).catch(() => {});
+    ridesAPI.getActiveRide(token).then((r) => setRide(r.ride ?? null)).catch(() => setRide(null));
+  }, [token, refreshUser]));
+
+  const contact = user?.emergency_contact || null;
+  const call = (number: string, who: string) =>
+    Alert.alert(`Call ${who}?`, number, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Call', style: 'destructive', onPress: () => Linking.openURL(`tel:${number.replace(/[^\d+]/g, '')}`).catch(() => {}) },
+    ]);
+
+  const shareTrip = () => {
+    if (!ride) return;
+    const driver = firstName(ride.driver_name);
+    const lines = [
+      `I'm on a Flow ride from ${ride.pickup} to ${ride.dropoff}.`,
+      driver ? `My driver is ${driver}.` : 'The driver is on the way.',
+      `${user?.name ? firstName(user.name) : 'Me'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    ];
+    Share.share({ message: lines.join('\n') }).catch(() => {});
   };
-
-  const handleShareRide = () => {
-    setEmergencySharing(!emergencySharing);
-    Alert.alert(
-      'Ride Sharing',
-      emergencySharing 
-        ? 'Ride sharing has been disabled' 
-        : 'Ride details will be shared with your emergency contacts'
-    );
-  };
-
-  const safetyFeatures = [
-    {
-      title: 'Emergency Call',
-      description: 'Quick access to emergency services',
-      icon: 'phone.fill',
-      action: handleEmergencyCall,
-      color: '#d32f2f',
-    },
-    {
-      title: 'Share Ride Details',
-      description: 'Share your ride with trusted contacts',
-      icon: 'person.2.fill',
-      action: handleShareRide,
-      color: '#1976d2',
-    },
-    {
-      title: 'Report Safety Issue',
-      description: 'Report any safety concerns during your ride',
-      icon: 'exclamationmark.triangle.fill',
-      action: () => Alert.alert('Safety Report', 'Safety reporting feature coming soon'),
-      color: '#ff9800',
-    },
-    {
-      title: 'Safety Tips',
-      description: 'View safety guidelines and best practices',
-      icon: 'lightbulb.fill',
-      action: () => Alert.alert('Safety Tips', 'Safety tips feature coming soon'),
-      color: '#111111',
-    },
-  ] as const;
-
-  const emergencyContacts = [
-    { name: 'Police', number: '911', description: 'Local police emergency line' },
-    { name: 'Medical Emergency', number: '911', description: 'Medical emergency services' },
-    { name: 'Flow support', number: '+257 79 000 000', description: '24/7 customer support' },
-  ];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.page}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#d32f2f" />
-          <Text style={styles.goBackText}>Back</Text>
-        </TouchableOpacity>
-        <AppLogo size={40} />
+        <IconButton icon="chevron-left" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+        <Text variant="title" style={{ flex: 1 }}>Safety</Text>
+        <IconButton icon="phone" label={`Call ${EMERGENCY.label}`} onPress={() => call(EMERGENCY.number, EMERGENCY.label)} />
       </View>
 
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Safety & Support</Text>
-        <Text style={styles.subtitle}>Your safety is our top priority</Text>
+      {/* Help, first */}
+      <View style={styles.sos}>
+        <View style={styles.sosIcon}><Icon name="alert-octagon" size={26} color={colors.onDark} /></View>
+        <Text variant="title" color={colors.onDark} style={{ marginTop: space.md }}>In danger?</Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: 2 }}>Call for help now. Your safety comes first.</Text>
+        <Button size="lg" variant="light" icon="phone" label={`Call ${EMERGENCY.number}`} onPress={() => call(EMERGENCY.number, EMERGENCY.label)}
+          style={{ marginTop: space.lg }} />
+        {contact ? (
+          <Button size="lg" variant="ghostDark" icon="heart" label={`Call your emergency contact`} onPress={() => call(contact, 'your emergency contact')}
+            style={{ marginTop: space.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' }} />
+        ) : null}
       </View>
 
-      <View style={styles.statusCard}>
-        <Text style={styles.statusTitle}>Ride Sharing Status</Text>
-        <View style={styles.statusRow}>
-          <Text style={styles.statusText}>
-            Emergency contacts sharing: {emergencySharing ? 'ON' : 'OFF'}
-          </Text>
-          <View style={[styles.statusIndicator, { backgroundColor: emergencySharing ? '#111111' : '#888' }]} />
-        </View>
+      {/* Your circle */}
+      <View style={styles.sectionHead}>
+        <Text variant="heading">Your circle</Text>
+        <Text variant="caption" color={colors.muted}>People you trust</Text>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Safety Features</Text>
-        {safetyFeatures.map((feature, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.featureItem}
-            onPress={feature.action}
-          >
-            <View style={[styles.featureIcon, { backgroundColor: feature.color + '20' }]}>
-              <IconSymbol name={feature.icon} size={24} color={feature.color} />
+      <FlatList
+        horizontal
+        data={friends}
+        keyExtractor={(f) => f.handle}
+        showsHorizontalScrollIndicator={false}
+        style={{ marginHorizontal: -space.xl }}
+        contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.lg }}
+        ListHeaderComponent={
+          <Pressable onPress={() => (contact ? call(contact, 'your emergency contact') : router.push('/profile'))}
+            style={styles.circleItem} accessibilityRole="button" accessibilityLabel={contact ? 'Call your emergency contact' : 'Add an emergency contact'}>
+            <View style={[styles.circle, contact ? styles.circleSos : styles.circleAdd]}>
+              <Icon name={contact ? 'heart' : 'plus'} size={24} color={contact ? colors.onDark : colors.ink} />
             </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>{feature.title}</Text>
-              <Text style={styles.featureDescription}>{feature.description}</Text>
+            <Text variant="caption" weight="semibold" numberOfLines={1}>{contact ? 'Emergency' : 'Add contact'}</Text>
+          </Pressable>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.circleItem}>
+            <PersonAvatar person={item} size={64} ring />
+            <Text variant="caption" weight="semibold" numberOfLines={1}>{item.firstName}</Text>
+          </View>
+        )}
+      />
+      <Button
+        icon="share-2"
+        label={ride ? 'Share my trip' : 'Share my trip (during a ride)'}
+        variant={ride ? 'primary' : 'secondary'}
+        disabled={!ride}
+        onPress={shareTrip}
+        style={{ marginTop: space.lg }}
+      />
+      {ride && (
+        <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>
+          Sends {ride.pickup} → {ride.dropoff} by WhatsApp, SMS or any app you choose.
+        </Text>
+      )}
+
+      {/* Tips */}
+      <View style={styles.sectionHead}>
+        <Text variant="heading">Ride safe</Text>
+      </View>
+      <FlatList
+        horizontal
+        data={TIPS}
+        keyExtractor={(t) => t.title}
+        showsHorizontalScrollIndicator={false}
+        style={{ marginHorizontal: -space.xl }}
+        contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.md }}
+        renderItem={({ item }) => (
+          <View style={styles.tip}>
+            <View style={styles.tipIcon}><Icon name={item.icon} size={20} color={colors.ink} /></View>
+            <Text variant="heading" color={colors.onDark} style={{ marginTop: space.lg }}>{item.title}</Text>
+            <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>{item.text}</Text>
+          </View>
+        )}
+      />
+
+      {/* More */}
+      <View style={styles.list}>
+        {([
+          ['flag', 'Report a problem', 'The Flow team answers in your notifications', () => router.push('/support')],
+          ['user', 'Emergency contact', contact ?? 'Not set yet', () => router.push('/profile')],
+        ] as [IconName, string, string, () => void][]).map(([icon, title, sub, onPress], i) => (
+          <Pressable key={title} onPress={onPress} style={({ pressed }) => [styles.row, i > 0 && styles.rowLine, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+            <View style={styles.rowIcon}><Icon name={icon} size={18} /></View>
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold">{title}</Text>
+              <Text variant="caption" color={colors.muted}>{sub}</Text>
             </View>
-            <IconSymbol name="chevron.right" size={16} color="#888" />
-          </TouchableOpacity>
+            <Icon name="chevron-right" color={colors.muted} />
+          </Pressable>
         ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Emergency Contacts</Text>
-        {emergencyContacts.map((contact, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.contactItem}
-            onPress={() => Linking.openURL(`tel:${contact.number}`)}
-          >
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactDescription}>{contact.description}</Text>
-            </View>
-            <Text style={styles.contactNumber}>{contact.number}</Text>
-            <IconSymbol name="phone.fill" size={20} color="#111111" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.helpSection}>
-        <Text style={styles.helpTitle}>Need Additional Help?</Text>
-        <TouchableOpacity
-          style={styles.helpButton}
-          onPress={() => Alert.alert('Help Center', 'Opening help center...')}
-        >
-          <Text style={styles.helpButtonText}>Visit Help Center</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
-  },
-  goBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  goBackText: {
-    color: '#d32f2f',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  titleContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#d32f2f',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statusCard: {
-    backgroundColor: '#fff',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#111111',
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  contactDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  contactNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111111',
-    marginRight: 8,
-  },
-  helpSection: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  helpTitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-  },
-  helpButton: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  helpButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  page: { padding: space.xl, paddingTop: 56, paddingBottom: space.xxxl * 2 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.lg },
+  sos: { backgroundColor: colors.night, borderRadius: radius.xxl, padding: space.xl, ...shadow.float },
+  sosIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: space.xxl, marginBottom: space.md },
+  circleItem: { alignItems: 'center', gap: 6, width: 76 },
+  circle: { margin: 5, width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  circleSos: { backgroundColor: colors.danger },
+  circleAdd: { borderWidth: 2, borderStyle: 'dashed', borderColor: colors.ink3, backgroundColor: colors.surface },
+  tip: { width: 220, minHeight: 180, borderRadius: radius.xxl, padding: space.lg, backgroundColor: colors.night },
+  tipIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.onDark, alignItems: 'center', justifyContent: 'center' },
+  list: { marginTop: space.xxl, backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.line, paddingHorizontal: space.lg },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.lg },
+  rowLine: { borderTopWidth: 1, borderTopColor: colors.line },
+  rowIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
 });

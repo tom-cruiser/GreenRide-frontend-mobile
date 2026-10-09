@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Text, TextInputFlow as TextInput } from '@/design';
+import { Text, TextInputFlow as TextInput, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 
 import AppLogo from '../components/app-logo';
@@ -93,10 +93,9 @@ export default function PromotionsScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 28 }}>
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <TouchableOpacity style={styles.goBack} onPress={() => router.back()} accessibilityRole="button">
-          <IconSymbol name="chevron.left" size={24} color={theme.text} />
-          <Text style={[styles.goBackText, { color: theme.text }]}>Back</Text>
-        </TouchableOpacity>
+        <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+      </View>
         <AppLogo size={28} compact />
       </View>
 
@@ -229,14 +228,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 16,
     borderBottomWidth: 1,
-  },
-  goBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  goBackText: {
-    fontWeight: '700',
-    marginLeft: 4,
   },
   hero: {
     margin: 20,

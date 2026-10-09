@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
+import { Text, TextInputFlow as TextInput, formatMoney, IconButton } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -134,9 +134,9 @@ export default function WalletScreen() {
       contentContainerStyle={{ paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <TouchableOpacity style={styles.goBack} onPress={() => router.replace('/(tabs)')}>
-        <Text style={styles.goBackText}>{'< Go Back'}</Text>
-      </TouchableOpacity>
+      <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+        <IconButton icon="chevron-left" label="Back" onPress={() => router.replace('/(tabs)')} />
+      </View>
       <View style={styles.header}>
         <AppLogo size={60} />
         <Text style={styles.title}>Wallet</Text>
@@ -263,19 +263,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     padding: 20,
-  },
-  goBack: {
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F6F6F6',
-  },
-  goBackText: {
-    color: '#0B0B0B',
-    fontWeight: '700',
-    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
