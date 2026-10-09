@@ -1,73 +1,33 @@
-import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  StatusBar,
-} from 'react-native';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { Modal, StyleSheet, View } from 'react-native';
+import { RoundButton } from '@/components/round-button';
+import { Avatar, colors, firstName, radius, space, Text } from '@/design';
 import { useCall } from '@/hooks/useCall';
+import { useT } from '@/i18n';
 
+// The rider is calling: who, and two big buttons.
 export function IncomingCallOverlay() {
-  const { phase, callInfo, acceptCall, rejectCall } = useCall();
   const router = useRouter();
+  const { t } = useT();
+  const { phase, callInfo, acceptCall, rejectCall } = useCall();
 
-  const visible = phase === 'incoming';
-
-  const handleAccept = async () => {
+  const accept = async () => {
     await acceptCall();
     router.push('/call');
   };
 
-  const handleReject = () => {
-    rejectCall();
-  };
-
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={handleReject}
-    >
+    <Modal visible={phase === 'incoming'} transparent animationType="slide" statusBarTranslucent onRequestClose={rejectCall}>
       <View style={styles.backdrop}>
-        <View style={styles.card}>
-          {/* Header */}
-          <Text style={styles.appLabel}>Flow</Text>
-
-          {/* Caller info */}
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarLetter}>
-              {callInfo?.peerName?.[0]?.toUpperCase() ?? '?'}
-            </Text>
-          </View>
-          <Text style={styles.callerName}>{callInfo?.peerName ?? 'Unknown'}</Text>
-          <Text style={styles.status}>Incoming call…</Text>
-
-          {/* Action buttons */}
+        <View style={styles.sheet}>
+          <Text variant="overline" color={colors.onDarkMuted}>{t('call.incoming')}</Text>
+          <Avatar name={callInfo?.peerName} size={88} dark />
+          <Text variant="title" color={colors.onDark}>{firstName(callInfo?.peerName) || t('call.unknown')}</Text>
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.rejectBtn]}
-              onPress={handleReject}
-              accessibilityLabel="Reject call"
-            >
-              <Text style={styles.actionIcon}>✕</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.acceptBtn]}
-              onPress={handleAccept}
-              accessibilityLabel="Accept call"
-            >
-              <Text style={styles.actionIcon}>✆</Text>
-            </TouchableOpacity>
+            <RoundButton icon="phone-off" label={t('call.decline')} onPress={rejectCall} danger />
+            <RoundButton icon="phone" label={t('call.accept')} onPress={accept} light />
           </View>
-
-          <Text style={styles.hint}>Slide up to answer</Text>
         </View>
       </View>
     </Modal>
@@ -75,79 +35,10 @@ export function IncomingCallOverlay() {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 44,
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheet: {
+    backgroundColor: colors.night, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
+    paddingTop: space.xxl, paddingBottom: space.xxxl * 1.5, paddingHorizontal: space.xxl, alignItems: 'center', gap: space.lg,
   },
-  card: {
-    backgroundColor: '#1c1c2e',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 24,
-    paddingBottom: 48,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  appLabel: {
-    color: '#111111',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 20,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#111111',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarLetter: {
-    color: '#fff',
-    fontSize: 34,
-    fontWeight: '700',
-  },
-  callerName: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  status: {
-    color: '#aaa',
-    fontSize: 15,
-    marginBottom: 36,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 48,
-    marginBottom: 20,
-  },
-  actionBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rejectBtn: {
-    backgroundColor: '#e53935',
-  },
-  acceptBtn: {
-    backgroundColor: '#111111',
-  },
-  actionIcon: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  hint: {
-    color: '#666',
-    fontSize: 13,
-  },
+  actions: { flexDirection: 'row', gap: 64, marginTop: space.lg },
 });

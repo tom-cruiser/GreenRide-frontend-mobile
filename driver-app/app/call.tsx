@@ -1,179 +1,56 @@
-import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { RoundButton } from '@/components/round-button';
+import { Avatar, colors, firstName, Screen, space, Text } from '@/design';
 import { useCall } from '@/hooks/useCall';
+import { useT } from '@/i18n';
 
-// ─── Duration formatter ───────────────────────────────────────────────────────
-function formatDuration(secs: number): string {
-  const m = Math.floor(secs / 60)
-    .toString()
-    .padStart(2, '0');
-  const s = (secs % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-}
+const duration = (secs: number) =>
+  `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
 
-// ─── Status label ─────────────────────────────────────────────────────────────
-function phaseLabel(phase: string): string {
-  switch (phase) {
-    case 'outgoing':
-      return 'Calling…';
-    case 'negotiating':
-      return 'Connecting…';
-    case 'active':
-      return 'Connected';
-    default:
-      return '';
-  }
-}
-
+// The call with the rider: who, the state, mute and hang up. Big round
+// buttons that are easy to hit without looking twice.
 export default function CallScreen() {
-  const { phase, callInfo, isMuted, durationSeconds, endCall, toggleMute } = useCall();
   const router = useRouter();
+  const { t } = useT();
+  const { phase, callInfo, isMuted, durationSeconds, endCall, toggleMute } = useCall();
 
-  // Close screen when call finishes
+  // Close when the call finishes.
   useEffect(() => {
-    if (phase === 'idle' || phase === 'ended') {
-      router.back();
-    }
+    if (phase === 'idle' || phase === 'ended') router.back();
   }, [phase, router]);
 
   if (!callInfo) return null;
 
-  const isActive = phase === 'active';
+  const state = phase === 'active' ? t('call.connected') : phase === 'negotiating' ? t('call.connecting') : t('call.calling');
 
   return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0d1117" />
-
-      {/* Top spacer */}
-      <View style={styles.top}>
-        <Text style={styles.appLabel}>GreenRider Call</Text>
-      </View>
-
-      {/* Peer info */}
-      <View style={styles.peerSection}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarLetter}>
-            {callInfo.peerName?.[0]?.toUpperCase() ?? '?'}
+    <Screen dark scroll={false} edges={['top', 'bottom']} contentStyle={styles.page}>
+      <StatusBar style="light" />
+      <View style={styles.peer}>
+        <Avatar name={callInfo.peerName} size={104} dark />
+        <Text variant="title" color={colors.onDark} style={{ marginTop: space.xl }}>
+          {firstName(callInfo.peerName) || t('call.unknown')}
+        </Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>{state}</Text>
+        {phase === 'active' && (
+          <Text color={colors.onDark} weight="semibold" style={{ marginTop: space.md, fontSize: 24, lineHeight: 30, fontVariant: ['tabular-nums'] }}>
+            {duration(durationSeconds)}
           </Text>
-        </View>
-        <Text style={styles.peerName}>{callInfo.peerName}</Text>
-        <Text style={styles.statusText}>{phaseLabel(phase)}</Text>
-        {isActive && (
-          <Text style={styles.duration}>{formatDuration(durationSeconds)}</Text>
         )}
       </View>
-
-      {/* Controls */}
       <View style={styles.controls}>
-        {/* Mute */}
-        <TouchableOpacity
-          style={[styles.controlBtn, isMuted && styles.controlBtnActive]}
-          onPress={toggleMute}
-          accessibilityLabel={isMuted ? 'Unmute' : 'Mute'}
-        >
-          <Text style={styles.controlIcon}>{isMuted ? '🔇' : '🎙'}</Text>
-          <Text style={styles.controlLabel}>{isMuted ? 'Unmute' : 'Mute'}</Text>
-        </TouchableOpacity>
-
-        {/* End call */}
-        <TouchableOpacity
-          style={[styles.controlBtn, styles.endBtn]}
-          onPress={endCall}
-          accessibilityLabel="End call"
-        >
-          <Text style={styles.controlIcon}>✕</Text>
-          <Text style={styles.controlLabel}>End</Text>
-        </TouchableOpacity>
+        <RoundButton icon={isMuted ? 'mic-off' : 'mic'} label={isMuted ? t('call.unmute') : t('call.mute')} onPress={toggleMute} active={isMuted} />
+        <RoundButton icon="phone-off" label={t('call.end')} onPress={endCall} danger />
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0d1117',
-    justifyContent: 'space-between',
-  },
-  top: {
-    alignItems: 'center',
-    paddingTop: 20,
-  },
-  appLabel: {
-    color: '#111111',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  peerSection: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatarCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#111111',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    color: '#fff',
-    fontSize: 40,
-    fontWeight: '700',
-  },
-  peerName: {
-    color: '#fff',
-    fontSize: 30,
-    fontWeight: '700',
-  },
-  statusText: {
-    color: '#888',
-    fontSize: 16,
-  },
-  duration: {
-    color: '#ccc',
-    fontSize: 22,
-    fontWeight: '300',
-    letterSpacing: 2,
-  },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 32,
-    paddingBottom: 40,
-  },
-  controlBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#1f2937',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  controlBtnActive: {
-    backgroundColor: '#374151',
-  },
-  endBtn: {
-    backgroundColor: '#e53935',
-    width: 72,
-    height: 72,
-  },
-  controlIcon: {
-    fontSize: 24,
-  },
-  controlLabel: {
-    color: '#ccc',
-    fontSize: 11,
-  },
+  page: { flex: 1, justifyContent: 'space-between', paddingVertical: space.xxxl },
+  peer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  controls: { flexDirection: 'row', justifyContent: 'center', gap: 56 },
 });

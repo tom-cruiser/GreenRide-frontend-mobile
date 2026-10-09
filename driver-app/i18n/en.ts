@@ -221,6 +221,18 @@ export const en: Strings = {
     failed: 'Could not sign in',
     notDriver: 'This is a rider account. Use the Flow rider app.',
   },
+  call: {
+    calling: 'Calling…',
+    connecting: 'Connecting…',
+    connected: 'Connected',
+    incoming: 'Incoming call',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    end: 'End call',
+    accept: 'Answer',
+    decline: 'Decline',
+    unknown: 'Rider',
+  },
   onboarding: {
     s1Title: 'Drive with Flow',
     s1Text: 'Get rides near you, in one tap.',

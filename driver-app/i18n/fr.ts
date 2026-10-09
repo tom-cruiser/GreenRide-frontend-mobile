@@ -220,6 +220,18 @@ export const fr = {
     failed: 'Connexion impossible',
     notDriver: 'Ce compte est un compte passager. Utilisez l’application Flow passager.',
   },
+  call: {
+    calling: 'Appel en cours…',
+    connecting: 'Connexion…',
+    connected: 'En communication',
+    incoming: 'Appel entrant',
+    mute: 'Couper le micro',
+    unmute: 'Réactiver le micro',
+    end: 'Raccrocher',
+    accept: 'Répondre',
+    decline: 'Refuser',
+    unknown: 'Passager',
+  },
   onboarding: {
     s1Title: 'Conduisez avec Flow',
     s1Text: 'Recevez des courses près de vous, en un geste.',
