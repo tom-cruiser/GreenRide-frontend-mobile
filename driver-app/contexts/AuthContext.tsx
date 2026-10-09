@@ -9,6 +9,7 @@ interface User {
   email: string;
   phone?: string;
   role: string;
+  photoUrl?: string | null;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateWalletBalance: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,9 +119,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await AsyncStorage.setItem('driverUserData', JSON.stringify(updatedUser));
   };
 
+  // Reloads the account from the server (e.g. after a new photo).
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await authAPI.getProfile(token);
+      if (!response.user) return;
+      setUser(response.user);
+      await AsyncStorage.setItem('driverUserData', JSON.stringify(response.user));
+    } catch {}
+  }, [token]);
+
   return (
     <AuthContext.Provider
-      value={{ user, token, walletBalance, isLoading, login, register, logout, updateWalletBalance, updateProfile }}
+      value={{ user, token, walletBalance, isLoading, login, register, logout, updateWalletBalance, updateProfile, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

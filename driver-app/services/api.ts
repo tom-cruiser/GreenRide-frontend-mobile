@@ -2,6 +2,9 @@ import { getBackendOrigin } from './backend';
 
 const getApiBase = (): string => `${getBackendOrigin()}/api`;
 
+// A full URL for a path the backend returns, e.g. a photo's "/api/photos/…".
+export const apiUrl = (path: string) => `${getBackendOrigin()}${path}`;
+
 // Keeps the HTTP status so screens can tell e.g. "not found" from a failure.
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -236,3 +239,15 @@ export const promotionsAPI = {
   getUserPromotions: (token: string) =>
     apiCall('/promotions/user', { headers: authHeader(token) }),
 };
+
+// Profile photo: one per account, shown in a circle. Photos are private and
+// fetched with the signed-in token.
+export async function uploadProfilePhoto(token: string, file: { uri: string; name: string; mimeType: string }) {
+  const body = new FormData();
+  body.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+  const res = await fetch(`${getApiBase()}/users/me/photo`, { method: 'POST', headers: authHeader(token), body });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError((data as any).error || `HTTP ${res.status}`, res.status);
+  return data as { photoUrl: string };
+}
+export const removeProfilePhoto = (token: string) => apiCall('/users/me/photo', { method: 'DELETE', headers: authHeader(token) });

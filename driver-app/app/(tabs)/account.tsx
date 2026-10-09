@@ -3,7 +3,8 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDriverWork } from '@/contexts/DriverWorkContext';
-import { Avatar, Badge, Card, colors, Divider, Header, ListItem, radius, Screen, space, Text } from '@/design';
+import { Badge, Card, colors, Divider, Header, ListItem, radius, Screen, space, Text } from '@/design';
+import { DriverAvatar } from '@/components/driver-avatar';
 import { useT, type Locale } from '@/i18n';
 import { driversAPI } from '@/services/api';
 
@@ -32,7 +33,7 @@ export default function AccountScreen() {
     <Screen>
       <Header title={t('account.title')} />
       <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
-        <Avatar name={user?.name} size={60} />
+        <DriverAvatar name={user?.name} photoUrl={user?.photoUrl} size={60} />
         <View style={{ flex: 1, gap: 6 }}>
           <Text variant="heading" weight="bold">{user?.name}</Text>
           {badge && <Badge {...badge} />}
