@@ -311,6 +311,8 @@ export type PublicRide = {
   price: number;
   currency: string;
   distanceKm: number | null;
+  // The rider's own public ride (listed first, so they see it is up).
+  mine?: boolean;
 };
 
 export type SocialPerson = FriendsPerson & { handle: string };

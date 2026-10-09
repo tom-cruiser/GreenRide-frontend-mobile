@@ -200,6 +200,7 @@ export default function JoinScreen() {
                 <Icon name="users" size={22} />
                 <Text weight="semibold" style={{ marginTop: space.sm }}>No public rides near you right now</Text>
                 <Text variant="caption" color={colors.muted} align="center">
+                  A public ride shows here for a few minutes while its host waits for people, to riders within 15 km of its pickup.
                   Start one: Book → Shared ride → With friends → Public.
                 </Text>
               </View>
@@ -212,7 +213,9 @@ export default function JoinScreen() {
                 style={{ marginHorizontal: -space.xl }}
                 contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.md }}
                 renderItem={({ item }) => (
-                  <RideCard ride={item} busy={busy === 'join'} onJoin={() => joinRide(item)} onView={() => setSheet({ kind: 'ride', ride: item })} />
+                  <RideCard ride={item} busy={busy === 'join'}
+                    onJoin={() => (item.mine ? router.push(`/friends-ride/${item.groupId}`) : joinRide(item))}
+                    onView={() => (item.mine ? router.push(`/friends-ride/${item.groupId}`) : setSheet({ kind: 'ride', ride: item }))} />
                 )}
               />
             )}
@@ -274,17 +277,20 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
       </View>
       <View style={styles.cardShade} />
       <View style={styles.cardTop}>
-        <Badge tone="light" icon="users" label={`${ride.seatsLeft} seat${ride.seatsLeft > 1 ? 's' : ''} left`} />
+        <View style={{ flexDirection: 'row', gap: space.xs }}>
+          {ride.mine && <Badge tone="light" icon="star" label="Your ride" />}
+          <Badge tone="light" icon="users" label={`${ride.seatsLeft} seat${ride.seatsLeft > 1 ? 's' : ''} left`} />
+        </View>
       </View>
       <View style={styles.cardBottom}>
-        <Text variant="title" color={colors.onDark} numberOfLines={1}>{ride.host.firstName}</Text>
+        <Text variant="title" color={colors.onDark} numberOfLines={1}>{ride.mine ? 'You' : ride.host.firstName}</Text>
         <Text variant="caption" color={colors.onDarkMuted} numberOfLines={1}>
           {ride.distanceKm != null ? `${formatKm(ride.distanceKm)} away · ` : ''}{minutesAgo(ride.createdAt)}
         </Text>
         <Text weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{ride.pickup} → {ride.dropoff}</Text>
         <Text variant="heading" weight="bold" color={colors.onDark}>{formatMoney(ride.price, ride.currency)}</Text>
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
-          <Button size="md" variant="light" label="Join" icon="user-plus" onPress={onJoin} loading={busy} style={{ flex: 1, height: 42 }} />
+          <Button size="md" variant="light" label={ride.mine ? 'Open' : 'Join'} icon={ride.mine ? 'arrow-right' : 'user-plus'} onPress={onJoin} loading={busy} style={{ flex: 1, height: 42 }} />
           <Pressable onPress={onView} style={styles.glassBtn} accessibilityRole="button">
             <Text variant="caption" weight="semibold" color={colors.onDark}>View</Text>
           </Pressable>
