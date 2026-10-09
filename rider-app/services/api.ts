@@ -193,6 +193,9 @@ export const ridesAPI = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  // Join a "With others" ride from "For you", from the rider's own pickup.
+  joinShared: (token: string, groupId: string | number, coords?: { pickup_lat: number; pickup_lng: number }) =>
+    apiCall(`/rides/share/${groupId}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(coords ?? {}) }),
   getSharedRideGroup: async (token: string, groupId: string) =>
     apiCall(`/rides/share/${encodeURIComponent(groupId)}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -300,12 +303,15 @@ export const friendsAPI = {
 };
 
 export type PublicRide = {
+  // 'friends': a public ride a host started; 'others': a "With others" ride
+  // waiting for co-riders.
+  kind?: 'friends' | 'others';
   groupId: number;
   host: FriendsPerson;
   pickup: string;
   dropoff: string;
   createdAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   ridersCount: number;
   seatsLeft: number;
   price: number;

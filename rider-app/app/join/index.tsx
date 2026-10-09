@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Badge, Button, colors, Field, formatKm, formatMoney, Icon, IconButton, radius, shadow, space, Text, TextInputFlow as TextInput,
 } from '@/design';
-import { friendsAPI, socialAPI, type PublicRide, type SearchResult, type SocialOverview, type SocialPerson } from '@/services/api';
+import { friendsAPI, socialAPI, type PublicRide, type SearchResult, type SocialOverview, type SocialPerson, ridesAPI } from '@/services/api';
 import { signalingClient } from '@/services/signalingClient';
 
 // "Join a ride", social style: your circle (friends and people you rode
@@ -96,8 +96,17 @@ export default function JoinScreen() {
       ]
     : [];
 
+  // Your own ride opens it; someone else's joins it.
+  const openRide = (ride: PublicRide) =>
+    router.push(ride.kind === 'others' ? '/active-ride' : `/friends-ride/${ride.groupId}`);
   const joinRide = (ride: PublicRide) =>
-    run('join', async () => {
+    ride.mine ? openRide(ride) : run('join', async () => {
+      if (ride.kind === 'others') {
+        const pos = await Location.getLastKnownPositionAsync().catch(() => null);
+        await ridesAPI.joinShared(token!, ride.groupId, pos ? { pickup_lat: pos.coords.latitude, pickup_lng: pos.coords.longitude } : undefined);
+        router.replace('/active-ride');
+        return;
+      }
       const { group } = await friendsAPI.joinPublic(token!, ride.groupId);
       router.replace(`/friends-ride/${group.groupId}`);
     });
@@ -214,8 +223,8 @@ export default function JoinScreen() {
                 contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.md }}
                 renderItem={({ item }) => (
                   <RideCard ride={item} busy={busy === 'join'}
-                    onJoin={() => (item.mine ? router.push(`/friends-ride/${item.groupId}`) : joinRide(item))}
-                    onView={() => (item.mine ? router.push(`/friends-ride/${item.groupId}`) : setSheet({ kind: 'ride', ride: item }))} />
+                    onJoin={() => joinRide(item)}
+                    onView={() => (item.mine ? openRide(item) : setSheet({ kind: 'ride', ride: item }))} />
                 )}
               />
             )}
@@ -259,8 +268,11 @@ const relationLabel = (r: SearchResult['relation']) =>
 
 const minutesAgo = (iso: string) => {
   const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  return m < 1 ? 'just now' : `${m} min ago`;
+  return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
 };
+
+// "Current" is how a ride booked from the rider's own position is named.
+const place = (name: string) => (name === 'Current' ? 'Nearby pickup' : name);
 
 // A public ride as a big card, like a post: the host's photo, the route and the price.
 function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: boolean; onJoin: () => void; onView: () => void }) {
@@ -277,8 +289,9 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
       </View>
       <View style={styles.cardShade} />
       <View style={styles.cardTop}>
-        <View style={{ flexDirection: 'row', gap: space.xs }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
           {ride.mine && <Badge tone="light" icon="star" label="Your ride" />}
+          {ride.kind === 'others' && <Badge tone="light" icon="shuffle" label="With others" />}
           <Badge tone="light" icon="users" label={`${ride.seatsLeft} seat${ride.seatsLeft > 1 ? 's' : ''} left`} />
         </View>
       </View>
@@ -287,7 +300,7 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
         <Text variant="caption" color={colors.onDarkMuted} numberOfLines={1}>
           {ride.distanceKm != null ? `${formatKm(ride.distanceKm)} away · ` : ''}{minutesAgo(ride.createdAt)}
         </Text>
-        <Text weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{ride.pickup} → {ride.dropoff}</Text>
+        <Text weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{place(ride.pickup)} → {ride.dropoff}</Text>
         <Text variant="heading" weight="bold" color={colors.onDark}>{formatMoney(ride.price, ride.currency)}</Text>
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
           <Button size="md" variant="light" label={ride.mine ? 'Open' : 'Join'} icon={ride.mine ? 'arrow-right' : 'user-plus'} onPress={onJoin} loading={busy} style={{ flex: 1, height: 42 }} />
@@ -399,7 +412,7 @@ function RideSheet({ ride, busy, onJoin }: { ride: PublicRide; busy: boolean; on
       </View>
       <View style={styles.rideBox}>
         <Text variant="caption" color={colors.muted}>From</Text>
-        <Text weight="semibold">{ride.pickup}</Text>
+        <Text weight="semibold">{place(ride.pickup)}</Text>
         <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>To</Text>
         <Text weight="semibold">{ride.dropoff}</Text>
       </View>
@@ -439,7 +452,7 @@ const styles = StyleSheet.create({
   card: { width: 260, height: 340, borderRadius: radius.xxl, overflow: 'hidden', backgroundColor: colors.night, ...shadow.float },
   cardInitials: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.night2 },
   cardShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.28)' },
-  cardTop: { position: 'absolute', top: space.lg, left: space.lg },
+  cardTop: { position: 'absolute', top: space.lg, left: space.lg, right: space.lg },
   cardBottom: { position: 'absolute', left: space.lg, right: space.lg, bottom: space.lg },
   glassBtn: {
     height: 42, paddingHorizontal: space.lg, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
