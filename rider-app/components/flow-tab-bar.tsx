@@ -1,9 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import type { Tabs } from 'expo-router';
 import { colors, Icon, type IconName, shadow, Text } from '@/design';
 
@@ -17,11 +16,10 @@ const BAR_H = 64;       // height of the white bar
 const R = 22;           // corner radius
 const PAD = 28;         // space between the bar's ends and the first/last tab
 const CIRCLE = 56;      // the raised circle
-const NOTCH_W = 38;     // half the notch's width
-const NOTCH_D = 34;     // how deep the notch dips
+const GAP = 6;          // the notch: page colour around the circle
+const NOTCH = CIRCLE + GAP * 2;
 const LIFT = CIRCLE / 2; // the circle rises this much above the bar
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+const CIRCLE_TOP = -LIFT + 4;
 const SPRING = { damping: 18, stiffness: 190, mass: 0.9 };
 
 export const TAB_ICONS: Record<string, IconName> = {
@@ -31,28 +29,6 @@ export const TAB_ICONS: Record<string, IconName> = {
   'ride-history': 'clock',
   explore: 'menu',
 };
-
-// The bar's outline with the notch centred on cx (kept off the corners).
-function barPath(cx: number, w: number) {
-  'worklet';
-  const c = Math.min(Math.max(cx, R + NOTCH_W), w - R - NOTCH_W);
-  const h = BAR_H;
-  return [
-    `M ${R} 0`,
-    `H ${c - NOTCH_W}`,
-    `C ${c - NOTCH_W * 0.5} 0 ${c - NOTCH_W * 0.62} ${NOTCH_D} ${c} ${NOTCH_D}`,
-    `C ${c + NOTCH_W * 0.62} ${NOTCH_D} ${c + NOTCH_W * 0.5} 0 ${c + NOTCH_W} 0`,
-    `H ${w - R}`,
-    `A ${R} ${R} 0 0 1 ${w} ${R}`,
-    `V ${h - R}`,
-    `A ${R} ${R} 0 0 1 ${w - R} ${h}`,
-    `H ${R}`,
-    `A ${R} ${R} 0 0 1 0 ${h - R}`,
-    `V ${R}`,
-    `A ${R} ${R} 0 0 1 ${R} 0`,
-    'Z',
-  ].join(' ');
-}
 
 export function FlowTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -71,8 +47,9 @@ export function FlowTabBar({ state, descriptors, navigation }: BottomTabBarProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.index, width, ready]);
 
-  const pathProps = useAnimatedProps(() => ({ d: barPath(cx.value, width || 1) }));
+  // Only transforms move, so it runs the same on iPhone and Android.
   const circleStyle = useAnimatedStyle(() => ({ transform: [{ translateX: cx.value - CIRCLE / 2 }] }));
+  const notchStyle = useAnimatedStyle(() => ({ transform: [{ translateX: cx.value - NOTCH / 2 }] }));
   const labelStyle = useAnimatedStyle(() => ({ transform: [{ translateX: cx.value - 40 }] }));
 
   const active = state.routes[state.index];
@@ -83,9 +60,8 @@ export function FlowTabBar({ state, descriptors, navigation }: BottomTabBarProps
       <View style={styles.bar} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {ready && (
           <>
-            <Svg width={width} height={BAR_H} style={StyleSheet.absoluteFill}>
-              <AnimatedPath animatedProps={pathProps} fill={colors.surface} />
-            </Svg>
+            {/* The notch: a page-coloured disc cut into the bar's top edge */}
+            <Animated.View pointerEvents="none" style={[styles.notch, notchStyle]} />
 
             {/* Tabs: the active one's icon lives in the circle */}
             <View style={[styles.row, { paddingHorizontal: PAD }]}>
@@ -131,12 +107,16 @@ export function FlowTabBar({ state, descriptors, navigation }: BottomTabBarProps
 
 const styles = StyleSheet.create({
   wrap: { backgroundColor: colors.bg, paddingTop: LIFT + 4, paddingHorizontal: 16 },
-  bar: { height: BAR_H, borderRadius: R, ...shadow.float, shadowOpacity: 0.08 },
+  bar: { height: BAR_H, borderRadius: R, backgroundColor: colors.surface, ...shadow.float, shadowOpacity: 0.08 },
+  notch: {
+    position: 'absolute', top: CIRCLE_TOP - GAP, left: 0, width: NOTCH, height: NOTCH, borderRadius: NOTCH / 2,
+    backgroundColor: colors.bg,
+  },
   row: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center' },
   tab: { flex: 1, height: BAR_H, alignItems: 'center', justifyContent: 'center' },
   circle: {
-    position: 'absolute', top: -LIFT + 4, left: 0, width: CIRCLE, height: CIRCLE, borderRadius: CIRCLE / 2,
+    position: 'absolute', top: CIRCLE_TOP, left: 0, width: CIRCLE, height: CIRCLE, borderRadius: CIRCLE / 2,
     backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', ...shadow.float, shadowOpacity: 0.25,
   },
-  label: { position: 'absolute', top: NOTCH_D + 6, left: 0, width: 80 },
+  label: { position: 'absolute', top: CIRCLE_TOP + NOTCH - GAP + 2, left: 0, width: 80 },
 });
