@@ -4,7 +4,8 @@ import { Text, TextInputFlow as TextInput } from '@/design';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { friendsAPI, type FriendsGroup } from '@/services/api';
+import { friendsAPI, socialAPI, type FriendsGroup, type SocialPerson } from '@/services/api';
+import { PersonAvatar } from '@/components/person-avatar';
 import { Avatar, BackButton, ACCENT, Row, StatusChip, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
 
 // A "share with friends" ride. The host shares the code, invites by phone,
@@ -19,6 +20,12 @@ export default function FriendsRideScreen() {
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  // The host's friends, for one-tap invitations.
+  const [friends, setFriends] = useState<SocialPerson[]>([]);
+  const [invitedHandles, setInvitedHandles] = useState<string[]>([]);
+  useEffect(() => {
+    if (token) socialAPI.overview(token).then((o) => setFriends(o.friends)).catch(() => {});
+  }, [token]);
 
   const reload = useCallback(async () => {
     if (!token || !groupId) return;
@@ -163,6 +170,7 @@ export default function FriendsRideScreen() {
         <Row label="From" value={group.pickup} />
         <Row label="To" value={group.dropoff} />
         <Row label="Riders" value={`${group.ridersCount} of ${group.maxRiders}`} />
+        <Row label="Who can join" value={group.visibility === 'public' ? 'Public: riders nearby' : 'Friends only'} />
         {!isHost && (
           <View style={[ui.row, { alignItems: 'center' }]}>
             <Text style={ui.rowLabel}>Host</Text>
@@ -187,6 +195,28 @@ export default function FriendsRideScreen() {
             <Text style={ui.primaryBtnText}>Share by WhatsApp or SMS</Text>
           </TouchableOpacity>
           <Text style={ui.hint}>Friends enter the code in Flow under “Join a ride”.</Text>
+
+          {friends.length > 0 && (
+            <>
+              <Text style={[ui.cardTitle, { marginTop: 18 }]}>Invite friends</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingVertical: 4 }}>
+                {friends.map((f) => {
+                  const invited = invitedHandles.includes(f.handle);
+                  return (
+                    <TouchableOpacity key={f.handle} disabled={invited || busy === `friend-${f.handle}`} style={{ alignItems: 'center', gap: 6, width: 64, opacity: invited ? 0.45 : 1 }}
+                      accessibilityLabel={`Invite ${f.firstName}`}
+                      onPress={() => run(`friend-${f.handle}`, async () => {
+                        await friendsAPI.inviteFriend(token!, group.groupId, f.handle);
+                        setInvitedHandles((list) => [...list, f.handle]);
+                      }, 'Could not invite')}>
+                      <PersonAvatar person={f} size={56} ring />
+                      <Text style={{ fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{invited ? 'Invited' : f.firstName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
 
           <Text style={[ui.cardTitle, { marginTop: 18 }]}>Invite by phone number</Text>
           <TextInput

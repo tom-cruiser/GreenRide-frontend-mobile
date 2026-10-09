@@ -44,6 +44,7 @@ const SERVER_EVENTS = [
   'error',
   // Live app updates (not calls): a "share with friends" group changed, or a new notification.
   'friends:updated',
+  'social:updated',
   'notification',
 ] as const;
 

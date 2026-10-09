@@ -10,6 +10,9 @@ interface User {
   email: string;
   phone?: string;
   emergencyContact?: string;
+  emergency_contact?: string | null;
+  photoUrl?: string | null;
+  friendCode?: string | null;
 }
 
 interface AuthContextType {
@@ -22,6 +25,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateWalletBalance: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
+  // Reloads the signed-in user from the server (after a photo change, say).
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -158,7 +163,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (userData: Partial<User>) => {
     if (!user || !token) return;
     try {
-      const response = await authAPI.updateProfile(token, { name: userData.name, phone: userData.phone });
+      const response = await authAPI.updateProfile(token, {
+        name: userData.name,
+        phone: userData.phone,
+        emergency_contact: userData.emergency_contact ?? undefined,
+      });
       const updatedUser = { ...user, ...response.user };
       setUser(updatedUser);
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
@@ -168,7 +177,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await authAPI.getProfile(token);
+      if (response.user) {
+        setUser((current) => {
+          const next = { ...(current ?? {}), ...response.user } as User;
+          AsyncStorage.setItem('userData', JSON.stringify(next)).catch(() => {});
+          return next;
+        });
+      }
+    } catch {
+      // Keep what we have.
+    }
+  }, [token]);
+
   const value: AuthContextType = {
+    refreshUser,
     user,
     token,
     walletBalance,

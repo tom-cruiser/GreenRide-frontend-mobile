@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Avatar as DesignAvatar, Badge, colors, IconButton, radius, shadow, space, formatMoney } from '@/design';
+import { PersonAvatar } from './person-avatar';
+import { Badge, colors, IconButton, radius, shadow, space, formatMoney } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { signalingClient } from '../services/signalingClient';
 import { isInsufficientBalance, type FriendsPerson } from '../services/api';
@@ -16,7 +17,7 @@ export const money = (amount: number, currency = 'FBU') => formatMoney(amount, c
 
 // Riders see each other's first name and initials only (photos come later).
 export function Avatar({ person, size = 44 }: { person: FriendsPerson; size?: number }) {
-  return <DesignAvatar name={person.initials.split('').join(' ')} size={size} />;
+  return <PersonAvatar person={person} size={size} />;
 }
 
 const CHIP: Record<string, [string, 'neutral' | 'dark' | 'warning' | 'danger']> = {

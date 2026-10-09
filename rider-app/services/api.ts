@@ -35,7 +35,10 @@ const getApiConfig = (): ApiConfig => {
   return { baseUrl: `${origin}/api`, origin };
 };
 
-const { baseUrl: API_BASE_URL } = getApiConfig();
+const { baseUrl: API_BASE_URL, origin: API_ORIGIN } = getApiConfig();
+
+// Full address of a path the API returns (e.g. a photo's /api/photos/...).
+export const apiUrl = (path: string) => `${API_ORIGIN}${path}`;
 
 // eslint-disable-next-line no-console
 console.log('[api] base URL:', API_BASE_URL);
@@ -101,7 +104,7 @@ export const authAPI = {
   getProfile: async (token: string) =>
     apiCall('/auth/profile', { headers: { Authorization: `Bearer ${token}` } }),
 
-  updateProfile: async (token: string, data: { name?: string; phone?: string }) =>
+  updateProfile: async (token: string, data: { name?: string; phone?: string; emergency_contact?: string }) =>
     apiCall('/auth/profile', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
@@ -204,7 +207,7 @@ export const ridesAPI = {
 };
 
 // Share with friends: the host invites people they know (by phone or ride code).
-export type FriendsPerson = { firstName: string; initials: string };
+export type FriendsPerson = { firstName: string; initials: string; photoUrl?: string | null; handle?: string };
 export type FriendsGuest = FriendsPerson & {
   invitationId: number;
   status: 'invited' | 'accepted' | 'declined' | 'expired' | 'removed' | 'left';
@@ -214,6 +217,7 @@ export type FriendsGuest = FriendsPerson & {
 export type FriendsGroup = {
   groupId: number;
   status: 'gathering' | 'requested' | 'cancelled';
+  visibility?: 'friends' | 'public';
   role: 'host' | 'guest' | 'invited';
   code: string;
   link: string;
@@ -260,12 +264,20 @@ const post = (token: string, body?: unknown): RequestInit =>
   authed(token, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const friendsAPI = {
-  create: (token: string, ride: { pickup: string; dropoff: string; distance: number; pickup_lat?: number; pickup_lng?: number }) =>
+  create: (token: string, ride: { pickup: string; dropoff: string; distance: number; pickup_lat?: number; pickup_lng?: number; visibility?: 'friends' | 'public' }) =>
     apiCall('/rides/friends', post(token, ride)) as Promise<{ group: FriendsGroup }>,
   get: (token: string, groupId: string | number) =>
     apiCall(`/rides/friends/${groupId}`, authed(token)) as Promise<{ group: FriendsGroup }>,
   invite: (token: string, groupId: string | number, phone: string) =>
     apiCall(`/rides/friends/${groupId}/invite`, post(token, { phone })) as Promise<{ invitation: FriendsGuest }>,
+  // One tap from the friends list (friends only).
+  inviteFriend: (token: string, groupId: string | number, handle: string) =>
+    apiCall(`/rides/friends/${groupId}/invite`, post(token, { friend: handle })) as Promise<{ invitation: FriendsGuest }>,
+  // Public rides nearby that still have a seat.
+  listPublic: (token: string, coords?: { lat: number; lng: number }) =>
+    apiCall(`/rides/friends/public${coords ? `?lat=${coords.lat}&lng=${coords.lng}` : ''}`, authed(token)) as Promise<{ rides: PublicRide[] }>,
+  joinPublic: (token: string, groupId: string | number) =>
+    apiCall(`/rides/friends/${groupId}/join`, post(token)) as Promise<{ group: FriendsGroup }>,
   removeGuest: (token: string, groupId: string | number, invitationId: number) =>
     apiCall(`/rides/friends/${groupId}/guests/${invitationId}`, authed(token, { method: 'DELETE' })) as Promise<{ group: FriendsGroup }>,
   requestDriver: (token: string, groupId: string | number, alone = false) =>
@@ -285,6 +297,55 @@ export const friendsAPI = {
   joinByCode: (token: string, code: string) =>
     apiCall(`/rides/friends/code/${encodeURIComponent(code)}/join`, post(token)) as Promise<{ group: FriendsGroup }>,
 };
+
+export type PublicRide = {
+  groupId: number;
+  host: FriendsPerson;
+  pickup: string;
+  dropoff: string;
+  createdAt: string;
+  expiresAt: string;
+  ridersCount: number;
+  seatsLeft: number;
+  price: number;
+  currency: string;
+  distanceKm: number | null;
+};
+
+export type SocialPerson = FriendsPerson & { handle: string };
+export type SocialOverview = {
+  me: FriendsPerson & { code: string };
+  friends: (SocialPerson & { since: string })[];
+  incoming: (SocialPerson & { requestId: number })[];
+  outgoing: (SocialPerson & { requestId: number })[];
+  recent: (SocialPerson & { ridesTogether: number; requested: boolean })[];
+};
+export type SearchResult = SocialPerson & { relation: 'friend' | 'incoming' | 'outgoing' | 'recent' | 'none' };
+
+// Friends: requests the other rider accepts. Found by Flow code, phone
+// number (exact) or a shared ride.
+export const socialAPI = {
+  overview: (token: string) => apiCall('/friends', authed(token)) as Promise<SocialOverview>,
+  search: (token: string, q: string) =>
+    apiCall(`/friends/search?q=${encodeURIComponent(q)}`, authed(token)) as Promise<{ results: SearchResult[] }>,
+  request: (token: string, target: { code: string } | { phone: string }) =>
+    apiCall('/friends/requests', post(token, target)) as Promise<{ status: 'pending' | 'accepted'; person: SocialPerson }>,
+  accept: (token: string, requestId: number) => apiCall(`/friends/requests/${requestId}/accept`, post(token)),
+  decline: (token: string, requestId: number) => apiCall(`/friends/requests/${requestId}/decline`, post(token)),
+  remove: (token: string, handle: string) =>
+    apiCall(`/friends/${encodeURIComponent(handle)}`, authed(token, { method: 'DELETE' })),
+};
+
+// Profile photo: a picked image, sent as multipart form data.
+export async function uploadProfilePhoto(token: string, file: { uri: string; name: string; mimeType: string }) {
+  const body = new FormData();
+  body.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+  const res = await fetch(`${API_BASE_URL}/users/me/photo`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError((data as any).error || `HTTP ${res.status}`, res.status, (data as any).details);
+  return data as { photoUrl: string };
+}
+export const removeProfilePhoto = (token: string) => apiCall('/users/me/photo', authed(token, { method: 'DELETE' }));
 
 export const pushAPI = {
   register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web') =>

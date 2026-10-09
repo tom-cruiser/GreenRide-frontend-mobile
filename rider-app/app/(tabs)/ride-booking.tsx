@@ -78,6 +78,8 @@ export default function RideBookingScreen() {
   // Shared rides: matched with nearby riders, or with people the rider invites.
   const [shareMode, setShareMode] = useState<"others" | "friends">("others");
   const withFriends = isSharedRide && shareMode === "friends";
+  // Friends rides: invite-only, or public (riders nearby can join).
+  const [isPublic, setIsPublic] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +220,7 @@ export default function RideBookingScreen() {
           distance: estimate.distanceKm,
           pickup_lat: estimate.pickupCoords.latitude,
           pickup_lng: estimate.pickupCoords.longitude,
+          visibility: isPublic ? "public" : "friends",
         });
         setConfirmationModalVisible(false);
         resetEstimate();
@@ -331,6 +334,25 @@ export default function RideBookingScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}
                 >
+                  <Icon name={icon} size={18} color={on ? colors.onDark : colors.ink} />
+                  <Text weight="semibold" color={on ? colors.onDark : colors.ink} style={{ marginTop: space.sm }}>{label}</Text>
+                  <Text variant="caption" color={on ? colors.onDarkMuted : colors.muted}>{hint}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {withFriends && (
+          <View style={[styles.modeRow, { marginTop: space.md }]}>
+            {([
+              [false, "Friends only", "Invite by code or tap", "lock"],
+              [true, "Public", "Riders nearby can join", "globe"],
+            ] as const).map(([pub, label, hint, icon]) => {
+              const on = isPublic === pub;
+              return (
+                <Pressable key={label} style={[styles.modeOption, on && styles.modeOptionOn]}
+                  onPress={() => setIsPublic(pub)} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                   <Icon name={icon} size={18} color={on ? colors.onDark : colors.ink} />
                   <Text weight="semibold" color={on ? colors.onDark : colors.ink} style={{ marginTop: space.sm }}>{label}</Text>
                   <Text variant="caption" color={on ? colors.onDarkMuted : colors.muted}>{hint}</Text>
