@@ -17,7 +17,7 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { height: 70, paddingTop: 8, paddingBottom: 12, borderTopColor: colors.line, backgroundColor: colors.surface },
+        tabBarStyle: { height: 76, paddingTop: 8, paddingBottom: 14, borderTopColor: colors.line, backgroundColor: colors.surface },
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 12 },
       }}
     >

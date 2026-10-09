@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity, Alert, Modal, Switch, Platform, ScrollView } from 'react-native';
-import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
+import { View, StyleSheet, Pressable, Alert, Modal, Switch, Platform } from 'react-native';
+import { Button, Card, colors, Field, formatKm, formatMoney, Header, Icon, radius, Row, Screen, shadow, space, Text } from '@/design';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
-import AppLogo from "../../components/app-logo";
 import { useAuth } from "../../contexts/AuthContext";
 import { ridesAPI, driversAPI, friendsAPI } from "../../services/api";
 
@@ -259,550 +258,177 @@ export default function RideBookingScreen() {
   const userLng = location ? location.longitude : 29.36;
 
   return (
-    // Scrollable: the fare card and Confirm Booking appear below the form.
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <TouchableOpacity
-        style={styles.goBack}
-        onPress={() => router.replace("/(tabs)")}
-      >
-        <Text style={styles.goBackText}>{"< Go Back"}</Text>
-      </TouchableOpacity>
-      <AppLogo size={60} />
-      <Text style={styles.title}>Book a Ride</Text>
-      {/* Map with user and driver markers */}
-      {hasAndroidMapsKey ? (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: userLat,
-            longitude: userLng,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          region={
-            location
-              ? {
-                  latitude: userLat,
-                  longitude: userLng,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }
-              : undefined
-          }
-        >
-          <Marker
-            coordinate={{ latitude: userLat, longitude: userLng }}
-            title="You"
-            pinColor="#111111"
-          />
-          {nearbyDrivers.map((driver) => (
-            <Marker
-              key={driver.id}
-              coordinate={{
-                latitude: driver.latitude,
-                longitude: driver.longitude,
-              }}
-              title={driver.name || `Driver ${driver.id}`}
-              pinColor="#1976d2"
-            />
-          ))}
-        </MapView>
-      ) : (
-        <View style={[styles.map, styles.mapFallback]}>
-          <Text style={styles.mapFallbackTitle}>Map disabled in this build</Text>
-          <Text style={styles.mapFallbackText}>
-            Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable live Google Maps.
-          </Text>
-        </View>
-      )}
-      <TextInput
-        style={styles.input}
-        placeholder="Pickup Location"
-        value={pickup}
-        onChangeText={(v) => {
-          setPickup(v);
-          resetEstimate();
-        }}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Dropoff Location"
-        value={dropoff}
-        onChangeText={(v) => {
-          setDropoff(v);
-          resetEstimate();
-        }}
-      />
+    <Screen>
+      <Header title="Book a ride" onBack={() => router.replace("/(tabs)")} backLabel="Home" />
 
-      <View style={styles.sharedRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sharedTitle}>Shared ride</Text>
-          <Text style={styles.sharedSubtitle}>
-            Pay less by riding with friends or nearby riders
+      {/* Map with you and the drivers near you */}
+      <View style={styles.mapWrap}>
+        {hasAndroidMapsKey ? (
+          <MapView
+            style={StyleSheet.absoluteFill}
+            initialRegion={{ latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
+            region={location ? { latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
+          >
+            <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="You" pinColor={colors.ink} />
+            {nearbyDrivers.map((driver) => (
+              <Marker
+                key={driver.id}
+                coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}
+                title={driver.name || `Driver ${driver.id}`}
+                pinColor={colors.ink3}
+              />
+            ))}
+          </MapView>
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.mapOff]}>
+            <Icon name="map" size={28} color={colors.muted} />
+            <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Map not available in this build</Text>
+          </View>
+        )}
+        <View style={styles.driversPill}>
+          <Icon name="navigation" size={14} color={colors.onDark} />
+          <Text variant="caption" weight="semibold" color={colors.onDark}>
+            {nearbyDrivers.length ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby` : "No drivers nearby yet"}
           </Text>
         </View>
-        <Switch
-          value={isSharedRide}
-          onValueChange={(v) => {
-            setIsSharedRide(v);
-            resetEstimate();
-          }}
-          trackColor={{ false: "#E5E7EB", true: "#D1D5DB" }}
-          thumbColor={isSharedRide ? "#111111" : "#9CA3AF"}
-        />
       </View>
 
-      {isSharedRide && (
-        <View style={styles.modeRow}>
-          {([
-            ["friends", "Share with friends", "Invite people you know"],
-            ["others", "Share with others", "Match with nearby riders"],
-          ] as const).map(([mode, label, hint]) => (
-            <TouchableOpacity
-              key={mode}
-              style={[styles.modeOption, shareMode === mode && styles.modeOptionActive]}
-              onPress={() => {
-                setShareMode(mode);
-                resetEstimate();
-              }}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: shareMode === mode }}
-            >
-              <Text style={[styles.modeLabel, shareMode === mode && styles.modeLabelActive]}>{label}</Text>
-              <Text style={styles.modeHint}>{hint}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      {/* Where from, where to */}
+      <View style={{ gap: space.md, marginTop: space.lg }}>
+        <Field label="Pickup" placeholder="e.g. Rohero, near the market" value={pickup}
+          onChangeText={(v) => { setPickup(v); resetEstimate(); }} />
+        <Field label="Drop-off" placeholder="e.g. Kiriri" value={dropoff}
+          onChangeText={(v) => { setDropoff(v); resetEstimate(); }} />
+      </View>
 
-      {isSharedRide && shareMode === "others" && (
-        <View style={styles.coRidersCard}>
-          <Text style={styles.coRidersTitle}>Max co-riders</Text>
-          <View style={styles.stepperRow}>
-            <TouchableOpacity
-              style={[
-                styles.stepperButton,
-                maxCoRiders <= 1 && styles.stepperDisabled,
-              ]}
-              onPress={() => setMaxCoRiders((v) => Math.max(1, v - 1))}
-              disabled={maxCoRiders <= 1}
-            >
-              <Text style={styles.stepperButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.stepperValue}>{maxCoRiders}</Text>
-            <TouchableOpacity
-              style={[
-                styles.stepperButton,
-                maxCoRiders >= 3 && styles.stepperDisabled,
-              ]}
-              onPress={() => setMaxCoRiders((v) => Math.min(3, v + 1))}
-              disabled={maxCoRiders >= 3}
-            >
-              <Text style={styles.stepperButtonText}>+</Text>
-            </TouchableOpacity>
+      {/* Shared ride */}
+      <Card style={{ marginTop: space.lg }}>
+        <View style={styles.sharedRow}>
+          <View style={{ flex: 1 }}>
+            <Text weight="semibold">Shared ride</Text>
+            <Text variant="caption" color={colors.muted}>Pay less by riding with friends or nearby riders</Text>
           </View>
-          <Text style={styles.coRidersHint}>
-            You + up to {maxCoRiders} co-rider(s)
-          </Text>
+          <Switch
+            value={isSharedRide}
+            onValueChange={(v) => { setIsSharedRide(v); resetEstimate(); }}
+            trackColor={{ false: colors.soft2, true: colors.ink3 }}
+            thumbColor={isSharedRide ? colors.ink : "#FFFFFF"}
+          />
         </View>
-      )}
-      <TouchableOpacity
-        style={[styles.estimateButton, estimating && { opacity: 0.6 }]}
-        onPress={handleEstimate}
-        disabled={estimating}
-      >
-        <Text style={styles.estimateText}>
-          {estimating ? "Estimating…" : "Estimate Fare"}
-        </Text>
-      </TouchableOpacity>
 
+        {isSharedRide && (
+          <View style={styles.modeRow}>
+            {([
+              ["friends", "With friends", "Invite people you know", "users"],
+              ["others", "With others", "Match with nearby riders", "shuffle"],
+            ] as const).map(([mode, label, hint, icon]) => {
+              const on = shareMode === mode;
+              return (
+                <Pressable
+                  key={mode}
+                  style={[styles.modeOption, on && styles.modeOptionOn]}
+                  onPress={() => { setShareMode(mode); resetEstimate(); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                >
+                  <Icon name={icon} size={18} color={on ? colors.onDark : colors.ink} />
+                  <Text weight="semibold" color={on ? colors.onDark : colors.ink} style={{ marginTop: space.sm }}>{label}</Text>
+                  <Text variant="caption" color={on ? colors.onDarkMuted : colors.muted}>{hint}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {isSharedRide && shareMode === "others" && (
+          <View style={styles.stepper}>
+            <Text color={colors.ink3} style={{ flex: 1 }}>You + up to {maxCoRiders} co-rider{maxCoRiders > 1 ? "s" : ""}</Text>
+            <Pressable style={[styles.stepBtn, maxCoRiders <= 1 && { opacity: 0.4 }]} disabled={maxCoRiders <= 1}
+              onPress={() => setMaxCoRiders((v) => Math.max(1, v - 1))} accessibilityLabel="Fewer co-riders">
+              <Icon name="minus" size={18} />
+            </Pressable>
+            <Text variant="heading" style={{ minWidth: 24, textAlign: "center" }}>{maxCoRiders}</Text>
+            <Pressable style={[styles.stepBtn, maxCoRiders >= 3 && { opacity: 0.4 }]} disabled={maxCoRiders >= 3}
+              onPress={() => setMaxCoRiders((v) => Math.min(3, v + 1))} accessibilityLabel="More co-riders">
+              <Icon name="plus" size={18} />
+            </Pressable>
+          </View>
+        )}
+      </Card>
+
+      {!(estimate && bookingStep === "confirmation") && (
+        <Button label="See the price" icon="search" onPress={handleEstimate} loading={estimating} style={{ marginTop: space.lg }} />
+      )}
+
+      {/* Price and trip, then book */}
       {estimate && bookingStep === "confirmation" && (
-        <View style={styles.confirmationSection}>
-          <View style={styles.fareCard}>
-            <Text style={styles.fareLabel}>{withFriends ? "Each rider pays" : "Estimated Fare"}</Text>
-            <Text style={styles.fareAmount}>{formatMoney(estimate.fare)}</Text>
+        <View style={{ marginTop: space.lg, gap: space.md }}>
+          <Card dark>
+            <Text color={colors.onDarkMuted}>{withFriends ? "Each rider pays" : "Your price"}</Text>
+            <Text color={colors.onDark} weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
+              {formatMoney(estimate.fare)}
+            </Text>
             {withFriends && estimate.soloFare != null && (
-              <Text style={styles.fareNote}>
+              <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>
                 Until a friend joins you pay the solo price, {formatMoney(estimate.soloFare)}. Up to 4 riders.
               </Text>
             )}
-          </View>
-
-          <View style={styles.tripSummary}>
-            <Text style={styles.summaryTitle}>Trip Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>From:</Text>
-              <Text style={styles.summaryValue}>{pickup}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>To:</Text>
-              <Text style={styles.summaryValue}>{dropoff}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Distance:</Text>
-              <Text style={styles.summaryValue}>
-                ~{estimate.distanceKm.toFixed(1)} km (straight line)
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.bookButton} onPress={handleBookRide}>
-            <Text style={styles.bookText}>{withFriends ? "Continue and invite friends" : "Confirm Booking"}</Text>
-          </TouchableOpacity>
+          </Card>
+          <Card>
+            <Row label="From" value={pickup} />
+            <Row label="To" value={dropoff} />
+            <Row label="Distance" value={`~${formatKm(estimate.distanceKm)}`} />
+          </Card>
+          <Button label={withFriends ? "Continue and invite friends" : "Book this ride"} icon="arrow-right" onPress={handleBookRide} />
+          <Button label="Change the trip" variant="ghost" onPress={resetEstimate} />
         </View>
       )}
 
-      {/* Confirmation Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={confirmationModalVisible}
-        onRequestClose={() => setConfirmationModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirm booking</Text>
-
+      {/* Confirmation */}
+      <Modal animationType="slide" transparent visible={confirmationModalVisible} onRequestClose={() => setConfirmationModalVisible(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <Text variant="title">Confirm your ride</Text>
             {estimate && (
-              <View style={styles.modalTripSummary}>
-                <Text style={styles.modalFare}>
-                  {withFriends && estimate.soloFare != null
-                    ? `Now: ${formatMoney(estimate.soloFare)}`
-                    : `Total: ${formatMoney(estimate.fare)}`}
+              <View style={{ marginTop: space.md, gap: space.sm }}>
+                <Text variant="heading">
+                  {withFriends && estimate.soloFare != null ? `Now: ${formatMoney(estimate.soloFare)}` : formatMoney(estimate.fare)}
                 </Text>
-                <Text style={styles.modalRoute}>
-                  {pickup} → {dropoff}
-                </Text>
+                <Text color={colors.ink3}>{pickup} → {dropoff}</Text>
                 {isSharedRide && (
-                  <Text style={styles.modalRoute}>
+                  <Text color={colors.ink3}>
                     {withFriends
                       ? `Drops to ${formatMoney(estimate.fare)} each when friends join. You get a code to share; the driver is requested when you are ready.`
-                      : `Shared ride with up to ${maxCoRiders} co-rider(s)`}
+                      : `Shared ride with up to ${maxCoRiders} co-rider(s).`}
                   </Text>
                 )}
-                <Text style={styles.modalRoute}>
-                  The fare is held from your wallet and charged when the trip ends.
-                </Text>
+                <Text variant="caption" color={colors.muted}>The fare is held from your wallet and charged when the trip ends.</Text>
               </View>
             )}
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setConfirmationModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmBooking}
-                disabled={isBooking}
-              >
-                <Text style={styles.confirmButtonText}>
-                  {isBooking ? "Booking..." : "Confirm"}
-                </Text>
-              </TouchableOpacity>
+            <View style={{ gap: space.sm, marginTop: space.xl }}>
+              <Button label="Confirm" onPress={confirmBooking} loading={isBooking} />
+              <Button label="Cancel" variant="secondary" onPress={() => setConfirmationModalVisible(false)} disabled={isBooking} />
             </View>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  mapWrap: { height: 200, borderRadius: radius.xl, overflow: "hidden", backgroundColor: colors.soft2 },
+  mapOff: { alignItems: "center", justifyContent: "center" },
+  driversPill: {
+    position: "absolute", left: space.md, bottom: space.md, flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: colors.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6,
   },
-  container: {
-    flexGrow: 1,
-    alignItems: "center",
-    padding: 24,
-    paddingTop: 56,
-    paddingBottom: 40,
-  },
-  map: {
-    width: "100%",
-    height: 180,
-    borderRadius: 18,
-    marginBottom: 12,
-  },
-  mapFallback: {
-    backgroundColor: "#eef3f8",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  mapFallbackTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  mapFallbackText: {
-    fontSize: 13,
-    color: "#4b5563",
-    textAlign: "center",
-  },
-  goBack: {
-    alignSelf: "flex-start",
-    marginBottom: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: "#F6F6F6",
-  },
-  goBackText: {
-    color: "#0B0B0B",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#0B0B0B",
-    marginBottom: 24,
-  },
-  input: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  modeRow: { flexDirection: "row", gap: 10, width: "100%", marginBottom: 12 },
-  modeOption: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, backgroundColor: "#fff" },
-  modeOptionActive: { borderColor: "#111111", backgroundColor: "#F3F4F6" },
-  modeLabel: { fontWeight: "700", color: "#111827" },
-  modeLabelActive: { color: "#0B0B0B" },
-  modeHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
-  fareNote: { color: "#4b5563", fontSize: 13, marginTop: 6, textAlign: "center" },
-  sharedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F6F6F6",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  sharedTitle: {
-    color: "#0B0B0B",
-    fontWeight: "800",
-    fontSize: 14,
-  },
-  sharedSubtitle: {
-    color: "#6B7280",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  coRidersCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  coRidersTitle: {
-    color: "#111827",
-    fontWeight: "800",
-    marginBottom: 10,
-  },
-  stepperRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 10,
-  },
-  stepperButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepperDisabled: {
-    opacity: 0.5,
-  },
-  stepperButtonText: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#111827",
-  },
-  stepperValue: {
-    minWidth: 24,
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#111827",
-  },
-  coRidersHint: {
-    color: "#6B7280",
-    fontSize: 12,
-    marginTop: 8,
-  },
-  estimateButton: {
-    backgroundColor: "#0B0B0B",
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    marginBottom: 18,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  estimateText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  confirmationSection: {
-    width: "100%",
-  },
-  fareCard: {
-    backgroundColor: "#F6F6F6",
-    borderRadius: 12,
-    padding: 18,
-    alignItems: "center",
-    marginBottom: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  fareLabel: {
-    fontSize: 15,
-    color: "#6B7280",
-    marginBottom: 4,
-    fontWeight: "600",
-  },
-  fareAmount: {
-    fontSize: 22,
-    color: "#0B0B0B",
-    fontWeight: "bold",
-  },
-  tripSummary: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 18,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#0B0B0B",
-    marginBottom: 12,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0B0B0B",
-  },
-  bookButton: {
-    backgroundColor: "#0B0B0B",
-    borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 60,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  bookText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 18,
-    letterSpacing: 1,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    margin: 20,
-    alignItems: "center",
-    minWidth: 320,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0B0B0B",
-    marginBottom: 20,
-  },
-  modalTripSummary: {
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    width: "100%",
-  },
-  modalFare: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#0B0B0B",
-  },
-  modalRoute: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#F3F4F6",
-  },
-  cancelButtonText: {
-    color: "#111827",
-    fontWeight: "600",
-  },
-  confirmButton: {
-    backgroundColor: "#0B0B0B",
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  sharedRow: { flexDirection: "row", alignItems: "center", gap: space.md },
+  modeRow: { flexDirection: "row", gap: space.sm, marginTop: space.lg },
+  modeOption: { flex: 1, borderWidth: 1.5, borderColor: colors.line, borderRadius: radius.lg, padding: space.md, backgroundColor: colors.surface },
+  modeOptionOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  stepper: { flexDirection: "row", alignItems: "center", gap: space.md, marginTop: space.lg },
+  stepBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.soft, alignItems: "center", justifyContent: "center" },
+  overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, padding: space.xxl, ...shadow.float },
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text } from '@/design';
+import { Alert, type StyleProp, type ViewStyle } from 'react-native';
+import { Button } from '@/design';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCall } from '@/hooks/useCall';
@@ -12,11 +12,12 @@ export const CALLABLE_RIDE_STATUSES = ['accepted', 'arrived', 'in_progress'];
 type Props = {
   rideId: string | number;
   label?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 // Calls the other side of a ride. The peer is looked up from the ride itself
 // (GET /api/rides/:id), so the button only needs the ride id.
-export function CallRideButton({ rideId, label = 'Call' }: Props) {
+export function CallRideButton({ rideId, label = 'Call', style }: Props) {
   const { user, token } = useAuth();
   const { phase, initiateCall } = useCall();
   const router = useRouter();
@@ -43,31 +44,5 @@ export function CallRideButton({ rideId, label = 'Call' }: Props) {
   };
 
   const disabled = loading || (phase !== 'idle' && phase !== 'ended');
-
-  return (
-    <TouchableOpacity
-      style={[styles.button, disabled && styles.disabled]}
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.text}>{label}</Text>}
-    </TouchableOpacity>
-  );
+  return <Button label={label} icon="phone" variant="secondary" size="lg" onPress={onPress} loading={loading} disabled={disabled} style={style} />;
 }
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#111111',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-    marginTop: 8,
-  },
-  disabled: { opacity: 0.5 },
-  text: { color: '#fff', fontWeight: '700' },
-});

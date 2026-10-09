@@ -1,17 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
+import { Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button, Card, colors, formatMoney, Icon, IconButton, type IconName, radius, shadow, space, Text } from '@/design';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
-import { BlurView } from "expo-blur";
 import Constants from "expo-constants";
 
-import AppLogo from "../../components/app-logo";
 import { useAuth } from "../../contexts/AuthContext";
 import { driversAPI, friendsAPI, ridesAPI, type FriendsGroup } from "../../services/api";
-import { Colors, Radius, Spacing } from "../../constants/theme";
-import { useColorScheme } from "../../hooks/use-color-scheme";
 
 type NearbyDriver = {
   id: number | string;
@@ -25,15 +22,9 @@ type NearbyDriver = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? "light"];
 
   const { user, token, walletBalance, updateWalletBalance } = useAuth();
 
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("");
-  const [fare, setFare] = useState<string | null>(null);
-  const [surge, setSurge] = useState(true);
   const [coords, setCoords] = useState<Location.LocationObjectCoords | null>(
     null,
   );
@@ -139,334 +130,110 @@ export default function HomeScreen() {
     };
   }, [token, lat, lng]);
 
-  const handleEstimate = () => {
-    if (!pickup || !dropoff) {
-      Alert.alert(
-        "Missing Information",
-        "Please enter both pickup and dropoff locations.",
-      );
-      return;
-    }
+  const ridingLabel =
+    activeRideStatus === "gathering" ? "Waiting for your friends…"
+      : activeRideStatus === "pending" ? "Finding your driver…"
+        : "Your ride is in progress";
 
-    const estimatedDistanceKm = 1.0;
-    const baseRatePerKm = 7000;
-    const estimatedFare = Math.max(baseRatePerKm * estimatedDistanceKm, 3500);
-
-    setFare(`${formatMoney(estimatedFare)}`);
-  };
-
-  const topPadding = Platform.select({ android: 48, default: 64 });
+  const quick: [IconName, string, () => void][] = [
+    ["users", "Join a ride", () => router.push("/join")],
+    ["shield", "Safety", () => router.push("/support")],
+    ["gift", "Promos", () => router.push("/promotions")],
+  ];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Map: you and the drivers online near you */}
       {hasAndroidMapsKey ? (
         <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: userLat,
-            longitude: userLng,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          region={
-            coords
-              ? {
-                  latitude: userLat,
-                  longitude: userLng,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }
-              : undefined
-          }
+          style={StyleSheet.absoluteFill}
+          initialRegion={{ latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
+          region={coords ? { latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
         >
-          <Marker
-            coordinate={{ latitude: userLat, longitude: userLng }}
-            title="You"
-            pinColor={theme.tint}
-          />
+          <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="You" pinColor={colors.ink} />
           {nearbyDrivers.map((driver) => (
             <Marker
               key={String(driver.id)}
-              coordinate={{
-                latitude: driver.latitude,
-                longitude: driver.longitude,
-              }}
+              coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}
               title={driver.name || `Driver ${driver.id}`}
               description={[driver.vehicle, driver.eta && `${driver.eta} away`].filter(Boolean).join(" · ")}
-              pinColor="#1976d2"
+              pinColor={colors.ink3}
             />
           ))}
         </MapView>
       ) : (
-        <View style={[styles.map, styles.mapFallback]}>
-          <Text style={styles.mapFallbackTitle}>Map disabled in this build</Text>
-          <Text style={styles.mapFallbackText}>
-            Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable the live map.
-          </Text>
+        <View style={[StyleSheet.absoluteFill, styles.mapOff]}>
+          <Icon name="map" size={28} color={colors.muted} />
+          <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Map not available in this build</Text>
         </View>
       )}
 
-      <View style={[styles.topBar, { paddingTop: topPadding }]}>
-        <View style={styles.brandRow}>
-          <BlurView
-            intensity={22}
-            tint={colorScheme === "dark" ? "dark" : "light"}
-            style={[styles.logoPill, { borderColor: theme.border }]}
-          >
-            <AppLogo size={28} compact containerStyle={styles.logoInner} />
-          </BlurView>
+      {/* Greeting */}
+      <SafeAreaView edges={["top"]} style={styles.top} pointerEvents="box-none">
+        <View style={styles.greetCard}>
+          <Image source={require("@/assets/images/app-logo.png")} style={styles.logo} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.greeting, { color: theme.text }]}>
-              Hi, {greetingName}
-            </Text>
-            <Text style={[styles.subGreeting, { color: theme.muted }]}>
+            <Text weight="bold">Hi, {greetingName}</Text>
+            <Text variant="caption" color={colors.muted} numberOfLines={1}>
               {!nearbyLoaded
                 ? "Ready to ride?"
                 : nearbyDrivers.length
-                  ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby · closest ${nearbyDrivers[0].eta ?? ""}`.trim()
+                  ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby${nearbyDrivers[0].eta ? ` · closest ${nearbyDrivers[0].eta}` : ""}`
                   : "No drivers online near you right now"}
             </Text>
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.circleBtn,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-            onPress={() => router.push("/profile")}
-            accessibilityRole="button"
-            accessibilityLabel="Open profile"
-          >
-            <Text style={[styles.circleBtnText, { color: theme.text }]}>
-              👤
-            </Text>
-          </TouchableOpacity>
+          <IconButton icon="user" label="Open profile" onPress={() => router.push("/profile")} />
         </View>
-      </View>
+      </SafeAreaView>
 
-      <View
-        style={[
-          styles.sheet,
-          { backgroundColor: theme.surface, borderColor: theme.border },
-        ]}
-      >
+      {/* Sheet */}
+      <View style={styles.sheet}>
         {invitations.map((inv) => (
-          <TouchableOpacity
-            key={inv.invitation?.id ?? inv.groupId}
-            style={[styles.activeRideCard, { backgroundColor: theme.text }]}
-            onPress={() => router.push(`/invitation/${inv.invitation?.id}`)}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.activeRideTitle, { color: theme.background }]}>{inv.host.firstName} invited you to share a ride</Text>
-            <Text style={[styles.activeRideHint, { color: theme.background }]}>
-              To {inv.dropoff} · {formatMoney(inv.myPrice, inv.currency)} · Tap to answer
-            </Text>
-          </TouchableOpacity>
+          <Card key={inv.invitation?.id ?? inv.groupId} dark onPress={() => router.push(`/invitation/${inv.invitation?.id}`)} style={styles.banner}>
+            <Icon name="users" color={colors.onDark} />
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold" color={colors.onDark}>{inv.host.firstName} invited you to share a ride</Text>
+              <Text variant="caption" color={colors.onDarkMuted}>To {inv.dropoff} · {formatMoney(inv.myPrice, inv.currency)} · Tap to answer</Text>
+            </View>
+            <Icon name="chevron-right" color={colors.onDark} />
+          </Card>
         ))}
 
         {activeRideStatus && (
-          <TouchableOpacity
-            style={[styles.activeRideCard, { backgroundColor: theme.text }]}
-            onPress={() => router.push(gatheringGroupId ? `/friends-ride/${gatheringGroupId}` : "/active-ride")}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.activeRideTitle, { color: theme.background }]}>
-              {activeRideStatus === "gathering"
-                ? "Waiting for your friends…"
-                : activeRideStatus === "pending" ? "Finding your driver…" : "Your ride is in progress"}
-            </Text>
-            <Text style={[styles.activeRideHint, { color: theme.background }]}>Tap to follow your ride</Text>
-          </TouchableOpacity>
+          <Card dark onPress={() => router.push(gatheringGroupId ? `/friends-ride/${gatheringGroupId}` : "/active-ride")} style={styles.banner}>
+            <Icon name="navigation" color={colors.onDark} />
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold" color={colors.onDark}>{ridingLabel}</Text>
+              <Text variant="caption" color={colors.onDarkMuted}>Tap to follow your ride</Text>
+            </View>
+            <Icon name="chevron-right" color={colors.onDark} />
+          </Card>
         )}
 
-        <View
-          style={[
-            styles.walletCard,
-            { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-          ]}
-        >
+        <Pressable onPress={() => router.push("/(tabs)/ride-booking")} accessibilityRole="button" style={({ pressed }) => [styles.whereTo, pressed && { opacity: 0.85 }]}>
+          <Icon name="search" size={22} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.walletLabel, { color: theme.muted }]}>
-              Balance
-            </Text>
-            <Text style={[styles.walletAmount, { color: theme.tint }]}>
-              {walletBalance == null
-                ? "—"
-                : `${formatMoney(Number(walletBalance))}`}
-            </Text>
+            <Text variant="heading">Where to?</Text>
+            <Text variant="caption" color={colors.muted}>Choose a destination to book</Text>
           </View>
+          <Icon name="arrow-right" />
+        </Pressable>
 
-          <View style={styles.walletActions}>
-            <TouchableOpacity
-              style={[
-                styles.secondaryPillBtn,
-                { borderColor: theme.border, backgroundColor: theme.surface },
-              ]}
-              onPress={() => router.push("/(tabs)/wallet")}
-              accessibilityRole="button"
-            >
-              <Text
-                style={[styles.secondaryPillBtnText, { color: theme.text }]}
-              >
-                Wallet
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: theme.text }]}
-              onPress={() => router.push("/(tabs)/ride-history")}
-              accessibilityRole="button"
-            >
-              <Text
-                style={[styles.primaryBtnText, { color: theme.background }]}
-              >
-                Trips
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.balanceRow}>
+          <View style={{ flex: 1 }}>
+            <Text variant="caption" color={colors.muted}>Balance</Text>
+            <Text variant="heading" weight="bold">{walletBalance == null ? "—" : formatMoney(Number(walletBalance))}</Text>
           </View>
+          <Button size="md" variant="secondary" label="Top up" icon="plus" onPress={() => router.push("/(tabs)/wallet")} />
         </View>
-
-        <TouchableOpacity
-          style={[
-            styles.searchCta,
-            { backgroundColor: theme.surface, borderColor: theme.border },
-          ]}
-          onPress={() => router.push("/(tabs)/ride-booking")}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.searchCtaText, { color: theme.text }]}>
-            Where to?
-          </Text>
-          <Text style={[styles.searchCtaHint, { color: theme.muted }]}>
-            Choose a destination to book
-          </Text>
-        </TouchableOpacity>
 
         <View style={styles.quickRow}>
-          <TouchableOpacity
-            style={[
-              styles.pill,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-            onPress={() => router.push("/support")}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.pillText, { color: theme.text }]}>Safety</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.pill,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-            onPress={() => router.push("/join")}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.pillText, { color: theme.text }]}>Join a ride</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.pill,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-            onPress={() => router.push("/promotions")}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.pillText, { color: theme.text }]}>Promos</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.pill,
-              { backgroundColor: theme.surface, borderColor: theme.border },
-            ]}
-            onPress={() => setSurge((s) => !s)}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.pillText, { color: theme.text }]}>
-              {surge ? "Surge On" : "Surge Off"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View
-          style={[
-            styles.banner,
-            {
-              backgroundColor: surge ? "#F3F4F6" : theme.surface,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <Text style={[styles.bannerText, { color: theme.text }]}>
-            {surge ? "Surge pricing active" : "Standard pricing"}
-          </Text>
-          <Text style={[styles.bannerSubText, { color: theme.muted }]}>
-            {surge
-              ? "Fares may be higher during peak demand."
-              : "Enjoy stable fares right now."}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.fareBox,
-            { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-          ]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Quick fare estimate
-          </Text>
-
-          <TextInput
-            value={pickup}
-            onChangeText={setPickup}
-            placeholder="Pickup (e.g., Downtown)"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.border,
-                backgroundColor: theme.surface,
-                color: theme.text,
-              },
-            ]}
-          />
-
-          <TextInput
-            value={dropoff}
-            onChangeText={setDropoff}
-            placeholder="Drop-off (e.g., Airport)"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.border,
-                backgroundColor: theme.surface,
-                color: theme.text,
-              },
-            ]}
-          />
-
-          <TouchableOpacity
-            style={[
-              styles.secondaryBtn,
-              { borderColor: theme.border, backgroundColor: theme.surface },
-            ]}
-            onPress={handleEstimate}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.secondaryBtnText, { color: theme.text }]}>
-              Estimate
-            </Text>
-          </TouchableOpacity>
-
-          {fare ? (
-            <Text style={[styles.fareResult, { color: theme.text }]}>
-              Estimated fare: {fare}
-            </Text>
-          ) : null}
+          {quick.map(([icon, label, onPress]) => (
+            <Pressable key={label} onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.quick, pressed && { opacity: 0.8 }]}>
+              <Icon name={icon} size={18} />
+              <Text variant="caption" weight="semibold">{label}</Text>
+            </Pressable>
+          ))}
         </View>
       </View>
     </View>
@@ -474,211 +241,25 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  activeRideCard: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+  mapOff: { backgroundColor: colors.soft2, alignItems: "center", justifyContent: "center" },
+  top: { position: "absolute", left: 0, right: 0, top: 0, paddingHorizontal: space.lg, paddingTop: space.sm },
+  greetCard: {
+    flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.surface, borderRadius: radius.xl,
+    paddingVertical: space.sm, paddingLeft: space.sm, paddingRight: space.sm, ...shadow.card,
   },
-  activeRideTitle: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  activeRideHint: { color: "#fff", opacity: 0.9, marginTop: 2 },
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
-  mapFallback: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eef3f8",
-    paddingHorizontal: 24,
-  },
-  mapFallbackTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  mapFallbackText: {
-    fontSize: 14,
-    color: "#4b5563",
-    textAlign: "center",
-  },
-  topBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    paddingHorizontal: Spacing.lg,
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  logoPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  logoInner: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  greeting: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  subGreeting: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  circleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  circleBtnText: {
-    fontSize: 16,
-  },
+  logo: { width: 40, height: 40, borderRadius: 20 },
   sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 72,
-    padding: Spacing.lg,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    borderTopWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 12,
+    position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.surface, gap: space.md,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, padding: space.xl, ...shadow.float,
   },
-  walletCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
+  banner: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.lg },
+  whereTo: {
+    flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.soft, borderRadius: radius.xl,
+    paddingHorizontal: space.lg, paddingVertical: space.lg,
   },
-  walletLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  walletAmount: {
-    marginTop: 2,
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  walletActions: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-  },
-  primaryBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: Radius.md,
-  },
-  primaryBtnText: {
-    fontWeight: "900",
-    fontSize: 13,
-  },
-  secondaryPillBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    backgroundColor: "transparent",
-  },
-  secondaryPillBtnText: {
-    fontWeight: "900",
-    fontSize: 13,
-  },
-  searchCta: {
-    marginTop: Spacing.md,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-  },
-  searchCtaText: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  searchCtaHint: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  quickRow: {
-    marginTop: Spacing.md,
-    flexDirection: "row",
-    gap: 10,
-  },
-  pill: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-  },
-  pillText: {
-    fontWeight: "900",
-    fontSize: 13,
-  },
-  banner: {
-    marginTop: Spacing.md,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-  },
-  bannerText: {
-    fontWeight: "900",
-    fontSize: 14,
-  },
-  bannerSubText: {
-    marginTop: 2,
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  fareBox: {
-    marginTop: Spacing.md,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    marginBottom: Spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  secondaryBtnText: {
-    fontWeight: "900",
-    fontSize: 13,
-  },
-  fareResult: {
-    marginTop: 10,
-    fontWeight: "700",
+  balanceRow: { flexDirection: "row", alignItems: "center", gap: space.md },
+  quickRow: { flexDirection: "row", gap: space.sm },
+  quick: {
+    flex: 1, alignItems: "center", gap: 6, paddingVertical: space.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line,
   },
 });

@@ -1,8 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Text, TextInputFlow as TextInput, formatMoney } from '@/design';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Avatar, Badge, Button, Card, colors, Field, firstName, formatKm, formatMoney, Header, Icon, Row, Screen, space, Text } from '@/design';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CallRideButton } from '@/components/CallRideButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { ridesAPI } from '@/services/api';
@@ -32,7 +31,7 @@ type Ride = {
 const CANCELLABLE = ['gathering', 'pending', 'accepted', 'arrived'];
 
 function headline(ride: Ride): { title: string; detail: string } {
-  const driver = ride.driver_name ?? 'Your driver';
+  const driver = firstName(ride.driver_name) || 'Your driver';
   switch (ride.status) {
     case 'gathering':
       return { title: 'Waiting for your friends…', detail: 'The driver is requested once your group is ready.' };
@@ -140,146 +139,110 @@ export default function ActiveRideScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.page, styles.center]}>
-        <ActivityIndicator size="large" color="#111111" />
-      </View>
+      <Screen scroll={false} contentStyle={styles.center}>
+        <ActivityIndicator size="large" color={colors.ink} />
+      </Screen>
     );
   }
 
   if (!ride) {
     return (
-      <View style={[styles.page, styles.center]}>
-        <Text style={styles.title}>No active ride</Text>
-        <Text style={styles.detail}>Book a ride and you can follow it here.</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => router.replace('/(tabs)/ride-booking')}>
-          <Text style={styles.primaryBtnText}>Book a ride</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen scroll={false} contentStyle={styles.center}>
+        <Icon name="map-pin" size={36} color={colors.muted} />
+        <Text variant="title" align="center" style={{ marginTop: space.lg }}>No active ride</Text>
+        <Text color={colors.ink3} align="center" style={{ marginTop: space.xs }}>Book a ride and you can follow it here.</Text>
+        <Button label="Book a ride" icon="map-pin" onPress={() => router.replace('/(tabs)/ride-booking')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
+      </Screen>
     );
   }
 
   const { title, detail } = headline(ride);
   const hasDriver = ['accepted', 'arrived', 'in_progress'].includes(ride.status);
+  const waiting = ride.status === 'pending' || ride.status === 'gathering';
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <TouchableOpacity style={styles.goBack} onPress={() => router.replace('/(tabs)')}>
-        <Text style={styles.goBackText}>{'< Home'}</Text>
-      </TouchableOpacity>
+    <Screen>
+      <Header onBack={() => router.replace('/(tabs)')} backLabel="Home" />
 
-      <View style={styles.statusCard}>
-        {ride.status === 'pending' && <ActivityIndicator color="#111111" style={styles.spinner} />}
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.detail}>{detail}</Text>
-        {hasDriver && <CallRideButton rideId={ride.id} label="Call driver" />}
-      </View>
+      {/* Status in plain words */}
+      <Card dark style={{ alignItems: 'flex-start' }}>
+        {waiting ? <ActivityIndicator color={colors.onDark} style={{ marginBottom: space.md }} /> : null}
+        <Text variant="title" color={colors.onDark}>{title}</Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>{detail}</Text>
+      </Card>
 
-      <View style={styles.card}>
+      {/* Driver */}
+      {ride.driver_name && (
+        <Card style={{ marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
+          <Avatar name={ride.driver_name} />
+          <View style={{ flex: 1 }}>
+            <Text variant="caption" color={colors.muted}>Your driver</Text>
+            <Text variant="heading" weight="bold">{firstName(ride.driver_name)}</Text>
+          </View>
+        </Card>
+      )}
+      {hasDriver && <View style={{ marginTop: space.md }}><CallRideButton rideId={ride.id} label="Call your driver" /></View>}
+
+      {/* Trip */}
+      <Card style={{ marginTop: space.md }}>
         <Row label="From" value={ride.pickup} />
         <Row label="To" value={ride.dropoff} />
-        <Row label="Distance" value={`~${Number(ride.distance).toFixed(1)} km`} />
-        <Row label="Fare" value={`${formatMoney(ride.fare)}`} />
-        {ride.driver_name && <Row label="Driver" value={ride.driver_name} />}
-      </View>
+        <Row label="Distance" value={`~${formatKm(Number(ride.distance))}`} />
+        <Row label="Fare" value={formatMoney(ride.fare)} strong />
+      </Card>
 
       {ride.share?.mode === 'friends' && ride.status !== 'cancelled' && (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => router.push(`/friends-ride/${ride.share!.groupId}`)}
-        >
-          <Text style={styles.cardTitle}>Ride with friends</Text>
-          <Text style={styles.detail}>
-            {ride.share.ridersCount} of {ride.share.maxRiders} riders. Tap to see the group.
-          </Text>
-        </TouchableOpacity>
+        <Card style={{ marginTop: space.md }} onPress={() => router.push(`/friends-ride/${ride.share!.groupId}`)}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <Icon name="users" />
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold">Ride with friends</Text>
+              <Text variant="caption" color={colors.muted}>{ride.share.ridersCount} of {ride.share.maxRiders} riders. Tap to see the group.</Text>
+            </View>
+            <Icon name="chevron-right" color={colors.muted} />
+          </View>
+        </Card>
       )}
 
       {ride.is_shared && ride.share && ride.share.mode !== 'friends' && ride.status === 'pending' && (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => router.push({ pathname: '/shared-ride', params: { groupId: String(ride.share!.groupId) } })}
-        >
-          <Text style={styles.cardTitle}>Shared ride</Text>
-          <Text style={styles.detail}>
-            {ride.share.ridersCount} of {ride.share.maxRiders} riders matched ({ride.share.status}). Tap for details.
-          </Text>
-        </TouchableOpacity>
+        <Card style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/shared-ride', params: { groupId: String(ride.share!.groupId) } })}>
+          <Text weight="semibold">Shared ride</Text>
+          <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
+            <Badge label={`${ride.share.ridersCount} of ${ride.share.maxRiders} riders`} icon="users" />
+            <Badge label={ride.share.status} />
+          </View>
+        </Card>
       )}
 
+      {/* Rating once the trip is done */}
       {ride.status === 'completed' && ride.rating === null && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>How was your ride?</Text>
+        <Card style={{ marginTop: space.md }}>
+          <Text variant="heading">How was your ride?</Text>
           <View style={styles.stars}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)} accessibilityLabel={`${star} stars`}>
-                <IconSymbol name={star <= rating ? 'star.fill' : 'star'} size={34} color={star <= rating ? '#FFD700' : '#ccc'} />
-              </TouchableOpacity>
+              <Pressable key={star} onPress={() => setRating(star)} accessibilityRole="button" accessibilityLabel={`${star} stars`} hitSlop={6}>
+                <Text style={{ fontSize: 36, lineHeight: 42 }} color={star <= rating ? colors.ink : colors.line}>★</Text>
+              </Pressable>
             ))}
           </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Anything to add? (optional)"
-            placeholderTextColor="#9CA3AF"
-            value={feedback}
-            onChangeText={setFeedback}
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.primaryBtn, (rating === 0 || submittingRating) && styles.disabled]}
-            onPress={submitRating}
-            disabled={rating === 0 || submittingRating}
-          >
-            <Text style={styles.primaryBtnText}>{submittingRating ? 'Sending…' : 'Send rating'}</Text>
-          </TouchableOpacity>
-        </View>
+          <Field label="Anything to add? (optional)" value={feedback} onChangeText={setFeedback} multiline
+            style={{ height: 90, paddingTop: space.md, textAlignVertical: 'top' }} />
+          <Button label={submittingRating ? 'Sending…' : 'Send rating'} onPress={submitRating}
+            disabled={rating === 0} loading={submittingRating} style={{ marginTop: space.md }} />
+        </Card>
       )}
 
       {CANCELLABLE.includes(ride.status) && (
-        <TouchableOpacity style={[styles.cancelBtn, cancelling && styles.disabled]} onPress={cancel} disabled={cancelling}>
-          <Text style={styles.cancelText}>{cancelling ? 'Cancelling…' : 'Cancel ride'}</Text>
-        </TouchableOpacity>
+        <Button label="Cancel ride" variant="danger" onPress={cancel} loading={cancelling} style={{ marginTop: space.xl }} />
       )}
-
       {['completed', 'cancelled'].includes(ride.status) && (
-        <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.replace('/(tabs)')}>
-          <Text style={styles.secondaryBtnText}>Done</Text>
-        </TouchableOpacity>
+        <Button label="Done" variant="secondary" onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl }} />
       )}
-    </ScrollView>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F7F7F7' },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
-  container: { padding: 20, paddingTop: 56, paddingBottom: 40 },
-  goBack: { alignSelf: 'flex-start', marginBottom: 12, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#F6F6F6' },
-  goBackText: { color: '#0B0B0B', fontWeight: '700', fontSize: 15 },
-  statusCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
-  spinner: { marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: '#0B0B0B', textAlign: 'center' },
-  detail: { color: '#4b5563', textAlign: 'center', marginTop: 6 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, gap: 12 },
-  rowLabel: { color: '#6b7280' },
-  rowValue: { color: '#111827', fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  stars: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: 8 },
-  input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 12, minHeight: 60, color: '#0f172a', marginBottom: 8, textAlignVertical: 'top' },
-  primaryBtn: { backgroundColor: '#111111', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondaryBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
-  secondaryBtnText: { color: '#111111', fontWeight: '700', fontSize: 16 },
-  cancelBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff' },
-  cancelText: { color: '#b91c1c', fontWeight: '700', fontSize: 16 },
-  disabled: { opacity: 0.5 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xxl },
+  stars: { flexDirection: 'row', justifyContent: 'center', gap: space.md, marginVertical: space.md },
 });
