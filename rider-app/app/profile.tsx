@@ -2,7 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PersonAvatar } from '@/components/person-avatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -172,6 +172,7 @@ export default function ProfileScreen() {
 
       {/* Edit one field */}
       <Modal visible={editing !== null} transparent animationType="slide" onRequestClose={() => setEditing(null)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={styles.overlay} onPress={() => setEditing(null)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             {editing && (
@@ -186,6 +187,7 @@ export default function ProfileScreen() {
             )}
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

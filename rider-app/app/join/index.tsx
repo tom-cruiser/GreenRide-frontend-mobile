@@ -2,7 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { PersonAvatar } from '@/components/person-avatar';
 import { showError } from '@/components/friends-ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,8 +75,10 @@ export default function JoinScreen() {
     setBusy(name);
     try {
       await fn();
-      if (done) Alert.alert(done);
       setSheet(null);
+      // iPhone: an alert shown while the sheet closes can be lost or freeze
+      // the screen, so it waits for the sheet to be gone.
+      if (done) setTimeout(() => Alert.alert(done), Platform.OS === 'ios' ? 450 : 0);
       await load();
       if (query.trim()) socialAPI.search(token!, query.trim()).then((r) => setResults(r.results)).catch(() => {});
     } catch (e) {
@@ -295,12 +297,15 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
 function Sheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.grabber} />
-          {children}
+      {/* iPhone does not push the sheet up for the keyboard by itself */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.grabber} />
+            {children}
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
