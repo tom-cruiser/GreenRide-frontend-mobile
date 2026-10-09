@@ -366,7 +366,7 @@ export default function RideBookingScreen() {
           <Pressable onPress={() => router.push("/join")} accessibilityRole="button" style={styles.joinLink}>
             <Icon name="users" size={18} />
             <View style={{ flex: 1 }}>
-              <Text weight="semibold">Joining a friend's ride?</Text>
+              <Text weight="semibold">{"Joining a friend's ride?"}</Text>
               <Text variant="caption" color={colors.muted}>Use their code or tap their public ride</Text>
             </View>
             <Icon name="chevron-right" color={colors.muted} />
