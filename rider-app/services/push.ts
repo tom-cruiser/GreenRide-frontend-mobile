@@ -73,8 +73,20 @@ export async function registerForPush(authToken: string): Promise<string | null>
     }
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Rides',
+        name: 'Updates',
         importance: Notifications.AndroidImportance.HIGH,
+      });
+      // Ride invitations and friend requests: shown as a banner over any
+      // open app, with sound and vibration, and on the lock screen. (Android
+      // keeps a channel's settings once created, hence a separate channel.)
+      await Notifications.setNotificationChannelAsync('rides', {
+        name: 'Ride invitations',
+        description: 'Friends inviting you to share a ride, and friend requests',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
+        vibrationPattern: [0, 300, 200, 300],
+        lightColor: '#111111',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
     await setCategories(Notifications).catch(() => {});

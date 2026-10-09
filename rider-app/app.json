@@ -16,7 +16,10 @@
           "NSAllowsArbitraryLoads": true
         }
       },
-      "bundleIdentifier": "com.girijambo.riderapp"
+      "bundleIdentifier": "com.girijambo.riderapp",
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
     },
     "android": {
       "permissions": [
