@@ -28,13 +28,25 @@ type Availability = {
 
 const AvailabilityContext = createContext<Availability | null>(null);
 
-async function currentPosition(ask: boolean) {
+// A fresh fix can take long or never come (indoors, weak GPS): wait this long at most.
+const FIX_TIMEOUT_MS = 10_000;
+// A last known position this recent is good enough to go online with.
+const LAST_KNOWN_MAX_AGE_MS = 2 * 60_000;
+
+// 'denied': no permission. null: allowed, but no position yet.
+async function currentPosition(ask: boolean): Promise<{ lat: number; lng: number } | 'denied' | null> {
   const permission = ask
     ? await Location.requestForegroundPermissionsAsync()
     : await Location.getForegroundPermissionsAsync();
-  if (permission.status !== 'granted') return null;
-  const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-  return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  if (permission.status !== 'granted') return 'denied';
+  const toPoint = (pos: Location.LocationObject | null) => (pos ? { lat: pos.coords.latitude, lng: pos.coords.longitude } : null);
+  const recent = await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS }).catch(() => null);
+  if (recent) return toPoint(recent);
+  const fresh = await Promise.race([
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), FIX_TIMEOUT_MS)),
+  ]);
+  return toPoint(fresh);
 }
 
 export function DriverAvailabilityProvider({ children }: { children: React.ReactNode }) {
@@ -49,12 +61,13 @@ export function DriverAvailabilityProvider({ children }: { children: React.React
   const goOnline = useCallback(async (ask: boolean) => {
     if (!token) return false;
     const position = await currentPosition(ask).catch(() => null);
-    if (!position) {
+    if (position === 'denied') {
       setLocationDenied(true);
       return false;
     }
     setLocationDenied(false);
-    await driversAPI.setAvailability(token, { online: true, ...position });
+    // No fix yet: online anyway; the position follows as soon as there is one.
+    await driversAPI.setAvailability(token, { online: true, ...(position ?? {}) });
     setOnline(true);
     return true;
   }, [token]);
@@ -102,7 +115,7 @@ export function DriverAvailabilityProvider({ children }: { children: React.React
       if (!token || sharingMode()) return;
       try {
         const position = await currentPosition(false);
-        if (position) await driversAPI.updateLocation(token, position);
+        if (position && position !== 'denied') await driversAPI.updateLocation(token, position);
       } catch {
         // A missed report is fine; the next one follows shortly.
       }
