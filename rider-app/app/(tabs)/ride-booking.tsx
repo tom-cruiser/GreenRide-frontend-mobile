@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Pressable, Alert, Modal, Switch, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Alert, Modal, Switch } from 'react-native';
 import { Button, Card, colors, Field, formatKm, formatMoney, Header, Icon, radius, Row, Screen, shadow, space, Text } from '@/design';
-import MapView, { Marker } from "react-native-maps";
+import FlowMap from "@/components/flow-map";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import Constants from "expo-constants";
 import { useAuth } from "../../contexts/AuthContext";
 import { ridesAPI, driversAPI, friendsAPI } from "../../services/api";
 
@@ -54,12 +53,6 @@ type Driver = {
 export default function RideBookingScreen() {
   const router = useRouter();
   const { user, token, walletBalance } = useAuth();
-  const hasAndroidMapsKey =
-    Platform.OS !== "android" ||
-    Boolean(
-      process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
-        (Constants.expoConfig as any)?.android?.config?.googleMaps?.apiKey,
-    );
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [estimate, setEstimate] = useState<Estimate | null>(null);
@@ -266,28 +259,20 @@ export default function RideBookingScreen() {
 
       {/* Map with you and the drivers near you */}
       <View style={styles.mapWrap}>
-        {hasAndroidMapsKey ? (
-          <MapView
-            style={StyleSheet.absoluteFill}
-            initialRegion={{ latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-            region={location ? { latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
-          >
-            <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="You" pinColor={colors.ink} />
-            {nearbyDrivers.map((driver) => (
-              <Marker
-                key={driver.id}
-                coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}
-                title={driver.name || `Driver ${driver.id}`}
-                pinColor={colors.ink3}
-              />
-            ))}
-          </MapView>
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.mapOff]}>
-            <Icon name="map" size={28} color={colors.muted} />
-            <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Map not available in this build</Text>
-          </View>
-        )}
+        <FlowMap
+          style={StyleSheet.absoluteFill}
+          center={{ latitude: userLat, longitude: userLng }}
+          pins={[
+            { id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink },
+            ...nearbyDrivers.map((driver) => ({
+              id: `driver-${driver.id}`,
+              latitude: driver.latitude,
+              longitude: driver.longitude,
+              title: driver.name || `Driver ${driver.id}`,
+              color: colors.ink3,
+            })),
+          ]}
+        />
         <View style={styles.driversPill}>
           <Icon name="navigation" size={14} color={colors.onDark} />
           <Text variant="caption" weight="semibold" color={colors.onDark}>
@@ -451,7 +436,6 @@ export default function RideBookingScreen() {
 
 const styles = StyleSheet.create({
   mapWrap: { height: 200, borderRadius: radius.xl, overflow: "hidden", backgroundColor: colors.soft2 },
-  mapOff: { alignItems: "center", justifyContent: "center" },
   driversPill: {
     position: "absolute", left: space.md, bottom: space.md, flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: colors.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6,

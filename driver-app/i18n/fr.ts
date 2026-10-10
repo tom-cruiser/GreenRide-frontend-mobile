@@ -26,7 +26,6 @@ export const fr = {
     locationTitle: 'Localisation nécessaire',
     locationText: 'Autorisez la localisation dans les réglages du téléphone pour que les passagers vous trouvent.',
     statusError: "Impossible de changer votre statut",
-    mapOff: 'Carte indisponible dans cette version',
   },
   approval: {
     notOnboardedTitle: 'Terminez votre inscription',

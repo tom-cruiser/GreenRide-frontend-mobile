@@ -1,25 +1,15 @@
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDriverAvailability } from '@/contexts/DriverAvailabilityContext';
 import { driverEarns, useDriverWork, type RideRequest } from '@/contexts/DriverWorkContext';
-import { Badge, Button, Card, colors, formatKm, formatMoney, Icon, IconButton, radius, shadow, space, Text } from '@/design';
+import { Badge, Button, Card, colors, formatKm, formatMoney, IconButton, radius, shadow, space, Text } from '@/design';
 import { useT } from '@/i18n';
 import { driversAPI } from '@/services/api';
-
-// react-native-maps is native; without it (some builds) the map is a plain panel.
-const maps = (() => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const m = require('react-native-maps');
-    return { MapView: m.default, Marker: m.Marker };
-  } catch {
-    return null;
-  }
-})();
+import FlowMap from '@/components/flow-map';
 
 // Default centre until the phone's position is known.
 const FALLBACK = { latitude: -3.3822, longitude: 29.3644 };
@@ -44,25 +34,21 @@ export default function HomeScreen() {
     }, [token]),
   );
 
-  const region = useMemo(() => ({ ...(here ?? FALLBACK), latitudeDelta: 0.03, longitudeDelta: 0.03 }), [here]);
   const verified = approval === 'verified';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Map: the driver's position and, while online, where requests start. */}
-      {maps ? (
-        <maps.MapView style={StyleSheet.absoluteFill} region={region} showsUserLocation showsMyLocationButton={false}>
-          {online && requests.filter((r) => r.pickup_lat != null && r.pickup_lng != null).map((r) => (
-            <maps.Marker key={r.id} coordinate={{ latitude: r.pickup_lat!, longitude: r.pickup_lng! }} pinColor={colors.ink}
-              onPress={() => router.push(`/request/${r.id}`)} />
-          ))}
-        </maps.MapView>
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.noMap]}>
-          <Icon name="map" size={32} color={colors.muted} />
-          <Text color={colors.muted} style={{ marginTop: space.sm }}>{t('home.mapOff')}</Text>
-        </View>
-      )}
+      <FlowMap
+        style={StyleSheet.absoluteFill}
+        center={here ?? FALLBACK}
+        delta={0.03}
+        userLocation={here}
+        pins={online ? requests.filter((r) => r.pickup_lat != null && r.pickup_lng != null).map((r) => (
+          { id: String(r.id), latitude: r.pickup_lat!, longitude: r.pickup_lng!, color: colors.ink }
+        )) : []}
+        onPinPress={(id) => router.push(`/request/${id}`)}
+      />
 
       {/* Top: today's earnings and the bell */}
       <SafeAreaView edges={['top']} style={styles.top} pointerEvents="box-none">
@@ -169,7 +155,6 @@ function ApprovalCard({ approval, reason, onRetry }: { approval: string; reason?
 }
 
 const styles = StyleSheet.create({
-  noMap: { backgroundColor: colors.soft2, alignItems: 'center', justifyContent: 'center' },
   top: { position: 'absolute', left: 0, right: 0, top: 0 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: space.lg, paddingTop: space.sm },
   todayCard: { paddingVertical: space.md, paddingHorizontal: space.lg, borderRadius: radius.lg },

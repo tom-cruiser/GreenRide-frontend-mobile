@@ -27,7 +27,6 @@ export const en: Strings = {
     locationTitle: 'Location needed',
     locationText: 'Allow location in your phone settings so riders can find you.',
     statusError: 'Could not change your status',
-    mapOff: 'Map not available in this build',
   },
   approval: {
     notOnboardedTitle: 'Finish signing up',

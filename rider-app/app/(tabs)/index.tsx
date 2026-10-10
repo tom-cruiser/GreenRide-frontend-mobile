@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Card, colors, formatMoney, Icon, IconButton, type IconName, radius, shadow, space, Text } from '@/design';
-import MapView, { Marker } from "react-native-maps";
+import FlowMap from "@/components/flow-map";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
-import Constants from "expo-constants";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { driversAPI, friendsAPI, ridesAPI, type FriendsGroup } from "../../services/api";
@@ -54,12 +53,6 @@ export default function HomeScreen() {
         .catch(() => setInvitations([]));
     }, [token]),
   );
-  const hasAndroidMapsKey =
-    Platform.OS !== "android" ||
-    Boolean(
-      process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
-        (Constants.expoConfig as any)?.android?.config?.googleMaps?.apiKey,
-    );
 
   const userLat = coords?.latitude ?? -3.375;
   const userLng = coords?.longitude ?? 29.36;
@@ -144,29 +137,21 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Map: you and the drivers online near you */}
-      {hasAndroidMapsKey ? (
-        <MapView
-          style={StyleSheet.absoluteFill}
-          initialRegion={{ latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-          region={coords ? { latitude: userLat, longitude: userLng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
-        >
-          <Marker coordinate={{ latitude: userLat, longitude: userLng }} title="You" pinColor={colors.ink} />
-          {nearbyDrivers.map((driver) => (
-            <Marker
-              key={String(driver.id)}
-              coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}
-              title={driver.name || `Driver ${driver.id}`}
-              description={[driver.vehicle, driver.eta && `${driver.eta} away`].filter(Boolean).join(" · ")}
-              pinColor={colors.ink3}
-            />
-          ))}
-        </MapView>
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.mapOff]}>
-          <Icon name="map" size={28} color={colors.muted} />
-          <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Map not available in this build</Text>
-        </View>
-      )}
+      <FlowMap
+        style={StyleSheet.absoluteFill}
+        center={{ latitude: userLat, longitude: userLng }}
+        pins={[
+          { id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink },
+          ...nearbyDrivers.map((driver) => ({
+            id: `driver-${driver.id}`,
+            latitude: driver.latitude,
+            longitude: driver.longitude,
+            title: driver.name || `Driver ${driver.id}`,
+            description: [driver.vehicle, driver.eta && `${driver.eta} away`].filter(Boolean).join(" · "),
+            color: colors.ink3,
+          })),
+        ]}
+      />
 
       {/* Greeting */}
       <SafeAreaView edges={["top"]} style={styles.top} pointerEvents="box-none">
@@ -241,7 +226,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  mapOff: { backgroundColor: colors.soft2, alignItems: "center", justifyContent: "center" },
   top: { position: "absolute", left: 0, right: 0, top: 0, paddingHorizontal: space.lg, paddingTop: space.sm },
   greetCard: {
     flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.surface, borderRadius: radius.xl,
