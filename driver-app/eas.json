@@ -6,10 +6,16 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
     },
     "production": {
       "autoIncrement": true

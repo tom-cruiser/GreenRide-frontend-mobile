@@ -22,6 +22,7 @@ export default function HomeScreen() {
   const { approval, profile, requests, payoutPercent, unread, reloadProfile } = useDriverWork();
   const [today, setToday] = useState<number | null>(null);
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [sheetHeight, setSheetHeight] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,6 +44,8 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         center={here ?? FALLBACK}
         delta={0.03}
+        // Keep the driver, the buttons and the map credit above the panel.
+        insets={{ top: 120, bottom: sheetHeight }}
         userLocation={here}
         pins={online ? requests.filter((r) => r.pickup_lat != null && r.pickup_lng != null).map((r) => (
           { id: String(r.id), latitude: r.pickup_lat!, longitude: r.pickup_lng!, color: colors.ink }
@@ -62,7 +65,7 @@ export default function HomeScreen() {
       </SafeAreaView>
 
       {/* Bottom sheet: status, the big button, requests */}
-      <View style={styles.sheet}>
+      <View style={styles.sheet} onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}>
         {approval === 'loading' ? (
           <ActivityIndicator color={colors.ink} style={{ paddingVertical: space.xxl }} />
         ) : !verified ? (

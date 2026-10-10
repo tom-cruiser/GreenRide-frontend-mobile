@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Card, colors, formatMoney, Icon, IconButton, type IconName, radius, shadow, space, Text } from '@/design';
 import FlowMap from "@/components/flow-map";
@@ -28,6 +28,7 @@ export default function HomeScreen() {
     null,
   );
   const [nearbyDrivers, setNearbyDrivers] = useState<NearbyDriver[]>([]);
+  const [sheetHeight, setSheetHeight] = useState(0);
   // False until the first answer, so "no drivers" isn't shown while loading.
   const [nearbyLoaded, setNearbyLoaded] = useState(false);
   const [activeRideStatus, setActiveRideStatus] = useState<string | null>(null);
@@ -140,8 +141,12 @@ export default function HomeScreen() {
       <FlowMap
         style={StyleSheet.absoluteFill}
         center={{ latitude: userLat, longitude: userLng }}
+        // Keep you, the buttons and the map credit above the panel.
+        insets={{ top: 120, bottom: sheetHeight }}
+        userLocation={Platform.OS === "android" && coords ? { latitude: userLat, longitude: userLng } : undefined}
         pins={[
-          { id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink },
+          // iOS keeps its "You" pin; Android shows the live blue dot.
+          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink }] : []),
           ...nearbyDrivers.map((driver) => ({
             id: `driver-${driver.id}`,
             latitude: driver.latitude,
@@ -172,7 +177,7 @@ export default function HomeScreen() {
       </SafeAreaView>
 
       {/* Sheet */}
-      <View style={styles.sheet}>
+      <View style={styles.sheet} onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}>
         {invitations.map((inv) => (
           <Card key={inv.invitation?.id ?? inv.groupId} dark onPress={() => router.push(`/invitation/${inv.invitation?.id}`)} style={styles.banner}>
             <Icon name="users" color={colors.onDark} />

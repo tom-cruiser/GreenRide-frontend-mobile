@@ -7,11 +7,21 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
     },
     "production": {
       "autoIncrement": true
