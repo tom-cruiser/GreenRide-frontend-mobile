@@ -58,7 +58,16 @@
       "expo-image",
       "expo-status-bar",
       "expo-localization",
-      "expo-audio"
+      "expo-audio",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Flow uses your location to send you nearby ride requests and show riders where you are.",
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

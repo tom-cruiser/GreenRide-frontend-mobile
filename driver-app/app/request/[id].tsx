@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { driverEarns, useDriverWork } from '@/contexts/DriverWorkContext';
@@ -9,8 +9,9 @@ import { useT } from '@/i18n';
 import { ridesAPI } from '@/services/api';
 
 // A new ride request, on top of everything: what the driver earns, where,
-// how far, solo or a group, and two big buttons. No countdown: the backend
-// keeps a request open until a driver takes it or the rider cancels.
+// how far, solo or a group, and two big buttons. The ride is offered to this
+// driver only for a few seconds (nearest driver first), so a countdown shows
+// how long is left; then it goes to the next driver.
 export default function RequestScreen() {
   const router = useRouter();
   const { t } = useT();
@@ -88,6 +89,9 @@ export default function RequestScreen() {
       </View>
 
       <View style={{ flex: 1 }} />
+      {req.offer_expires_at && (
+        <OfferTimer expiresAt={req.offer_expires_at} onExpired={() => { forgetRequest(req.id); close(); }} />
+      )}
       <View style={{ gap: space.md, marginTop: space.xxl }}>
         <Button size="xl" variant="light" icon="check" label={t('request.accept')} onPress={accept} loading={busy === 'accept'} disabled={busy !== null} />
         <Button size="lg" variant="ghostDark" label={t('request.decline')} onPress={decline} disabled={busy !== null}
@@ -115,3 +119,24 @@ const styles = StyleSheet.create({
   line: { width: 2, height: 22, backgroundColor: 'rgba(255,255,255,0.25)', marginLeft: 17 },
   stopIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.onDark, alignItems: 'center', justifyContent: 'center' },
 });
+
+// Seconds left to accept; at zero the offer has gone to the next driver.
+function OfferTimer({ expiresAt, onExpired }: { expiresAt: string; onExpired: () => void }) {
+  const { t } = useT();
+  const end = new Date(expiresAt).getTime();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, []);
+  const left = Math.max(0, Math.ceil((end - now) / 1000));
+  useEffect(() => {
+    if (left === 0) onExpired();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [left === 0]);
+  return (
+    <Text color={left <= 5 ? colors.onDark : colors.onDarkMuted} weight={left <= 5 ? 'bold' : undefined} align="center">
+      {t('request.timeLeft', { s: left })}
+    </Text>
+  );
+}

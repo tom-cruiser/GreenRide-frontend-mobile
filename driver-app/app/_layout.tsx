@@ -21,7 +21,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 const navTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg, text: colors.ink, primary: colors.ink } };
 
 // Screens a ride in progress may show; anything else is replaced by the ride.
-const DURING_RIDE = ['ride', 'call'];
+const DURING_RIDE = ['ride', 'navigate', 'call'];
 
 function Guard() {
   const router = useRouter();
@@ -78,6 +78,7 @@ function Guard() {
         <Stack.Screen name="request/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
         {/* The ride takes over the screen until it ends. */}
         <Stack.Screen name="ride" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="navigate" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="call" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="trip/[id]" />
         <Stack.Screen name="withdraw" />

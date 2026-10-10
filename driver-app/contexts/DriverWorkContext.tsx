@@ -6,6 +6,9 @@ import { AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDriverAvailability } from '@/contexts/DriverAvailabilityContext';
 import { ApiError, driversAPI, notificationsAPI, ridesAPI } from '@/services/api';
+import { retrySharing, startSharing, stopSharing } from '@/services/location-sharing';
+import { signalingClient } from '@/services/signalingClient';
+import { useT } from '@/i18n';
 
 // Everything the driver's day depends on, kept fresh in one place:
 // - the approval status (not_onboarded, pending, verified, rejected + reason)
@@ -40,6 +43,10 @@ export type RideRequest = {
   dropoff: string;
   pickup_lat?: number | null;
   pickup_lng?: number | null;
+  dropoff_lat?: number | null;
+  dropoff_lng?: number | null;
+  // Offered to this driver until then (nearest driver first); null: open to all.
+  offer_expires_at?: string | null;
   fare: number;
   distance: number;
   is_shared?: boolean;
@@ -55,6 +62,8 @@ export type ActiveRide = {
   dropoff: string;
   pickup_lat: number | null;
   pickup_lng: number | null;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
   fare: number;
   distance: number;
   rider_name: string;
@@ -196,13 +205,32 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
     }
     Promise.resolve().then(refreshRequests);
     const timer = setInterval(refreshRequests, REQUESTS_EVERY_MS);
-    return () => clearInterval(timer);
+    // An offer lasts only seconds: fetch it as soon as the server sends it.
+    const offOffer = signalingClient.on('ride:offer', () => refreshRequests());
+    return () => {
+      clearInterval(timer);
+      offOffer();
+    };
   }, [listening, refreshRequests]);
+
+  // The position goes out from a foreground service while online or on a
+  // ride: every 5 s on a ride, every 15 s while waiting (see location-sharing).
+  const { t } = useT();
+  const sharing = signedIn && (online || Boolean(activeRide));
+  const onRide = Boolean(activeRide);
+  useEffect(() => {
+    if (!sharing) {
+      stopSharing();
+      return;
+    }
+    startSharing(onRide ? 'ride' : 'idle', { title: t('sharing.title'), body: t(onRide ? 'sharing.ride' : 'sharing.idle') });
+  }, [sharing, onRide, t]);
 
   // Back to the app: check everything at once.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active' || !signedIn) return;
+      retrySharing();
       reloadProfile();
       refreshActive();
       refreshUnread();

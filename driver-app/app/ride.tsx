@@ -19,12 +19,14 @@ const STEP = {
   in_progress: { action: 'complete', title: 'ride.inProgress', next: 'ride.inProgressNext', button: 'ride.end', icon: 'check-circle' },
 } as const;
 
-function openDirections(ride: ActiveRide, onError: () => void) {
-  const toPickup = ride.status !== 'in_progress';
-  const destination = toPickup && ride.pickup_lat != null && ride.pickup_lng != null
-    ? `${ride.pickup_lat},${ride.pickup_lng}`
-    : toPickup ? ride.pickup : ride.dropoff;
-  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`).catch(onError);
+// In-app turn-by-turn when the ride has the point to go to; otherwise the
+// phone's own maps app with the address.
+function hasPoint(ride: ActiveRide) {
+  return ride.status === 'in_progress' ? ride.dropoff_lat != null : ride.pickup_lat != null;
+}
+function openExternalDirections(ride: ActiveRide, onError: () => void) {
+  const place = ride.status === 'in_progress' ? ride.dropoff : ride.pickup;
+  Linking.openURL(`geo:0,0?q=${encodeURIComponent(place)}`).catch(onError);
 }
 
 export default function RideScreen() {
@@ -152,7 +154,7 @@ export default function RideScreen() {
       <View style={{ flexDirection: 'row', gap: space.md, marginTop: space.md }}>
         <CallRideButton rideId={ride.id} label={t('ride.call')} style={{ flex: 1 }} />
         <Button label={t('ride.directions')} icon="navigation" variant="secondary" style={{ flex: 1 }}
-          onPress={() => openDirections(ride, () => Alert.alert(t('ride.mapsError')))} />
+          onPress={() => (hasPoint(ride) ? router.push('/navigate' as any) : openExternalDirections(ride, () => Alert.alert(t('ride.mapsError'))))} />
       </View>
 
       {/* Trip */}

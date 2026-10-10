@@ -22,7 +22,7 @@ export const setUnauthorizedHandler = (handler: (() => void) | null) => {
 const hasAuthHeader = (headers: RequestInit['headers']) =>
   Boolean(headers && typeof headers === 'object' && 'Authorization' in headers);
 
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -179,7 +179,8 @@ export const driversAPI = {
     return res.json();
   },
 
-  updateLocation: (token: string, position: { lat: number; lng: number }) =>
+  // heading in degrees from north, speed in m/s: the rider's map turns and glides the car.
+  updateLocation: (token: string, position: { lat: number; lng: number; heading?: number; speed?: number }) =>
     apiCall('/drivers/me/location', {
       method: 'PUT',
       headers: authHeader(token),

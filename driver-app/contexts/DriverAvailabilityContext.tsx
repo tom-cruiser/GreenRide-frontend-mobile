@@ -5,10 +5,12 @@ import { Alert, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError, driversAPI } from '@/services/api';
 import { useT } from '@/i18n';
+import { sharingMode } from '@/services/location-sharing';
 
-// While online and the app is open, the position is sent this often. The
-// backend hides drivers whose position is older than 5 minutes, so a closed
-// app drops off the riders' map on its own.
+// The position normally goes out from the foreground service
+// (services/location-sharing); if that could not start, it is sent this often
+// while the app is open. The backend hides drivers whose position is older
+// than 5 minutes, so a closed app drops off the riders' map on its own.
 const REPORT_EVERY_MS = 30_000;
 // The driver's last choice. Approved drivers are online by default when they
 // open the app, unless they chose "Go Offline".
@@ -96,7 +98,7 @@ export function DriverAvailabilityProvider({ children }: { children: React.React
       timer.current = null;
     };
     const report = async () => {
-      if (!token) return;
+      if (!token || sharingMode()) return;
       try {
         const position = await currentPosition(false);
         if (position) await driversAPI.updateLocation(token, position);
