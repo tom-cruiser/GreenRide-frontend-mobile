@@ -36,10 +36,13 @@ environment variable, because it carries a provider key (see the backend's
 
 ## Testing on Android
 
-MapLibre and the driver's foreground location service are native code, so
-**Expo Go cannot run these apps any more**. Use a development build instead.
-You install it once, then JavaScript changes still load live from Metro, as
-with Expo Go.
+Quick check with **Expo Go** still works: `npx expo start --go`, then scan
+the QR code. Expo Go has no MapLibre, so there the Android map is Leaflet in a
+WebView (`components/flow-map.webview.tsx`) with the same OpenStreetMap data,
+and the driver's position is only sent while the app is open.
+
+For the real thing (MapLibre, background location) use a development build.
+You install it once, then JavaScript changes still load live from Metro.
 
 On a phone (cloud build, no Android SDK needed):
 

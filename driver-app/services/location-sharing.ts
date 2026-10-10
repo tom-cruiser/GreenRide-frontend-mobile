@@ -18,6 +18,8 @@ const MODES = {
 export type SharingMode = keyof typeof MODES;
 
 // Runs with the app in the background too: reads the saved login itself.
+// (In Expo Go the service may be unavailable; the app then reports from the
+// foreground every 30 s, see DriverAvailabilityContext.)
 TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TASK, async ({ data, error }) => {
   if (error || !data?.locations?.length) return;
   const { coords } = data.locations[data.locations.length - 1];
