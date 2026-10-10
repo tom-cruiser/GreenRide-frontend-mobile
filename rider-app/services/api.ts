@@ -69,7 +69,7 @@ export const isInsufficientBalance = (e: unknown): e is ApiError =>
 const hasAuthHeader = (headers: RequestInit['headers']) =>
   Boolean(headers && typeof headers === 'object' && 'Authorization' in headers);
 
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   // eslint-disable-next-line no-console
   console.log('[api] →', options.method ?? 'GET', `${API_BASE_URL}${endpoint}`);
   const controller = new AbortController();
@@ -136,6 +136,9 @@ export const walletAPI = {
     apiCall('/wallet/transactions', { headers: { Authorization: `Bearer ${token}` } }),
 };
 
+// Both ends of a trip as points.
+export type TripPoints = { pickup_lat: number; pickup_lng: number; dropoff_lat: number; dropoff_lng: number };
+
 // Rides — rider_id and user_id resolved from JWT on backend
 export const ridesAPI = {
   bookRide: async (
@@ -143,11 +146,14 @@ export const ridesAPI = {
     rideData: {
       pickup: string;
       dropoff: string;
-      distance: number;
+      // Older trips: a distance. With both points the server measures the road.
+      distance?: number;
       is_shared?: boolean;
       max_co_riders?: number;
       pickup_lat?: number;
       pickup_lng?: number;
+      dropoff_lat?: number;
+      dropoff_lng?: number;
     },
   ) =>
     apiCall('/rides/book', {
@@ -156,8 +162,9 @@ export const ridesAPI = {
       body: JSON.stringify(rideData),
     }),
 
-  // Server-side fare for a trip; the only source of prices.
-  estimate: async (token: string, data: { distance: number; is_shared?: boolean }) =>
+  // Server-side fare for a trip; the only source of prices. With both points
+  // it also returns the road route: distanceKm, durationMin and geometry.
+  estimate: async (token: string, data: TripPoints & { is_shared?: boolean } | { distance: number; is_shared?: boolean }) =>
     apiCall('/rides/estimate', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -268,7 +275,7 @@ const post = (token: string, body?: unknown): RequestInit =>
   authed(token, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const friendsAPI = {
-  create: (token: string, ride: { pickup: string; dropoff: string; distance: number; pickup_lat?: number; pickup_lng?: number; visibility?: 'friends' | 'public' }) =>
+  create: (token: string, ride: { pickup: string; dropoff: string; distance?: number; visibility?: 'friends' | 'public' } & Partial<TripPoints>) =>
     apiCall('/rides/friends', post(token, ride)) as Promise<{ group: FriendsGroup }>,
   get: (token: string, groupId: string | number) =>
     apiCall(`/rides/friends/${groupId}`, authed(token)) as Promise<{ group: FriendsGroup }>,

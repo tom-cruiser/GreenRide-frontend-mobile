@@ -1,45 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Pressable, Alert, Modal, Switch } from 'react-native';
-import { Button, Card, colors, Field, formatKm, formatMoney, Header, Icon, radius, Row, Screen, shadow, space, Text } from '@/design';
+import { View, StyleSheet, Pressable, Alert, Modal, Switch, Platform } from 'react-native';
+import { Button, Card, colors, formatKm, formatMoney, Header, Icon, radius, Row, Screen, shadow, space, Text } from '@/design';
 import FlowMap from "@/components/flow-map";
+import { PlaceButton, PlacePicker } from "@/components/place-picker";
+import { geocoding, geoErrorMessage, type Place } from "@/services/geo";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
-import { ridesAPI, driversAPI, friendsAPI } from "../../services/api";
+import { ApiError, ridesAPI, driversAPI, friendsAPI } from "../../services/api";
 
-type Coords = { latitude: number; longitude: number };
-
-// Longest trip the app will price (the server rejects anything over 500 km).
-const MAX_TRIP_KM = 200;
-
+// The price and the road route, both from the server.
 type Estimate = {
   fare: number;
   // Share with friends: the solo fare, paid while the host is still alone.
   soloFare?: number;
   distanceKm: number;
-  pickupCoords: Coords;
+  durationMin: number | null;
+  geometry: [number, number][] | null;
 };
 
-// Straight-line distance in km between two points (haversine formula).
-function distanceKm(a: Coords, b: Coords): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLng = toRad(b.longitude - a.longitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(h));
-}
-
-// Looks up a typed address with the phone's geocoder (no API key needed).
-async function geocode(address: string): Promise<Coords | null> {
-  try {
-    const [first] = await Location.geocodeAsync(address);
-    return first ? { latitude: first.latitude, longitude: first.longitude } : null;
-  } catch {
-    return null;
-  }
-}
+const points = (from: Place, to: Place) => ({
+  pickup_lat: from.lat, pickup_lng: from.lng, dropoff_lat: to.lat, dropoff_lng: to.lng,
+});
 
 type Driver = {
   id: number;
@@ -53,8 +35,9 @@ type Driver = {
 export default function RideBookingScreen() {
   const router = useRouter();
   const { user, token, walletBalance } = useAuth();
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("");
+  const [pickup, setPickup] = useState<Place | null>(null);
+  const [dropoff, setDropoff] = useState<Place | null>(null);
+  const [picking, setPicking] = useState<"pickup" | "dropoff" | null>(null);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [location, setLocation] =
@@ -82,8 +65,8 @@ export default function RideBookingScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           Alert.alert(
-            "Location Permission",
-            "Permission to access location was denied",
+            "Location is off",
+            "Search for your pickup instead, or allow location in the phone settings.",
           );
           return;
         }
@@ -92,6 +75,13 @@ export default function RideBookingScreen() {
         if (cancelled) return;
 
         setLocation(loc.coords);
+        // Pickup starts at the phone's position, named by its address.
+        const here = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        const place = token ? await geocoding.reverse(token, here).catch(() => null) : null;
+        if (cancelled) return;
+        setPickup((current) => current ?? {
+          id: "here", name: place?.name ?? "My location", address: place?.address ?? "Where the phone is now", ...here,
+        });
       } catch (error) {
         console.error("Location init failed:", error);
         Alert.alert(
@@ -104,7 +94,7 @@ export default function RideBookingScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [token]);
 
   const loadNearbyDrivers = async (lat: number, lng: number) => {
     try {
@@ -129,50 +119,34 @@ export default function RideBookingScreen() {
   };
 
   const handleEstimate = async () => {
-    if (!pickup.trim() || !dropoff.trim()) {
-      Alert.alert(
-        "Missing Information",
-        "Please enter both pickup and dropoff locations.",
-      );
+    if (!pickup || !dropoff) {
+      Alert.alert("Where to?", "Choose both the pickup and the drop-off.");
       return;
     }
     if (!token) return;
 
     setEstimating(true);
     try {
-      // Pickup falls back to the phone's GPS position if the address isn't found.
-      const pickupCoords =
-        (await geocode(pickup)) ??
-        (location ? { latitude: location.latitude, longitude: location.longitude } : null);
-      const dropoffCoords = await geocode(dropoff);
-      if (!pickupCoords || !dropoffCoords) {
-        Alert.alert(
-          "Address not found",
-          `We couldn't find ${!pickupCoords ? "the pickup" : "the dropoff"} address. Try adding the street or neighbourhood and city.`,
-        );
-        return;
-      }
-
-      const km = Math.max(0.1, Math.round(distanceKm(pickupCoords, dropoffCoords) * 100) / 100);
-      if (__DEV__) console.log("[booking] geocoded", { pickupCoords, dropoffCoords, km });
-      // A geocoder can match a name in another town or country; catch that
-      // here instead of sending an impossible trip to the server.
-      if (km > MAX_TRIP_KM) {
-        Alert.alert(
-          "Check the addresses",
-          `These places are ${Math.round(km)} km apart. Add the neighbourhood and city to both addresses.`,
-        );
-        return;
-      }
-      const result = await ridesAPI.estimate(token, { distance: km, is_shared: isSharedRide });
+      // The server measures the road between the two points and prices it.
+      const trip = points(pickup, dropoff);
+      const result = await ridesAPI.estimate(token, { ...trip, is_shared: isSharedRide });
       // With friends the host pays the solo fare until someone joins.
-      const solo = withFriends ? await ridesAPI.estimate(token, { distance: km, is_shared: false }) : null;
-      setEstimate({ fare: result.fare, soloFare: solo?.fare, distanceKm: km, pickupCoords });
+      const solo = withFriends ? await ridesAPI.estimate(token, { ...trip, is_shared: false }) : null;
+      setEstimate({
+        fare: result.fare,
+        soloFare: solo?.fare,
+        distanceKm: result.distanceKm,
+        durationMin: result.durationMin ?? null,
+        geometry: result.geometry ?? null,
+      });
       setBookingStep("confirmation");
     } catch (error) {
+      const status = error instanceof ApiError ? error.status : undefined;
       Alert.alert(
-        "Estimate failed",
-        error instanceof Error ? error.message : "Please try again.",
+        "Could not price this trip",
+        status === 422
+          ? "No road connects these places. Choose a point on a street."
+          : status === 400 && error instanceof Error ? error.message : geoErrorMessage(error),
       );
     } finally {
       setEstimating(false);
@@ -202,40 +176,34 @@ export default function RideBookingScreen() {
   };
 
   const confirmBooking = async () => {
-    if (!token || !user || !estimate) return;
+    if (!token || !user || !estimate || !pickup || !dropoff) return;
 
     setIsBooking(true);
     try {
       if (withFriends) {
         const { group } = await friendsAPI.create(token, {
-          pickup: pickup.trim(),
-          dropoff: dropoff.trim(),
-          distance: estimate.distanceKm,
-          pickup_lat: estimate.pickupCoords.latitude,
-          pickup_lng: estimate.pickupCoords.longitude,
+          pickup: pickup.name,
+          dropoff: dropoff.name,
+          ...points(pickup, dropoff),
           visibility: isPublic ? "public" : "friends",
         });
         setConfirmationModalVisible(false);
         resetEstimate();
-        setPickup("");
-        setDropoff("");
+        setDropoff(null);
         // Share the code, invite friends, then request the driver.
         router.replace(`/friends-ride/${group.groupId}`);
         return;
       }
       await ridesAPI.bookRide(token, {
-        pickup: pickup.trim(),
-        dropoff: dropoff.trim(),
-        distance: estimate.distanceKm,
+        pickup: pickup.name,
+        dropoff: dropoff.name,
+        ...points(pickup, dropoff),
         is_shared: isSharedRide,
         max_co_riders: isSharedRide ? maxCoRiders : undefined,
-        pickup_lat: estimate.pickupCoords.latitude,
-        pickup_lng: estimate.pickupCoords.longitude,
       });
       setConfirmationModalVisible(false);
       resetEstimate();
-      setPickup("");
-      setDropoff("");
+      setDropoff(null);
       // The active-ride screen shows "Finding a driver" and follows the ride.
       router.replace("/active-ride");
     } catch (error) {
@@ -262,8 +230,18 @@ export default function RideBookingScreen() {
         <FlowMap
           style={StyleSheet.absoluteFill}
           center={{ latitude: userLat, longitude: userLng }}
+          controls={false}
+          // Price shown: the road route, framed with both ends.
+          route={estimate?.geometry}
+          fitTo={estimate && pickup && dropoff ? [
+            { latitude: pickup.lat, longitude: pickup.lng },
+            { latitude: dropoff.lat, longitude: dropoff.lng },
+          ] : null}
+          userLocation={Platform.OS === "android" && location ? { latitude: userLat, longitude: userLng } : undefined}
           pins={[
-            { id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink },
+            // iOS keeps its "You" pin; Android shows the live blue dot.
+          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink }] : []),
+            ...(estimate && dropoff ? [{ id: "dropoff", latitude: dropoff.lat, longitude: dropoff.lng, title: dropoff.name, color: colors.ink }] : []),
             ...nearbyDrivers.map((driver) => ({
               id: `driver-${driver.id}`,
               latitude: driver.latitude,
@@ -283,10 +261,8 @@ export default function RideBookingScreen() {
 
       {/* Where from, where to */}
       <View style={{ gap: space.md, marginTop: space.lg }}>
-        <Field label="Pickup" placeholder="e.g. Rohero, near the market" value={pickup}
-          onChangeText={(v) => { setPickup(v); resetEstimate(); }} />
-        <Field label="Drop-off" placeholder="e.g. Kiriri" value={dropoff}
-          onChangeText={(v) => { setDropoff(v); resetEstimate(); }} />
+        <PlaceButton label="Pickup" place={pickup} placeholder="Where are you?" onPress={() => setPicking("pickup")} />
+        <PlaceButton label="Drop-off" place={dropoff} placeholder="Where to?" onPress={() => setPicking("dropoff")} />
       </View>
 
       {/* Shared ride */}
@@ -393,13 +369,29 @@ export default function RideBookingScreen() {
             )}
           </Card>
           <Card>
-            <Row label="From" value={pickup} />
-            <Row label="To" value={dropoff} />
-            <Row label="Distance" value={`~${formatKm(estimate.distanceKm)}`} />
+            <Row label="From" value={pickup?.name} />
+            <Row label="To" value={dropoff?.name} />
+            <Row label="Distance by road" value={formatKm(estimate.distanceKm)} />
+            {estimate.durationMin != null && <Row label="Trip time" value={`about ${estimate.durationMin} min`} />}
           </Card>
           <Button label={withFriends ? "Continue and invite friends" : "Book this ride"} icon="arrow-right" onPress={handleBookRide} />
           <Button label="Change the trip" variant="ghost" onPress={resetEstimate} />
         </View>
+      )}
+
+      {token && (
+        <PlacePicker
+          visible={picking !== null}
+          title={picking === "pickup" ? "Pickup" : "Drop-off"}
+          token={token}
+          here={location ? { lat: location.latitude, lng: location.longitude } : null}
+          onPick={(place) => {
+            if (picking === "pickup") setPickup(place);
+            else setDropoff(place);
+            resetEstimate();
+          }}
+          onClose={() => setPicking(null)}
+        />
       )}
 
       {/* Confirmation */}
@@ -412,7 +404,7 @@ export default function RideBookingScreen() {
                 <Text variant="heading">
                   {withFriends && estimate.soloFare != null ? `Now: ${formatMoney(estimate.soloFare)}` : formatMoney(estimate.fare)}
                 </Text>
-                <Text color={colors.ink3}>{pickup} → {dropoff}</Text>
+                <Text color={colors.ink3}>{pickup?.name} → {dropoff?.name}</Text>
                 {isSharedRide && (
                   <Text color={colors.ink3}>
                     {withFriends
