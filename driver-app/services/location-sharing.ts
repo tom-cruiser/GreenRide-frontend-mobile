@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { driversAPI } from '@/services/api';
@@ -11,6 +12,11 @@ import { driversAPI } from '@/services/api';
 
 const TASK = 'flow-driver-location';
 
+// Expo Go has no background location (none at all on Android): there the app
+// reports from the foreground instead (DriverAvailabilityContext), and this
+// service is never started, so Expo Go shows no warning.
+export const backgroundAvailable = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+
 const MODES = {
   idle: { accuracy: Location.Accuracy.Balanced, timeInterval: 15_000, distanceInterval: 30 },
   ride: { accuracy: Location.Accuracy.High, timeInterval: 5_000, distanceInterval: 10 },
@@ -18,9 +24,7 @@ const MODES = {
 export type SharingMode = keyof typeof MODES;
 
 // Runs with the app in the background too: reads the saved login itself.
-// (In Expo Go the service may be unavailable; the app then reports from the
-// foreground every 30 s, see DriverAvailabilityContext.)
-TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TASK, async ({ data, error }) => {
+if (backgroundAvailable) TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TASK, async ({ data, error }) => {
   if (error || !data?.locations?.length) return;
   const { coords } = data.locations[data.locations.length - 1];
   const token = await AsyncStorage.getItem('driverAuthToken').catch(() => null);
@@ -45,6 +49,7 @@ let wanted: { mode: SharingMode; notice: { title: string; body: string } } | nul
 // Starts (or switches) sharing. Must be called with the app open: Android
 // only lets a foreground service start from the foreground.
 export async function startSharing(mode: SharingMode, notice: { title: string; body: string }) {
+  if (!backgroundAvailable) return false;
   if (current === mode && (await Location.hasStartedLocationUpdatesAsync(TASK).catch(() => false))) return true;
   try {
     await Location.startLocationUpdatesAsync(TASK, {
@@ -77,6 +82,7 @@ export async function retrySharing() {
 export async function stopSharing() {
   current = null;
   wanted = null;
+  if (!backgroundAvailable) return;
   if (await Location.hasStartedLocationUpdatesAsync(TASK).catch(() => false)) {
     await Location.stopLocationUpdatesAsync(TASK).catch(() => {});
   }

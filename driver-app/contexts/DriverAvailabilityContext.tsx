@@ -8,10 +8,11 @@ import { useT } from '@/i18n';
 import { sharingMode } from '@/services/location-sharing';
 
 // The position normally goes out from the foreground service
-// (services/location-sharing); if that could not start, it is sent this often
-// while the app is open. The backend hides drivers whose position is older
-// than 5 minutes, so a closed app drops off the riders' map on its own.
-const REPORT_EVERY_MS = 30_000;
+// (services/location-sharing); in Expo Go, or if that could not start, it is
+// sent this often while the app is open, so riders still see the car move.
+// The backend hides drivers whose position is older than 5 minutes, so a
+// closed app drops off the riders' map on its own.
+const REPORT_EVERY_MS = 10_000;
 // The driver's last choice. Approved drivers are online by default when they
 // open the app, unless they chose "Go Offline".
 const PREFERENCE_KEY = 'driverWantsOnline';
