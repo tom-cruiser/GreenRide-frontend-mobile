@@ -207,6 +207,21 @@ export default function RideBookingScreen() {
       // The active-ride screen shows "Finding a driver" and follows the ride.
       router.replace("/active-ride");
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        // An earlier ride is still open: take the rider to it.
+        setPriceSheet(false);
+        const { ride } = await ridesAPI.getActiveRide(token).catch(() => ({ ride: null }));
+        const groupId = ride?.status === "gathering" ? ride.share?.groupId : null;
+        Alert.alert(
+          "You already have a ride",
+          "Finish or cancel your current ride before booking a new one.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "See my ride", onPress: () => router.push(groupId ? `/friends-ride/${groupId}` : "/active-ride") },
+          ],
+        );
+        return;
+      }
       console.error("Booking failed:", error);
       const message =
         error instanceof Error
