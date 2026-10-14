@@ -32,6 +32,7 @@ export default function WalletScreen() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [confirming, setConfirming] = useState(false);
   const finishedPayment = useRef<number | null>(null);
+  const [bonusPercent, setBonusPercent] = useState<number | null>(null);
 
   const loadTransactions = useCallback(async () => {
     if (!token) return;
@@ -50,6 +51,7 @@ export default function WalletScreen() {
     useCallback(() => {
       updateWalletBalance();
       loadTransactions();
+      paymentsAPI.topupBonusPercent().then(setBonusPercent).catch(() => {});
     }, [updateWalletBalance, loadTransactions]),
   );
 
@@ -215,7 +217,7 @@ export default function WalletScreen() {
                   placeholder="+257 ..."
                   placeholderTextColor="#9CA3AF"
                 />
-                <Text style={styles.modalHint}>You get a 4% bonus on every top-up.</Text>
+                {bonusPercent ? <Text style={styles.modalHint}>You get a {bonusPercent}% bonus on every top-up.</Text> : null}
                 <TouchableOpacity
                   style={[styles.modalPrimary, starting && { opacity: 0.6 }]}
                   onPress={startTopUp}

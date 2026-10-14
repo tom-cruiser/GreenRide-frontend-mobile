@@ -371,6 +371,12 @@ export const pushAPI = {
 };
 
 export const paymentsAPI = {
+  // The bonus added to every top-up, as set by the admins (whole percent).
+  topupBonusPercent: async (): Promise<number | null> => {
+    const res = await apiCall('/public/estimate', { method: 'POST', body: JSON.stringify({ distance: 1 }) });
+    return typeof res?.topupBonusPercent === 'number' ? res.topupBonusPercent : null;
+  },
+
   getPayment: async (token: string, paymentId: string | number) =>
     apiCall(`/payments/${paymentId}`, { headers: { Authorization: `Bearer ${token}` } }),
 
