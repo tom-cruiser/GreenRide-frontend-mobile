@@ -36,20 +36,28 @@ export default function RideScreen() {
   const { activeRide, refreshActive } = useDriverWork();
   const [acting, setActing] = useState(false);
   const [finished, setFinished] = useState<Finished | null>(null);
-  const hadRide = useRef(false);
+  // The ride on screen, until the driver ends it here.
+  const rideId = useRef<number | null>(null);
 
-  // The ride vanished without the driver ending it: the rider cancelled.
+  // The ride left the screen without the driver ending it here: look up what
+  // happened and only call it a cancellation when it really was one.
   useEffect(() => {
     if (activeRide) {
-      hadRide.current = true;
+      rideId.current = activeRide.id;
       return;
     }
-    if (hadRide.current && !finished && !acting) {
-      hadRide.current = false;
-      Alert.alert(t('ride.riderCancelled'));
-      router.replace('/(tabs)');
-    }
-  }, [activeRide, finished, acting, router, t]);
+    const id = rideId.current;
+    if (id == null || finished || acting || !token) return;
+    rideId.current = null;
+    ridesAPI.getRide(token, id)
+      .then(({ ride }) => ride?.status as string | undefined)
+      .catch(() => undefined)
+      .then((status) => {
+        if (status === 'cancelled') Alert.alert(t('ride.riderCancelled'));
+        else if (status === 'completed') Alert.alert(t('ride.finished'));
+        router.replace('/(tabs)');
+      });
+  }, [activeRide, finished, acting, token, router, t]);
 
   const home = () => {
     setFinished(null);
@@ -91,6 +99,7 @@ export default function RideScreen() {
     try {
       if (step.action === 'complete') {
         const result = await ridesAPI.completeRide(token, ride.id);
+        rideId.current = null;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         setFinished({ earned: result.driverAmount ?? 0, paid, riders: group || 1 });
         updateWalletBalance();
@@ -118,7 +127,7 @@ export default function RideScreen() {
           setActing(true);
           try {
             await ridesAPI.cancelRide(token, ride.id);
-            hadRide.current = false;
+            rideId.current = null;
             await refreshActive();
             router.replace('/(tabs)');
           } catch (e) {
