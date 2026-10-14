@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { IncomingCallOverlay } from '@/components/IncomingCallOverlay';
@@ -12,6 +12,7 @@ import { DriverAvailabilityProvider } from '@/contexts/DriverAvailabilityContext
 import { DriverWorkProvider, useDriverWork } from '@/contexts/DriverWorkContext';
 import { colors, DesignProvider, useFlowFonts } from '@/design';
 import { I18nProvider } from '@/i18n';
+import { registerForPush, useNotificationTaps } from '@/services/push';
 
 export const unstable_settings = { anchor: '(tabs)' };
 
@@ -37,6 +38,14 @@ function Guard() {
   }, []);
 
   const ready = !isLoading && hasOnboarded !== null;
+
+  // Signed in: this phone gets the driver's notifications (pull down from the
+  // top to see them); tapping one opens the notifications screen.
+  useEffect(() => {
+    if (token) registerForPush(token);
+  }, [token]);
+  const openNotifications = useCallback(() => router.push('/notifications'), [router]);
+  useNotificationTaps(openNotifications);
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);

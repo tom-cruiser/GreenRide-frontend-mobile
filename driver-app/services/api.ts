@@ -204,6 +204,16 @@ export const walletAPI = {
     }),
 };
 
+// This phone's Expo push token, so announcements reach it (services/push).
+export const pushAPI = {
+  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web') =>
+    apiCall('/push-tokens', {
+      method: 'POST', headers: authHeader(token), body: JSON.stringify({ token: pushToken, platform }),
+    }),
+  remove: (token: string, pushToken: string) =>
+    apiCall('/push-tokens', { method: 'DELETE', headers: authHeader(token), body: JSON.stringify({ token: pushToken }) }),
+};
+
 export const notificationsAPI = {
   getNotifications: (token: string) =>
     apiCall('/notifications', { headers: authHeader(token) }),

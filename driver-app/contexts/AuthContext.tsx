@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { authAPI, setUnauthorizedHandler, walletAPI } from '../services/api';
+import { unregisterPush } from '../services/push';
 
 interface User {
   id: string;
@@ -85,6 +86,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
+    // Stop this phone getting the driver's notifications (while still signed in).
+    if (token) await unregisterPush(token);
     setUser(null);
     setToken(null);
     setWalletBalance(0);

@@ -59,6 +59,15 @@
       "expo-status-bar",
       "expo-localization",
       "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#111111",
+          "sounds": [
+            "./assets/sounds/announcement.wav"
+          ]
+        }
+      ],
       "@maplibre/maplibre-react-native",
       [
         "expo-location",

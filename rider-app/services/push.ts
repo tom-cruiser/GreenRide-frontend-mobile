@@ -1,6 +1,6 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { pushAPI } from './api';
 
 // Expo push notifications. After sign-in the app asks for permission, gets
@@ -89,11 +89,13 @@ export async function registerForPush(authToken: string): Promise<string | null>
         lightColor: '#111111',
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
-      // Messages the Flow team sends to everyone: loud, over any open app.
+      // Messages the Flow team sends to everyone: the Flow chime, over any
+      // open app and on the lock screen.
       await Notifications.setNotificationChannelAsync('announcements', {
         name: 'Announcements',
         description: 'Messages from the Flow team',
         importance: Notifications.AndroidImportance.MAX,
+        sound: 'announcement.wav',
         vibrationPattern: [0, 400, 200, 400],
         lightColor: '#111111',
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
@@ -159,6 +161,8 @@ export function useNotificationTaps(
       }
       const route = routeForNotification(data);
       if (route) onOpen(route);
+      // An announcement has no screen of its own: show the whole message.
+      else if (data.type === 'announcement' && content.body) Alert.alert(content.title ?? 'Flow', content.body);
     };
     Notifications.getLastNotificationResponseAsync().then(handle).catch(() => {});
     const sub = Notifications.addNotificationResponseReceivedListener(handle);
