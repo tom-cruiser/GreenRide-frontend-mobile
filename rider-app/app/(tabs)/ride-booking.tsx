@@ -42,11 +42,10 @@ export default function RideBookingScreen() {
   const [estimating, setEstimating] = useState(false);
   const [location, setLocation] =
     useState<Location.LocationObjectCoords | null>(null);
-  const [confirmationModalVisible, setConfirmationModalVisible] =
-    useState(false);
-  const [bookingStep, setBookingStep] = useState<
-    "input" | "confirmation" | "booked"
-  >("input");
+  // The price sheet opens by itself once a newly chosen trip is priced.
+  const [priceSheet, setPriceSheet] = useState(false);
+  const [estimateFailed, setEstimateFailed] = useState(false);
+  const [estimateTry, setEstimateTry] = useState(0);
   const [nearbyDrivers, setNearbyDrivers] = useState<Driver[]>([]);
   const [isBooking, setIsBooking] = useState(false);
   const [isSharedRide, setIsSharedRide] = useState(false);
@@ -115,50 +114,59 @@ export default function RideBookingScreen() {
 
   const resetEstimate = () => {
     setEstimate(null);
-    setBookingStep("input");
+    setPriceSheet(false);
   };
 
-  const handleEstimate = async () => {
-    if (!pickup || !dropoff) {
-      Alert.alert("Where to?", "Choose both the pickup and the drop-off.");
-      return;
-    }
-    if (!token) return;
+  // Price the trip as soon as both ends are known, and again when the ride type changes.
+  useEffect(() => {
+    if (!pickup || !dropoff || !token) return;
+    let cancelled = false;
 
-    setEstimating(true);
-    try {
-      // The server measures the road between the two points and prices it.
-      const trip = points(pickup, dropoff);
-      const result = await ridesAPI.estimate(token, { ...trip, is_shared: isSharedRide });
-      // With friends the host pays the solo fare until someone joins.
-      const solo = withFriends ? await ridesAPI.estimate(token, { ...trip, is_shared: false }) : null;
-      setEstimate({
-        fare: result.fare,
-        soloFare: solo?.fare,
-        distanceKm: result.distanceKm,
-        durationMin: result.durationMin ?? null,
-        geometry: result.geometry ?? null,
-      });
-      setBookingStep("confirmation");
-    } catch (error) {
-      const status = error instanceof ApiError ? error.status : undefined;
-      Alert.alert(
-        "Could not price this trip",
-        status === 422
-          ? "No road connects these places. Choose a point on a street."
-          : status === 400 && error instanceof Error ? error.message : geoErrorMessage(error),
-      );
-    } finally {
-      setEstimating(false);
-    }
-  };
+    (async () => {
+      setEstimate(null);
+      setEstimateFailed(false);
+      setEstimating(true);
+      try {
+        // The server measures the road between the two points and prices it.
+        const trip = points(pickup, dropoff);
+        const result = await ridesAPI.estimate(token, { ...trip, is_shared: isSharedRide });
+        // With friends the host pays the solo fare until someone joins.
+        const solo = withFriends ? await ridesAPI.estimate(token, { ...trip, is_shared: false }) : null;
+        if (cancelled) return;
+        setEstimate({
+          fare: result.fare,
+          soloFare: solo?.fare,
+          distanceKm: result.distanceKm,
+          durationMin: result.durationMin ?? null,
+          geometry: result.geometry ?? null,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setEstimateFailed(true);
+        setPriceSheet(false);
+        const status = error instanceof ApiError ? error.status : undefined;
+        Alert.alert(
+          "Could not price this trip",
+          status === 422
+            ? "No road connects these places. Choose a point on a street."
+            : status === 400 && error instanceof Error ? error.message : geoErrorMessage(error),
+        );
+      } finally {
+        if (!cancelled) setEstimating(false);
+      }
+    })();
 
-  const handleBookRide = () => {
+    return () => {
+      cancelled = true;
+    };
+  }, [pickup, dropoff, token, isSharedRide, withFriends, estimateTry]);
+
+  const bookRide = async () => {
     if (!user || !token) {
       Alert.alert("Authentication Required", "Please log in to book a ride.");
       return;
     }
-    if (!estimate) return;
+    if (!estimate || !pickup || !dropoff) return;
 
     if (walletBalance < estimate.fare) {
       Alert.alert(
@@ -166,17 +174,11 @@ export default function RideBookingScreen() {
         `This ride costs ${formatMoney(estimate.fare)}. Please top up your wallet.`,
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Top up", onPress: () => router.push("/(tabs)/wallet") },
+          { text: "Top up", onPress: () => { setPriceSheet(false); router.push("/(tabs)/wallet"); } },
         ],
       );
       return;
     }
-
-    setConfirmationModalVisible(true);
-  };
-
-  const confirmBooking = async () => {
-    if (!token || !user || !estimate || !pickup || !dropoff) return;
 
     setIsBooking(true);
     try {
@@ -187,7 +189,6 @@ export default function RideBookingScreen() {
           ...points(pickup, dropoff),
           visibility: isPublic ? "public" : "friends",
         });
-        setConfirmationModalVisible(false);
         resetEstimate();
         setDropoff(null);
         // Share the code, invite friends, then request the driver.
@@ -201,7 +202,6 @@ export default function RideBookingScreen() {
         is_shared: isSharedRide,
         max_co_riders: isSharedRide ? maxCoRiders : undefined,
       });
-      setConfirmationModalVisible(false);
       resetEstimate();
       setDropoff(null);
       // The active-ride screen shows "Finding a driver" and follows the ride.
@@ -350,32 +350,16 @@ export default function RideBookingScreen() {
         )}
       </Card>
 
-      {!(estimate && bookingStep === "confirmation") && (
-        <Button label="See the price" icon="search" onPress={handleEstimate} loading={estimating} style={{ marginTop: space.lg }} />
-      )}
-
-      {/* Price and trip, then book */}
-      {estimate && bookingStep === "confirmation" && (
-        <View style={{ marginTop: space.lg, gap: space.md }}>
-          <Card dark>
-            <Text color={colors.onDarkMuted}>{withFriends ? "Each rider pays" : "Your price"}</Text>
-            <Text color={colors.onDark} weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
-              {formatMoney(estimate.fare)}
-            </Text>
-            {withFriends && estimate.soloFare != null && (
-              <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>
-                Until a friend joins you pay the solo price, {formatMoney(estimate.soloFare)}. Up to 4 riders.
-              </Text>
-            )}
-          </Card>
-          <Card>
-            <Row label="From" value={pickup?.name} />
-            <Row label="To" value={dropoff?.name} />
-            <Row label="Distance by road" value={formatKm(estimate.distanceKm)} />
-            {estimate.durationMin != null && <Row label="Trip time" value={`about ${estimate.durationMin} min`} />}
-          </Card>
-          <Button label={withFriends ? "Continue and invite friends" : "Book this ride"} icon="arrow-right" onPress={handleBookRide} />
-          <Button label="Change the trip" variant="ghost" onPress={resetEstimate} />
+      {/* The price sheet was closed or the trip is still being priced */}
+      {pickup && dropoff && (
+        <View style={{ marginTop: space.lg }}>
+          {estimating ? (
+            <Button label="Working out the price…" loading onPress={() => {}} />
+          ) : estimate ? (
+            <Button label={`Book this ride · ${formatMoney(estimate.fare)}`} icon="arrow-right" onPress={() => setPriceSheet(true)} />
+          ) : estimateFailed ? (
+            <Button label="Try the price again" icon="search" onPress={() => { setPriceSheet(true); setEstimateTry((n) => n + 1); }} />
+          ) : null}
         </View>
       )}
 
@@ -389,35 +373,45 @@ export default function RideBookingScreen() {
             if (picking === "pickup") setPickup(place);
             else setDropoff(place);
             resetEstimate();
+            setPriceSheet(true);
           }}
           onClose={() => setPicking(null)}
         />
       )}
 
-      {/* Confirmation */}
-      <Modal animationType="slide" transparent visible={confirmationModalVisible} onRequestClose={() => setConfirmationModalVisible(false)}>
+      {/* Price of the chosen trip, booked in one tap */}
+      <Modal animationType="slide" transparent visible={priceSheet && !!estimate && picking === null} onRequestClose={() => setPriceSheet(false)}>
         <View style={styles.overlay}>
           <View style={styles.sheet}>
-            <Text variant="title">Confirm your ride</Text>
             {estimate && (
-              <View style={{ marginTop: space.md, gap: space.sm }}>
-                <Text variant="heading">
-                  {withFriends && estimate.soloFare != null ? `Now: ${formatMoney(estimate.soloFare)}` : formatMoney(estimate.fare)}
+              <>
+                <Text color={colors.muted}>{withFriends ? "Each rider pays" : "Your price"}</Text>
+                <Text weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
+                  {formatMoney(estimate.fare)}
                 </Text>
-                <Text color={colors.ink3}>{pickup?.name} → {dropoff?.name}</Text>
                 {isSharedRide && (
-                  <Text color={colors.ink3}>
+                  <Text color={colors.ink3} style={{ marginTop: space.xs }}>
                     {withFriends
-                      ? `Drops to ${formatMoney(estimate.fare)} each when friends join. You get a code to share; the driver is requested when you are ready.`
-                      : `Shared ride with up to ${maxCoRiders} co-rider(s).`}
+                      ? estimate.soloFare != null
+                        ? `Until a friend joins you pay the solo price, ${formatMoney(estimate.soloFare)}. Up to 4 riders. You get a code to share; the driver is requested when you are ready.`
+                        : "You get a code to share; the driver is requested when you are ready."
+                      : `Shared ride with up to ${maxCoRiders} co-rider${maxCoRiders > 1 ? "s" : ""}.`}
                   </Text>
                 )}
-                <Text variant="caption" color={colors.muted}>The fare is held from your wallet and charged when the trip ends.</Text>
-              </View>
+                <View style={{ marginTop: space.lg }}>
+                  <Row label="From" value={pickup?.name} />
+                  <Row label="To" value={dropoff?.name} />
+                  <Row label="Distance by road" value={formatKm(estimate.distanceKm)} />
+                  {estimate.durationMin != null && <Row label="Trip time" value={`about ${estimate.durationMin} min`} />}
+                </View>
+                <Text variant="caption" color={colors.muted} style={{ marginTop: space.md }}>
+                  The fare is held from your wallet and charged when the trip ends.
+                </Text>
+              </>
             )}
             <View style={{ gap: space.sm, marginTop: space.xl }}>
-              <Button label="Confirm" onPress={confirmBooking} loading={isBooking} />
-              <Button label="Cancel" variant="secondary" onPress={() => setConfirmationModalVisible(false)} disabled={isBooking} />
+              <Button label={withFriends ? "Continue and invite friends" : "Book this ride"} icon="arrow-right" onPress={bookRide} loading={isBooking} />
+              <Button label="Change the trip" variant="secondary" onPress={() => setPriceSheet(false)} disabled={isBooking} />
             </View>
           </View>
         </View>

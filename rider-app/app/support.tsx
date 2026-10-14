@@ -13,7 +13,7 @@ export default function SupportScreen() {
   const faqData = [
     {
       question: 'How do I book a ride?',
-      answer: 'Tap the "Book Ride" button on the home screen, enter your pickup and destination locations, review the fare estimate, and confirm your booking.',
+      answer: 'Tap the "Book Ride" button on the home screen, enter your pickup and destination: the price appears straight away, then tap "Book this ride".',
     },
     {
       question: 'How is the fare calculated?',
