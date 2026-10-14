@@ -248,6 +248,9 @@ export const fr = {
     title: 'Notifications',
     none: 'Aucune notification.',
     markAll: 'Tout marquer comme lu',
+    announcement: 'Message de Flow',
+    later: 'Plus tard',
+    open: 'Ouvrir',
   },
   auth: {
     loginTitle: 'Bon retour.',

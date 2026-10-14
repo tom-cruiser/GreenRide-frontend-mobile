@@ -2,7 +2,7 @@ import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDriverAvailability } from '@/contexts/DriverAvailabilityContext';
 import { ApiError, driversAPI, notificationsAPI, ridesAPI } from '@/services/api';
@@ -14,7 +14,8 @@ import { useT } from '@/i18n';
 // - the approval status (not_onboarded, pending, verified, rejected + reason)
 // - the ride in progress, if any (the app then shows only that ride)
 // - incoming requests while online: a new one plays a sound and opens on top
-// - the unread notification count for the bell
+// - the unread notification count for the bell, and announcements from the
+//   Flow team: a new one plays its own chime and shows on screen at once
 //
 // The backend has no push for new requests, so the list is checked every few
 // seconds while online. It has no request timeout either: a request stays
@@ -23,6 +24,8 @@ import { useT } from '@/i18n';
 const REQUESTS_EVERY_MS = 5_000;
 const RIDE_EVERY_MS = 5_000;
 const UNREAD_EVERY_MS = 30_000;
+
+type Note = { id: number; type: string | null; message: string; read_at: string | null };
 
 export type Approval = 'loading' | 'not_onboarded' | 'pending' | 'verified' | 'rejected' | 'error';
 
@@ -100,6 +103,7 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
   const { token, user } = useAuth();
   const { online } = useDriverAvailability();
   const router = useRouter();
+  const { t } = useT();
   const signedIn = Boolean(token && user?.role === 'driver');
 
   const [approval, setApproval] = useState<Approval>('loading');
@@ -111,8 +115,11 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
   const seen = useRef(new Set<number>());
   const forgotten = useRef(new Set<number>());
   const firstLoad = useRef(true);
+  // Notifications already shown, so an announcement rings only once.
+  const knownNotes = useRef<Set<number> | null>(null);
 
   const chime = useAudioPlayer(require('@/assets/sounds/new-request.wav'));
+  const bell = useAudioPlayer(require('@/assets/sounds/announcement.wav'));
   useEffect(() => {
     // Heard even when the phone is on silent: a driver must not miss a ride.
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -169,12 +176,26 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
   const refreshUnread = useCallback(async () => {
     if (!token) return;
     try {
-      const { notifications } = await notificationsAPI.getNotifications(token);
-      setUnread((notifications ?? []).filter((n: { read_at: string | null }) => !n.read_at).length);
+      const list = ((await notificationsAPI.getNotifications(token)).notifications ?? []) as Note[];
+      setUnread(list.filter((n) => !n.read_at).length);
+      // The first load only learns what is there; after that, a new unread
+      // announcement rings (even on silent) and is shown on top.
+      const known = knownNotes.current;
+      knownNotes.current = new Set(list.map((n) => n.id));
+      const fresh = known ? list.find((n) => !known.has(n.id) && !n.read_at && n.type === 'announcement') : undefined;
+      if (fresh) {
+        bell.seekTo(0);
+        bell.play();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        Alert.alert(t('notifications.announcement'), fresh.message, [
+          { text: t('notifications.later'), style: 'cancel' },
+          { text: t('notifications.open'), onPress: () => router.push('/notifications') },
+        ]);
+      }
     } catch {
       // Keep the last count.
     }
-  }, [token]);
+  }, [token, bell, router, t]);
 
   // Signed in: load the profile, payout share, ride and unread count.
   useEffect(() => {
@@ -189,10 +210,14 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
     });
     const rideTimer = setInterval(refreshActive, RIDE_EVERY_MS);
     const unreadTimer = setInterval(refreshUnread, UNREAD_EVERY_MS);
+    // New notifications arrive live; the timer is the fallback.
+    const offNote = signalingClient.on('notification', () => refreshUnread());
     return () => {
       stop = true;
       clearInterval(rideTimer);
       clearInterval(unreadTimer);
+      offNote();
+      knownNotes.current = null;
     };
   }, [signedIn, token, reloadProfile, refreshActive, refreshUnread]);
 
@@ -215,7 +240,6 @@ export function DriverWorkProvider({ children }: { children: React.ReactNode }) 
 
   // The position goes out from a foreground service while online or on a
   // ride: every 5 s on a ride, every 15 s while waiting (see location-sharing).
-  const { t } = useT();
   const sharing = signedIn && (online || Boolean(activeRide));
   const onRide = Boolean(activeRide);
   useEffect(() => {

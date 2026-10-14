@@ -249,6 +249,9 @@ export const en: Strings = {
     title: 'Notifications',
     none: 'No notifications.',
     markAll: 'Mark all as read',
+    announcement: 'Message from Flow',
+    later: 'Later',
+    open: 'Open',
   },
   auth: {
     loginTitle: 'Welcome back.',

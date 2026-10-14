@@ -83,8 +83,18 @@ export async function registerForPush(authToken: string): Promise<string | null>
         name: 'Ride invitations',
         description: 'Friends inviting you to share a ride, and friend requests',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
+        // No `sound`: the channel then uses the phone's notification sound
+        // (`sound` names a custom file bundled with the app).
         vibrationPattern: [0, 300, 200, 300],
+        lightColor: '#111111',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+      // Messages the Flow team sends to everyone: loud, over any open app.
+      await Notifications.setNotificationChannelAsync('announcements', {
+        name: 'Announcements',
+        description: 'Messages from the Flow team',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 400, 200, 400],
         lightColor: '#111111',
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });

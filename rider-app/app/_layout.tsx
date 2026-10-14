@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -154,6 +155,7 @@ function RootNavigator() {
         const note = notifications?.find((n: any) => n.id === msg?.id);
         if (!note) return;
         const route = routeForNotification(note.data);
+        if (note.type === 'announcement') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         Alert.alert('Flow', note.message, route
           ? [{ text: 'Later', style: 'cancel' }, { text: 'Open', onPress: () => router.push(route as any) }]
           : [{ text: 'OK' }]);
