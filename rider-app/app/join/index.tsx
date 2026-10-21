@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersonAvatar } from '@/components/person-avatar';
 import { showError, useCountdown } from '@/components/friends-ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +35,7 @@ export default function JoinScreen() {
     | null
   >(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -118,8 +120,8 @@ export default function JoinScreen() {
   const goCode = () => code.trim() && router.push(`/join/${encodeURIComponent(code.trim().toUpperCase())}`);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior="padding">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
           <IconButton icon="chevron-left" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
@@ -229,30 +231,33 @@ export default function JoinScreen() {
               </View>
             )}
 
-            {/* Nothing to join? Start one: opens Book with "With friends" chosen. */}
-            <Pressable onPress={() => startRide('friends')} accessibilityRole="button" style={styles.startRide}>
-              <View style={styles.startIcon}><Icon name="plus" size={20} color={colors.onDark} /></View>
-              <View style={{ flex: 1 }}>
-                <Text weight="semibold">Start your own ride</Text>
-                <Text variant="caption" color={colors.muted}>Invite friends, or open it to riders nearby</Text>
-              </View>
-              <Icon name="chevron-right" color={colors.muted} />
-            </Pressable>
-
-            {/* Ride code */}
-            <View style={styles.sectionHead}>
-              <Text variant="heading">Have a ride code?</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' }}>
-              <View style={{ flex: 1 }}>
-                <Field label="Ride code" placeholder="FLOW-4K7P" autoCapitalize="characters" autoCorrect={false}
-                  value={code} onChangeText={setCode} onSubmitEditing={goCode} />
-              </View>
-              <Button label="Go" size="md" onPress={goCode} disabled={!code.trim()} style={{ height: 52 }} />
-            </View>
           </>
         )}
       </ScrollView>
+
+      {/* Pinned to the bottom, seen as soon as the screen opens; the rides
+          scroll above it. Hidden while search results are shown. */}
+      {!results && (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, space.md) }]}>
+          {/* Nothing to join? Start one: opens Book with "With friends" chosen. */}
+          <Pressable onPress={() => startRide('friends')} accessibilityRole="button" style={styles.startRide}>
+            <View style={styles.startIcon}><Icon name="plus" size={18} color={colors.onDark} /></View>
+            <View style={{ flex: 1 }}>
+              <Text weight="semibold">Start your own ride</Text>
+              <Text variant="caption" color={colors.muted}>Invite friends, or open it to riders nearby</Text>
+            </View>
+            <Icon name="chevron-right" color={colors.muted} />
+          </Pressable>
+          {/* Have a ride code? */}
+          <View style={styles.codeRow}>
+            <Icon name="hash" size={18} color={colors.muted} />
+            <TextInput value={code} onChangeText={setCode} onSubmitEditing={goCode} placeholder="Have a ride code? FLOW-4K7P"
+              placeholderTextColor={colors.muted} autoCapitalize="characters" autoCorrect={false} returnKeyType="go"
+              accessibilityLabel="Ride code" style={styles.codeInput} />
+            <Button label="Go" size="md" onPress={goCode} disabled={!code.trim()} style={{ height: 40, paddingHorizontal: space.lg }} />
+          </View>
+        </View>
+      )}
 
       <Sheet visible={sheet !== null} onClose={() => setSheet(null)}>
         {sheet?.kind === 'me' && social && <MyCode me={social.me} />}
@@ -269,7 +274,7 @@ export default function JoinScreen() {
         )}
         {sheet?.kind === 'ride' && <RideSheet ride={sheet.ride} busy={busy === 'join'} onJoin={() => joinRide(sheet.ride)} />}
       </Sheet>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -453,7 +458,7 @@ function RideSheet({ ride, busy, onJoin }: { ride: PublicRide; busy: boolean; on
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.xl, paddingTop: 56, paddingBottom: space.xxxl * 2 },
+  page: { padding: space.xl, paddingTop: 56, paddingBottom: space.xxl },
   header: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.lg, height: 52, borderRadius: radius.pill,
@@ -480,11 +485,20 @@ const styles = StyleSheet.create({
     height: 38, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
-  startRide: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.lg, padding: space.lg,
-    borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line,
+  footer: {
+    gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, ...shadow.float,
   },
-  startIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  startRide: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, paddingHorizontal: space.md,
+    borderRadius: radius.xl, backgroundColor: colors.soft,
+  },
+  startIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  codeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingLeft: space.md, paddingRight: 4, paddingVertical: 4,
+    borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line,
+  },
+  codeInput: { flex: 1, height: 40, fontSize: 15, color: colors.ink, letterSpacing: 0.5 },
   emptyFeed: { alignItems: 'center', padding: space.xl, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
