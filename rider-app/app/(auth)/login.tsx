@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { Image, KeyboardAvoidingView, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, colors, Field, Screen, space, Text } from '@/design';
 
@@ -28,7 +28,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <Screen dark edges={['top', 'bottom']}>
         <Image source={require('@/assets/images/app-logo.png')} style={{ width: 52, height: 52, borderRadius: 26 }} />
         <Text color={colors.onDark} weight="bold" style={{ fontSize: 44, lineHeight: 48, letterSpacing: -1.5, marginTop: space.xxxl }}>

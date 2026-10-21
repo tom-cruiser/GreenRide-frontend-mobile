@@ -341,8 +341,8 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
 function Sheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      {/* iPhone does not push the sheet up for the keyboard by itself */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* The sheet moves up over the keyboard (Android draws edge-to-edge, so it no longer resizes the screen) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Pressable style={styles.overlay} onPress={onClose}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.grabber} />

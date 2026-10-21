@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { KeyboardAvoidingView, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, colors, Field, Header, Screen, space, Text } from '@/design';
 import { useT } from '@/i18n';
@@ -35,7 +35,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <Screen dark edges={['top', 'bottom']}>
         <Header onBack={() => router.back()} backLabel={t('common.back')} dark />
         <Text color={colors.onDark} weight="bold" style={{ fontSize: 44, lineHeight: 48, letterSpacing: -1.4 }}>{t('auth.registerTitle')}</Text>
