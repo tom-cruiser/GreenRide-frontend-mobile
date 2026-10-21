@@ -208,7 +208,8 @@ export default function RideBookingScreen() {
         });
         resetEstimate();
         setDropoff(null);
-        // Share the code, invite friends, then request the driver.
+        // Friends only: share the code and invite. Public: listed for riders
+        // nearby. Either way the host requests the driver when ready.
         router.replace(`/friends-ride/${group.groupId}`);
         return;
       }
@@ -417,16 +418,18 @@ export default function RideBookingScreen() {
           <View style={styles.sheet}>
             {estimate && (
               <>
-                <Text color={colors.muted}>{withFriends ? "Each rider pays" : "Your price"}</Text>
+                <Text color={colors.muted}>{withFriends ? (isPublic ? "Public ride · each rider pays" : "Each rider pays") : "Your price"}</Text>
                 <Text weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
                   {formatMoney(estimate.fare)}
                 </Text>
                 {isSharedRide && (
                   <Text color={colors.ink3} style={{ marginTop: space.xs }}>
                     {withFriends
-                      ? estimate.soloFare != null
-                        ? `Until a friend joins you pay the solo price, ${formatMoney(estimate.soloFare)}. Up to 4 riders. You get a code to share; the driver is requested when you are ready.`
-                        : "You get a code to share; the driver is requested when you are ready."
+                      ? isPublic
+                        ? `Your ride is listed under "Join a ride" for riders within 15 km, who can join it themselves. ${estimate.soloFare != null ? `Until someone joins you pay the solo price, ${formatMoney(estimate.soloFare)}. ` : ""}Up to 4 riders; you request the driver when you are ready.`
+                        : estimate.soloFare != null
+                          ? `Until a friend joins you pay the solo price, ${formatMoney(estimate.soloFare)}. Up to 4 riders. You get a code to share; the driver is requested when you are ready.`
+                          : "You get a code to share; the driver is requested when you are ready."
                       : `Shared ride with up to ${maxCoRiders} co-rider${maxCoRiders > 1 ? "s" : ""}.`}
                   </Text>
                 )}
@@ -442,7 +445,7 @@ export default function RideBookingScreen() {
               </>
             )}
             <View style={{ gap: space.sm, marginTop: space.xl }}>
-              <Button label={withFriends ? "Continue and invite friends" : "Book this ride"} icon="arrow-right" onPress={bookRide} loading={isBooking} />
+              <Button label={withFriends ? (isPublic ? "Post public ride" : "Continue and invite friends") : "Book this ride"} icon={withFriends && isPublic ? "globe" : "arrow-right"} onPress={bookRide} loading={isBooking} />
               <Button label="Change the trip" variant="secondary" onPress={() => setPriceSheet(false)} disabled={isBooking} />
             </View>
           </View>

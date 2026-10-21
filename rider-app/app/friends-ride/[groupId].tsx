@@ -139,6 +139,7 @@ export default function FriendsRideScreen() {
       ],
     );
 
+  const isPublic = group.visibility === 'public';
   const header = group.status === 'cancelled'
     ? { title: 'Ride cancelled', detail: 'Any money held for it is back in your wallet.' }
     : group.status === 'requested'
@@ -146,7 +147,9 @@ export default function FriendsRideScreen() {
       : isHost
         ? group.expired
           ? { title: 'Time is up', detail: joined.length ? 'Request a driver for the friends who joined, or cancel.' : 'Nobody joined in time. Go alone or cancel.' }
-          : { title: 'Invite your friends', detail: countdown ? `Invitations close in ${countdown}` : 'Waiting for friends' }
+          : isPublic
+            ? { title: 'Your ride is public', detail: countdown ? `Riders nearby can join · closes in ${countdown}` : 'Waiting for riders to join' }
+            : { title: 'Invite your friends', detail: countdown ? `Invitations close in ${countdown}` : 'Waiting for friends' }
         : { title: `Riding with ${group.host.firstName}`, detail: `${group.host.firstName} will request the driver.` };
 
   // The host alone pays the solo fare; it drops once a friend joins.
@@ -155,7 +158,7 @@ export default function FriendsRideScreen() {
 
   return (
     <Screen>
-      <Header title={isHost ? 'Ride with friends' : 'Shared ride'} onBack={() => router.replace('/(tabs)')} backLabel="Home" />
+      <Header title={isHost ? (isPublic ? 'Public ride' : 'Ride with friends') : 'Shared ride'} onBack={() => router.replace('/(tabs)')} backLabel="Home" />
 
       {/* Status and your price */}
       <Card dark>
@@ -172,7 +175,7 @@ export default function FriendsRideScreen() {
           {money(group.myPrice, group.currency)}
         </Text>
         {alone && gathering && dropsTo < group.myPrice && (
-          <Text color={colors.onDarkMuted}>Drops to {money(dropsTo, group.currency)} when a friend joins.</Text>
+          <Text color={colors.onDarkMuted}>Drops to {money(dropsTo, group.currency)} when {isPublic ? 'someone' : 'a friend'} joins.</Text>
         )}
       </Card>
 
@@ -191,6 +194,19 @@ export default function FriendsRideScreen() {
           </View>
         )}
       </Card>
+
+      {/* Public: where riders nearby find it */}
+      {isHost && gathering && !group.expired && isPublic && (
+        <Card style={{ marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+          <Icon name="globe" />
+          <View style={{ flex: 1 }}>
+            <Text weight="semibold">Listed for riders nearby</Text>
+            <Text variant="caption" color={colors.muted}>
+              Riders within 15 km see your ride under “Join a ride” and can join it themselves. You can still invite friends below.
+            </Text>
+          </View>
+        </Card>
+      )}
 
       {/* Invite: friends in one tap, the code, or a phone number */}
       {isHost && gathering && !group.expired && (
