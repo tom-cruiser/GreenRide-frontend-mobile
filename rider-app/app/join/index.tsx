@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { PersonAvatar } from '@/components/person-avatar';
-import { showError } from '@/components/friends-ui';
+import { showError, useCountdown } from '@/components/friends-ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Badge, Button, colors, Field, formatKm, formatMoney, Icon, IconButton, radius, shadow, space, Text, TextInputFlow as TextInput,
@@ -286,11 +286,20 @@ const minutesAgo = (iso: string) => {
   return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
 };
 
+// "Closes in 24:10" while a public ride is still open to join. "With others"
+// rides have no time limit (null). Gone at zero: the next refresh drops it.
+function useClosesIn(expiresAt: string | null): string | null {
+  const left = useCountdown(expiresAt);
+  if (!expiresAt) return null;
+  return left ? `Closes in ${left}` : 'Closing…';
+}
+
 // "Current" is how a ride booked from the rider's own position is named.
 const place = (name: string) => (name === 'Current' ? 'Nearby pickup' : name);
 
 // A public ride as a big card, like a post: the host's photo, the route and the price.
 function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: boolean; onJoin: () => void; onView: () => void }) {
+  const closes = useClosesIn(ride.expiresAt);
   return (
     <View style={styles.card}>
       <View style={StyleSheet.absoluteFill}>
@@ -315,6 +324,7 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
         <Text variant="caption" color={colors.onDarkMuted} numberOfLines={1}>
           {ride.distanceKm != null ? `${formatKm(ride.distanceKm)} away · ` : ''}{minutesAgo(ride.createdAt)}
         </Text>
+        {closes && <Text variant="caption" weight="semibold" color={colors.onDark} numberOfLines={1}>{closes}</Text>}
         <Text weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{place(ride.pickup)} → {ride.dropoff}</Text>
         <Text variant="heading" weight="bold" color={colors.onDark}>{formatMoney(ride.price, ride.currency)}</Text>
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
@@ -415,13 +425,14 @@ function PersonSheet({ person, busy, onAdd, onAccept, onDecline, onRemove }: {
 }
 
 function RideSheet({ ride, busy, onJoin }: { ride: PublicRide; busy: boolean; onJoin: () => void }) {
+  const closes = useClosesIn(ride.expiresAt);
   return (
     <View style={{ gap: space.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
         <PersonAvatar person={ride.host} size={56} />
         <View style={{ flex: 1 }}>
           <Text variant="heading">{ride.host.firstName}</Text>
-          <Text variant="caption" color={colors.muted}>Started {minutesAgo(ride.createdAt)}</Text>
+          <Text variant="caption" color={colors.muted}>Started {minutesAgo(ride.createdAt)}{closes ? ` · ${closes}` : ''}</Text>
         </View>
         <Badge label={`${ride.seatsLeft} left`} icon="users" />
       </View>

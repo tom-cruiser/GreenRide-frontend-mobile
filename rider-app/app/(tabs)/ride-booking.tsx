@@ -426,7 +426,7 @@ export default function RideBookingScreen() {
                   <Text color={colors.ink3} style={{ marginTop: space.xs }}>
                     {withFriends
                       ? isPublic
-                        ? `Your ride is listed under "Join a ride" for riders within 15 km, who can join it themselves. ${estimate.soloFare != null ? `Until someone joins you pay the solo price, ${formatMoney(estimate.soloFare)}. ` : ""}Up to 4 riders; you request the driver when you are ready.`
+                        ? `Your ride is listed under "Join a ride" for 30 minutes, to riders within 15 km, who can join it themselves. ${estimate.soloFare != null ? `Until someone joins you pay the solo price, ${formatMoney(estimate.soloFare)}. ` : ""}Up to 4 riders; you request the driver when you are ready.`
                         : estimate.soloFare != null
                           ? `Until a friend joins you pay the solo price, ${formatMoney(estimate.soloFare)}. Up to 4 riders. You get a code to share; the driver is requested when you are ready.`
                           : "You get a code to share; the driver is requested when you are ready."
