@@ -213,25 +213,20 @@ export default function JoinScreen() {
                 <Icon name="users" size={22} />
                 <Text weight="semibold" style={{ marginTop: space.sm }}>No public rides near you right now</Text>
                 <Text variant="caption" color={colors.muted} align="center">
-                  A public ride shows here for a few minutes while its host waits for people, to riders within 15 km of its pickup.
+                  A public ride shows here for 30 minutes while its host waits for people, to riders within 15 km of its pickup.
                 </Text>
                 <Button size="md" label="Start a public ride" icon="plus" onPress={() => startRide('public')}
                   style={{ marginTop: space.md, alignSelf: 'stretch' }} />
               </View>
             ) : (
-              <FlatList
-                horizontal
-                data={rides ?? []}
-                keyExtractor={(r) => String(r.groupId)}
-                showsHorizontalScrollIndicator={false}
-                style={{ marginHorizontal: -space.xl }}
-                contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.md }}
-                renderItem={({ item }) => (
-                  <RideCard ride={item} busy={busy === 'join'}
+              // Two rides per row; more rows follow down the page.
+              <View style={styles.grid}>
+                {(rides ?? []).map((item) => (
+                  <RideCard key={`${item.kind}-${item.groupId}`} ride={item} busy={busy === 'join'}
                     onJoin={() => joinRide(item)}
                     onView={() => (item.mine ? openRide(item) : setSheet({ kind: 'ride', ride: item }))} />
-                )}
-              />
+                ))}
+              </View>
             )}
 
             {/* Nothing to join? Start one: opens Book with "With friends" chosen. */}
@@ -297,7 +292,7 @@ function useClosesIn(expiresAt: string | null): string | null {
 // "Current" is how a ride booked from the rider's own position is named.
 const place = (name: string) => (name === 'Current' ? 'Nearby pickup' : name);
 
-// A public ride as a big card, like a post: the host's photo, the route and the price.
+// A public ride as a card, half the width (two per row): the host's photo, the route and the price.
 function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: boolean; onJoin: () => void; onView: () => void }) {
   const closes = useClosesIn(ride.expiresAt);
   return (
@@ -307,7 +302,7 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
           <PersonAvatar person={ride.host} fill />
         ) : (
           <View style={styles.cardInitials}>
-            <Text weight="extrabold" color="rgba(255,255,255,0.12)" style={{ fontSize: 120, lineHeight: 130 }}>{ride.host.initials}</Text>
+            <Text weight="extrabold" color="rgba(255,255,255,0.12)" style={{ fontSize: 84, lineHeight: 92 }}>{ride.host.initials}</Text>
           </View>
         )}
       </View>
@@ -320,15 +315,15 @@ function RideCard({ ride, busy, onJoin, onView }: { ride: PublicRide; busy: bool
         </View>
       </View>
       <View style={styles.cardBottom}>
-        <Text variant="title" color={colors.onDark} numberOfLines={1}>{ride.mine ? 'You' : ride.host.firstName}</Text>
+        <Text variant="heading" weight="bold" color={colors.onDark} numberOfLines={1}>{ride.mine ? 'You' : ride.host.firstName}</Text>
         <Text variant="caption" color={colors.onDarkMuted} numberOfLines={1}>
           {ride.distanceKm != null ? `${formatKm(ride.distanceKm)} away · ` : ''}{minutesAgo(ride.createdAt)}
         </Text>
         {closes && <Text variant="caption" weight="semibold" color={colors.onDark} numberOfLines={1}>{closes}</Text>}
-        <Text weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{place(ride.pickup)} → {ride.dropoff}</Text>
+        <Text variant="caption" weight="semibold" color={colors.onDark} numberOfLines={2} style={{ marginTop: space.sm }}>{place(ride.pickup)} → {ride.dropoff}</Text>
         <Text variant="heading" weight="bold" color={colors.onDark}>{formatMoney(ride.price, ride.currency)}</Text>
-        <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
-          <Button size="md" variant="light" label={ride.mine ? 'Open' : 'Join'} icon={ride.mine ? 'arrow-right' : 'user-plus'} onPress={onJoin} loading={busy} style={{ flex: 1, height: 42 }} />
+        <View style={{ flexDirection: 'row', gap: space.xs, marginTop: space.sm }}>
+          <Button size="md" variant="light" label={ride.mine ? 'Open' : 'Join'} onPress={onJoin} loading={busy} style={{ flex: 1, height: 38, paddingHorizontal: space.sm }} />
           <Pressable onPress={onView} style={styles.glassBtn} accessibilityRole="button">
             <Text variant="caption" weight="semibold" color={colors.onDark}>View</Text>
           </Pressable>
@@ -475,13 +470,14 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: space.xxl, marginBottom: space.md },
-  card: { width: 260, height: 340, borderRadius: radius.xxl, overflow: 'hidden', backgroundColor: colors.night, ...shadow.float },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space.md },
+  card: { width: '48.5%', height: 290, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: colors.night, ...shadow.float },
   cardInitials: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.night2 },
   cardShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.28)' },
-  cardTop: { position: 'absolute', top: space.lg, left: space.lg, right: space.lg },
-  cardBottom: { position: 'absolute', left: space.lg, right: space.lg, bottom: space.lg },
+  cardTop: { position: 'absolute', top: space.md, left: space.md, right: space.md },
+  cardBottom: { position: 'absolute', left: space.md, right: space.md, bottom: space.md },
   glassBtn: {
-    height: 42, paddingHorizontal: space.lg, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
+    height: 38, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   startRide: {
