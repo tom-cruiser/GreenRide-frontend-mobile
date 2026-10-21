@@ -241,7 +241,7 @@ export default function JoinScreen() {
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, space.md) }]}>
           {/* Nothing to join? Start one: opens Book with "With friends" chosen. */}
           <Pressable onPress={() => startRide('friends')} accessibilityRole="button" style={styles.startRide}>
-            <View style={styles.startIcon}><Icon name="plus" size={18} color={colors.onDark} /></View>
+            <View style={styles.startIcon}><Icon name="plus" size={20} color={colors.onDark} /></View>
             <View style={{ flex: 1 }}>
               <Text weight="semibold">Start your own ride</Text>
               <Text variant="caption" color={colors.muted}>Invite friends, or open it to riders nearby</Text>
@@ -249,12 +249,13 @@ export default function JoinScreen() {
             <Icon name="chevron-right" color={colors.muted} />
           </Pressable>
           {/* Have a ride code? */}
-          <View style={styles.codeRow}>
-            <Icon name="hash" size={18} color={colors.muted} />
-            <TextInput value={code} onChangeText={setCode} onSubmitEditing={goCode} placeholder="Have a ride code? FLOW-4K7P"
-              placeholderTextColor={colors.muted} autoCapitalize="characters" autoCorrect={false} returnKeyType="go"
-              accessibilityLabel="Ride code" style={styles.codeInput} />
-            <Button label="Go" size="md" onPress={goCode} disabled={!code.trim()} style={{ height: 40, paddingHorizontal: space.lg }} />
+          <Text variant="heading" style={{ marginTop: space.sm }}>Have a ride code?</Text>
+          <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' }}>
+            <View style={{ flex: 1 }}>
+              <Field label="Ride code" placeholder="FLOW-4K7P" autoCapitalize="characters" autoCorrect={false}
+                value={code} onChangeText={setCode} onSubmitEditing={goCode} returnKeyType="go" />
+            </View>
+            <Button label="Go" size="md" onPress={goCode} disabled={!code.trim()} style={{ height: 52 }} />
           </View>
         </View>
       )}
@@ -486,19 +487,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   footer: {
-    gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.surface,
+    gap: space.md, paddingHorizontal: space.xl, paddingTop: space.lg, backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl, ...shadow.float,
   },
   startRide: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, paddingHorizontal: space.md,
-    borderRadius: radius.xl, backgroundColor: colors.soft,
+    flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg,
+    borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line,
   },
-  startIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  codeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingLeft: space.md, paddingRight: 4, paddingVertical: 4,
-    borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.line,
-  },
-  codeInput: { flex: 1, height: 40, fontSize: 15, color: colors.ink, letterSpacing: 0.5 },
+  startIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   emptyFeed: { alignItems: 'center', padding: space.xl, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
