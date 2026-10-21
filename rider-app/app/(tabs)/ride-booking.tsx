@@ -5,7 +5,7 @@ import FlowMap from "@/components/flow-map";
 import { PlaceButton, PlacePicker } from "@/components/place-picker";
 import { geocoding, geoErrorMessage, type Place } from "@/services/geo";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { ApiError, ridesAPI, driversAPI, friendsAPI } from "../../services/api";
 
@@ -55,6 +55,23 @@ export default function RideBookingScreen() {
   const withFriends = isSharedRide && shareMode === "friends";
   // Friends rides: invite-only, or public (riders nearby can join).
   const [isPublic, setIsPublic] = useState(false);
+
+  // Opened from "Join a ride" → "Start your own ride": With friends is already
+  // chosen. The params are cleared once applied, since this tab stays mounted.
+  const params = useLocalSearchParams<{ share?: string; visibility?: string }>();
+  useEffect(() => {
+    if (params.share !== "friends") return;
+    const visibility = params.visibility;
+    // Deferred a tick so no state is set during the effect itself.
+    Promise.resolve().then(() => {
+      setIsSharedRide(true);
+      setShareMode("friends");
+      setIsPublic(visibility === "public");
+      setEstimate(null);
+      setPriceSheet(false);
+      router.setParams({ share: undefined, visibility: undefined });
+    });
+  }, [params.share, params.visibility, router]);
 
   useEffect(() => {
     let cancelled = false;

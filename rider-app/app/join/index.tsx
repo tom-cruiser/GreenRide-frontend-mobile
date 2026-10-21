@@ -111,6 +111,10 @@ export default function JoinScreen() {
       router.replace(`/friends-ride/${group.groupId}`);
     });
 
+  // Book, with Shared ride → With friends (and Public or Friends only) already chosen.
+  const startRide = (visibility: 'friends' | 'public') =>
+    router.push({ pathname: '/(tabs)/ride-booking', params: { share: 'friends', visibility } });
+
   const goCode = () => code.trim() && router.push(`/join/${encodeURIComponent(code.trim().toUpperCase())}`);
 
   return (
@@ -210,8 +214,9 @@ export default function JoinScreen() {
                 <Text weight="semibold" style={{ marginTop: space.sm }}>No public rides near you right now</Text>
                 <Text variant="caption" color={colors.muted} align="center">
                   A public ride shows here for a few minutes while its host waits for people, to riders within 15 km of its pickup.
-                  Start one: Book → Shared ride → With friends → Public.
                 </Text>
+                <Button size="md" label="Start a public ride" icon="plus" onPress={() => startRide('public')}
+                  style={{ marginTop: space.md, alignSelf: 'stretch' }} />
               </View>
             ) : (
               <FlatList
@@ -228,6 +233,16 @@ export default function JoinScreen() {
                 )}
               />
             )}
+
+            {/* Nothing to join? Start one: opens Book with "With friends" chosen. */}
+            <Pressable onPress={() => startRide('friends')} accessibilityRole="button" style={styles.startRide}>
+              <View style={styles.startIcon}><Icon name="plus" size={20} color={colors.onDark} /></View>
+              <View style={{ flex: 1 }}>
+                <Text weight="semibold">Start your own ride</Text>
+                <Text variant="caption" color={colors.muted}>Invite friends, or open it to riders nearby</Text>
+              </View>
+              <Icon name="chevron-right" color={colors.muted} />
+            </Pressable>
 
             {/* Ride code */}
             <View style={styles.sectionHead}>
@@ -458,6 +473,11 @@ const styles = StyleSheet.create({
     height: 42, paddingHorizontal: space.lg, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
+  startRide: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.lg, padding: space.lg,
+    borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line,
+  },
+  startIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   emptyFeed: { alignItems: 'center', padding: space.xl, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, gap: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
