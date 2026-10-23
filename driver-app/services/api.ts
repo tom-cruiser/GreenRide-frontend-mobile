@@ -60,7 +60,7 @@ export const authAPI = {
   getProfile: (token: string) =>
     apiCall('/auth/profile', { headers: authHeader(token) }),
 
-  updateProfile: (token: string, data: { name?: string; phone?: string }) =>
+  updateProfile: (token: string, data: { name?: string; phone?: string; language?: 'fr' | 'en' }) =>
     apiCall('/auth/profile', {
       method: 'PUT',
       headers: authHeader(token),
@@ -206,9 +206,9 @@ export const walletAPI = {
 
 // This phone's Expo push token, so announcements reach it (services/push).
 export const pushAPI = {
-  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web') =>
+  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web', language?: 'fr' | 'en') =>
     apiCall('/push-tokens', {
-      method: 'POST', headers: authHeader(token), body: JSON.stringify({ token: pushToken, platform }),
+      method: 'POST', headers: authHeader(token), body: JSON.stringify({ token: pushToken, platform, language }),
     }),
   remove: (token: string, pushToken: string) =>
     apiCall('/push-tokens', { method: 'DELETE', headers: authHeader(token), body: JSON.stringify({ token: pushToken }) }),

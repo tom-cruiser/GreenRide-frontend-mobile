@@ -1,6 +1,7 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { pickedLocale } from '../i18n/picked';
 import { pushAPI } from './api';
 
 // Expo push notifications. After sign-in the app asks for permission, gets
@@ -74,7 +75,7 @@ export async function registerForPush(authToken: string): Promise<string | null>
     if (status !== 'granted') return null;
 
     const { data: pushToken } = await Notifications.getExpoPushTokenAsync({ projectId: id });
-    await pushAPI.register(authToken, pushToken, Platform.OS === 'ios' ? 'ios' : 'android');
+    await pushAPI.register(authToken, pushToken, Platform.OS === 'ios' ? 'ios' : 'android', pickedLocale() ?? undefined);
     registered = pushToken;
     return pushToken;
   } catch (e) {

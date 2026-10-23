@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { authAPI } from '../services/api';
 import { deviceLocale, setCurrentLocale, translate, type Locale, type TKey, type Values } from './translate';
 
 export { tr, type Locale, type TKey } from './translate';
@@ -41,6 +43,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setChosen(true);
     AsyncStorage.setItem(KEY, l).catch(() => {});
   }, []);
+
+  // The backend writes notifications and pushes in this language: tell it
+  // after sign-in and on every change.
+  const { token } = useAuth();
+  useEffect(() => {
+    if (token && chosen) authAPI.updateProfile(token, { language: locale }).catch(() => {});
+  }, [token, chosen, locale]);
 
   const t = useCallback((key: TKey, values?: Values) => translate(locale, key, values), [locale]);
 

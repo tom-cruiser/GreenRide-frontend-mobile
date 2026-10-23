@@ -24,7 +24,12 @@ export const translate = (locale: Locale, key: TKey, values?: Values) => {
 };
 
 let current: Locale = deviceLocale();
+// The language the rider picked (null until they have): sent with the push
+// token so the backend writes notifications in it.
+let picked: Locale | null = null;
 export const setCurrentLocale = (locale: Locale) => {
   current = locale;
+  picked = locale;
 };
+export const pickedLocale = () => picked;
 export const tr = (key: TKey, values?: Values) => translate(current, key, values);

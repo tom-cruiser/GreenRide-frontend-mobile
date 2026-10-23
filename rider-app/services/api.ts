@@ -104,7 +104,7 @@ export const authAPI = {
   getProfile: async (token: string) =>
     apiCall('/auth/profile', { headers: { Authorization: `Bearer ${token}` } }),
 
-  updateProfile: async (token: string, data: { name?: string; phone?: string; emergency_contact?: string }) =>
+  updateProfile: async (token: string, data: { name?: string; phone?: string; emergency_contact?: string; language?: 'fr' | 'en' }) =>
     apiCall('/auth/profile', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
@@ -364,8 +364,8 @@ export async function uploadProfilePhoto(token: string, file: { uri: string; nam
 export const removeProfilePhoto = (token: string) => apiCall('/users/me/photo', authed(token, { method: 'DELETE' }));
 
 export const pushAPI = {
-  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web') =>
-    apiCall('/push-tokens', post(token, { token: pushToken, platform })),
+  register: (token: string, pushToken: string, platform: 'ios' | 'android' | 'web', language?: 'fr' | 'en') =>
+    apiCall('/push-tokens', post(token, { token: pushToken, platform, language })),
   remove: (token: string, pushToken: string) =>
     apiCall('/push-tokens', authed(token, { method: 'DELETE', body: JSON.stringify({ token: pushToken }) })),
 };

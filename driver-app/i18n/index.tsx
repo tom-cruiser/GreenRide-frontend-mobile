@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { authAPI } from '../services/api';
 import { en } from './en';
 import { fr, type Strings } from './fr';
+import { setPickedLocale } from './picked';
 
 // French and English. The driver picks one on first launch (the phone's
 // language is preselected) and can change it in Account. Keys are typed: a
@@ -35,17 +38,28 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((saved) => {
-        if (saved === 'fr' || saved === 'en') setLocaleState(saved);
+        if (saved === 'fr' || saved === 'en') {
+          setPickedLocale(saved);
+          setLocaleState(saved);
+        }
         setChosen(saved === 'fr' || saved === 'en');
       })
       .catch(() => setChosen(false));
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
+    setPickedLocale(l);
     setLocaleState(l);
     setChosen(true);
     AsyncStorage.setItem(KEY, l).catch(() => {});
   }, []);
+
+  // The backend writes notifications and pushes in this language: tell it
+  // after sign-in and on every change.
+  const { token } = useAuth();
+  useEffect(() => {
+    if (token && chosen) authAPI.updateProfile(token, { language: locale }).catch(() => {});
+  }, [token, chosen, locale]);
 
   const t = useCallback(
     (key: TKey, values?: Record<string, string | number>) => {

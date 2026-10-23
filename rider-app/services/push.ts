@@ -2,7 +2,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { pushAPI } from './api';
-import { tr } from '../i18n/translate';
+import { pickedLocale, tr } from '../i18n/translate';
 
 // Expo push notifications. After sign-in the app asks for permission, gets
 // this device's Expo push token and gives it to the backend, which sends ride
@@ -108,7 +108,7 @@ export async function registerForPush(authToken: string): Promise<string | null>
     if (status !== 'granted') return null;
 
     const { data: pushToken } = await Notifications.getExpoPushTokenAsync({ projectId: id });
-    await pushAPI.register(authToken, pushToken, Platform.OS === 'ios' ? 'ios' : 'android');
+    await pushAPI.register(authToken, pushToken, Platform.OS === 'ios' ? 'ios' : 'android', pickedLocale() ?? undefined);
     registered = pushToken;
     return pushToken;
   } catch (e) {
