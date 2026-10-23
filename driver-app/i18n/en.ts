@@ -286,6 +286,9 @@ export const en: Strings = {
     accept: 'Answer',
     decline: 'Decline',
     unknown: 'Rider',
+    unavailableTitle: 'Call unavailable',
+    unavailableText: 'Calls are only available while the ride is in progress.',
+    failed: 'Call failed',
   },
   onboarding: {
     s1Title: 'Drive with Flow',

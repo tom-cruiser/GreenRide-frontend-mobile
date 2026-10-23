@@ -285,6 +285,9 @@ export const fr = {
     accept: 'Répondre',
     decline: 'Refuser',
     unknown: 'Passager',
+    unavailableTitle: 'Appel impossible',
+    unavailableText: 'Les appels ne sont possibles que pendant la course.',
+    failed: "L'appel a échoué",
   },
   onboarding: {
     s1Title: 'Conduisez avec Flow',

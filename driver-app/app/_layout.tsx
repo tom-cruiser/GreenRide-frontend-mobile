@@ -11,7 +11,7 @@ import { CallProvider } from '@/contexts/CallContext';
 import { DriverAvailabilityProvider } from '@/contexts/DriverAvailabilityContext';
 import { DriverWorkProvider, useDriverWork } from '@/contexts/DriverWorkContext';
 import { colors, DesignProvider, useFlowFonts } from '@/design';
-import { I18nProvider } from '@/i18n';
+import { I18nProvider, useT } from '@/i18n';
 import { registerForPush, useNotificationTaps } from '@/services/push';
 
 export const unstable_settings = { anchor: '(tabs)' };
@@ -29,6 +29,7 @@ function Guard() {
   const segments = useSegments();
   const { user, token, isLoading } = useAuth();
   const { activeRide } = useDriverWork();
+  const { chosen: languageChosen } = useT();
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ function Guard() {
       .catch(() => setHasOnboarded(false));
   }, []);
 
-  const ready = !isLoading && hasOnboarded !== null;
+  const ready = !isLoading && hasOnboarded !== null && languageChosen !== null;
 
   // Signed in: this phone gets the driver's notifications (pull down from the
   // top to see them); tapping one opens the notifications screen.
@@ -55,6 +56,11 @@ function Guard() {
     const first = segments[0] as string | undefined;
     const isAuthed = Boolean(user && token);
 
+    // First launch: the language comes before everything else.
+    if (!languageChosen) {
+      if (first !== 'language') router.replace('/language');
+      return;
+    }
     if (!hasOnboarded) {
       // The onboarding screen saves the flag, then navigates away.
       if (first !== 'onboarding') {
@@ -68,18 +74,19 @@ function Guard() {
       if (first !== '(auth)') router.replace('/(auth)/login');
       return;
     }
-    if (first === '(auth)' || first === 'onboarding') {
+    if (first === '(auth)' || first === 'onboarding' || first === 'language') {
       router.replace('/(tabs)');
       return;
     }
     // On a ride: only the ride (and the call) — no tabs, nothing else.
     if (activeRide && !DURING_RIDE.includes(first ?? '')) router.replace('/ride');
-  }, [ready, hasOnboarded, user, token, segments, router, activeRide]);
+  }, [ready, languageChosen, hasOnboarded, user, token, segments, router, activeRide]);
 
   if (!ready) return null;
   return (
     <ThemeProvider value={navTheme}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Screen name="language" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
