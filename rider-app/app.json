@@ -67,7 +67,8 @@
           ]
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

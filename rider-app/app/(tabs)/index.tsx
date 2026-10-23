@@ -7,6 +7,7 @@ import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { useAuth } from "../../contexts/AuthContext";
+import { useT } from "@/i18n";
 import { driversAPI, friendsAPI, ridesAPI, type FriendsGroup } from "../../services/api";
 
 type NearbyDriver = {
@@ -21,6 +22,7 @@ type NearbyDriver = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useT();
 
   const { user, token, walletBalance, updateWalletBalance } = useAuth();
 
@@ -60,9 +62,9 @@ export default function HomeScreen() {
 
   const greetingName = useMemo(() => {
     const raw = (user as any)?.name ?? (user as any)?.full_name ?? "";
-    if (typeof raw !== "string" || raw.trim().length === 0) return "Rider";
+    if (typeof raw !== "string" || raw.trim().length === 0) return t("home.rider");
     return raw.trim().split(/\s+/)[0];
-  }, [user]);
+  }, [user, t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -72,17 +74,14 @@ export default function HomeScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Location", "Permission to access location was denied.");
+          Alert.alert(t("home.location"), t("home.locationDenied"));
           return;
         }
         loc = await Location.getCurrentPositionAsync({});
       } catch (error) {
         if (!isMounted) return;
         console.warn("Location unavailable:", error);
-        Alert.alert(
-          "Location unavailable",
-          "Enable GPS / location services to see nearby drivers.",
-        );
+        Alert.alert(t("home.locationOff"), t("home.locationOffText"));
         return;
       }
       if (!isMounted) return;
@@ -95,7 +94,7 @@ export default function HomeScreen() {
     return () => {
       isMounted = false;
     };
-  }, [updateWalletBalance, token]);
+  }, [updateWalletBalance, token, t]);
 
   // Real drivers online near the rider, refreshed every 30 s so drivers who
   // go online (or move) show up without reopening the screen.
@@ -125,14 +124,14 @@ export default function HomeScreen() {
   }, [token, lat, lng]);
 
   const ridingLabel =
-    activeRideStatus === "gathering" ? "Waiting for your friends…"
-      : activeRideStatus === "pending" ? "Finding your driver…"
-        : "Your ride is in progress";
+    activeRideStatus === "gathering" ? t("home.gathering")
+      : activeRideStatus === "pending" ? t("home.finding")
+        : t("home.inProgress");
 
   const quick: [IconName, string, () => void][] = [
-    ["users", "Join a ride", () => router.push("/join")],
-    ["shield", "Safety", () => router.push("/safety")],
-    ["gift", "Promos", () => router.push("/promotions")],
+    ["users", t("home.joinRide"), () => router.push("/join")],
+    ["shield", t("home.safety"), () => router.push("/safety")],
+    ["gift", t("home.promos"), () => router.push("/promotions")],
   ];
 
   return (
@@ -146,13 +145,13 @@ export default function HomeScreen() {
         userLocation={Platform.OS === "android" && coords ? { latitude: userLat, longitude: userLng } : undefined}
         pins={[
           // iOS keeps its "You" pin; Android shows the live blue dot.
-          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink }] : []),
+          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: t("home.you"), color: colors.ink }] : []),
           ...nearbyDrivers.map((driver) => ({
             id: `driver-${driver.id}`,
             latitude: driver.latitude,
             longitude: driver.longitude,
-            title: driver.name || `Driver ${driver.id}`,
-            description: [driver.vehicle, driver.eta && `${driver.eta} away`].filter(Boolean).join(" · "),
+            title: driver.name || t("home.driver", { id: driver.id }),
+            description: [driver.vehicle, driver.eta && t("home.away", { eta: driver.eta })].filter(Boolean).join(" · "),
             color: colors.ink3,
           })),
         ]}
@@ -163,16 +162,17 @@ export default function HomeScreen() {
         <View style={styles.greetCard}>
           <Image source={require("@/assets/images/app-logo.png")} style={styles.logo} />
           <View style={{ flex: 1 }}>
-            <Text weight="bold">Hi, {greetingName}</Text>
+            <Text weight="bold">{t("home.hi", { name: greetingName })}</Text>
             <Text variant="caption" color={colors.muted} numberOfLines={1}>
               {!nearbyLoaded
-                ? "Ready to ride?"
+                ? t("home.ready")
                 : nearbyDrivers.length
-                  ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby${nearbyDrivers[0].eta ? ` · closest ${nearbyDrivers[0].eta}` : ""}`
-                  : "No drivers online near you right now"}
+                  ? t(nearbyDrivers.length > 1 ? "home.driversNearby" : "home.driverNearby", { count: nearbyDrivers.length })
+                    + (nearbyDrivers[0].eta ? t("home.closest", { eta: nearbyDrivers[0].eta }) : "")
+                  : t("home.noDrivers")}
             </Text>
           </View>
-          <IconButton icon="user" label="Open profile" onPress={() => router.push("/profile")} />
+          <IconButton icon="user" label={t("home.openProfile")} onPress={() => router.push("/profile")} />
         </View>
       </SafeAreaView>
 
@@ -182,8 +182,8 @@ export default function HomeScreen() {
           <Card key={inv.invitation?.id ?? inv.groupId} dark onPress={() => router.push(`/invitation/${inv.invitation?.id}`)} style={styles.banner}>
             <Icon name="users" color={colors.onDark} />
             <View style={{ flex: 1 }}>
-              <Text weight="semibold" color={colors.onDark}>{inv.host.firstName} invited you to share a ride</Text>
-              <Text variant="caption" color={colors.onDarkMuted}>To {inv.dropoff} · {formatMoney(inv.myPrice, inv.currency)} · Tap to answer</Text>
+              <Text weight="semibold" color={colors.onDark}>{t("home.invited", { name: inv.host.firstName })}</Text>
+              <Text variant="caption" color={colors.onDarkMuted}>{t("home.invitedText", { place: inv.dropoff, price: formatMoney(inv.myPrice, inv.currency) })}</Text>
             </View>
             <Icon name="chevron-right" color={colors.onDark} />
           </Card>
@@ -194,7 +194,7 @@ export default function HomeScreen() {
             <Icon name="navigation" color={colors.onDark} />
             <View style={{ flex: 1 }}>
               <Text weight="semibold" color={colors.onDark}>{ridingLabel}</Text>
-              <Text variant="caption" color={colors.onDarkMuted}>Tap to follow your ride</Text>
+              <Text variant="caption" color={colors.onDarkMuted}>{t("home.follow")}</Text>
             </View>
             <Icon name="chevron-right" color={colors.onDark} />
           </Card>
@@ -203,18 +203,18 @@ export default function HomeScreen() {
         <Pressable onPress={() => router.push("/(tabs)/ride-booking")} accessibilityRole="button" style={({ pressed }) => [styles.whereTo, pressed && { opacity: 0.85 }]}>
           <Icon name="search" size={22} />
           <View style={{ flex: 1 }}>
-            <Text variant="heading">Where to?</Text>
-            <Text variant="caption" color={colors.muted}>Choose a destination to book</Text>
+            <Text variant="heading">{t("home.whereTo")}</Text>
+            <Text variant="caption" color={colors.muted}>{t("home.whereToText")}</Text>
           </View>
           <Icon name="arrow-right" />
         </Pressable>
 
         <View style={styles.balanceRow}>
           <View style={{ flex: 1 }}>
-            <Text variant="caption" color={colors.muted}>Balance</Text>
+            <Text variant="caption" color={colors.muted}>{t("home.balance")}</Text>
             <Text variant="heading" weight="bold">{walletBalance == null ? "—" : formatMoney(Number(walletBalance))}</Text>
           </View>
-          <Button size="md" variant="secondary" label="Top up" icon="plus" onPress={() => router.push("/(tabs)/wallet")} />
+          <Button size="md" variant="secondary" label={t("home.topUp")} icon="plus" onPress={() => router.push("/(tabs)/wallet")} />
         </View>
 
         <View style={styles.quickRow}>

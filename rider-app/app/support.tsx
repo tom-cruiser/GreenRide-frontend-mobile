@@ -4,60 +4,24 @@ import { Text, TextInputFlow as TextInput, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useT, type TKey } from '@/i18n';
 
 export default function SupportScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null);
   const [supportMessage, setSupportMessage] = useState('');
 
-  const faqData = [
-    {
-      question: 'How do I book a ride?',
-      answer: 'Tap the "Book Ride" button on the home screen, enter your pickup and destination: the price appears straight away, then tap "Book this ride".',
-    },
-    {
-      question: 'How is the fare calculated?',
-      answer: 'Fares are calculated at 7,000 FBU per kilometer with a minimum fare for short trips. Additional charges may apply during surge pricing periods.',
-    },
-    {
-      question: 'Can I pay with cash?',
-      answer: 'Currently, we only accept digital payments through the wallet system. You can top up your wallet using mobile money or bank transfers.',
-    },
-    {
-      question: 'How do I contact my driver?',
-      answer: 'Once your ride is confirmed, you can use the in-app messaging feature or call your driver directly through the app.',
-    },
-    {
-      question: 'What if I forget something in the vehicle?',
-      answer: 'Contact customer support immediately with your ride details. We will help you get in touch with your driver to retrieve lost items.',
-    },
-    {
-      question: 'How do I cancel a ride?',
-      answer: 'You can cancel a ride from the active ride screen. Cancellation charges may apply depending on the timing of cancellation.',
-    },
-  ];
+  const faqData = [1, 2, 3, 4, 5, 6].map((n) => ({
+    question: t(`support.q${n}` as TKey),
+    answer: t(`support.a${n}` as TKey),
+  }));
 
   const supportCategories = [
-    {
-      title: 'Account & Profile',
-      icon: 'person.circle.fill',
-      description: 'Account settings, profile updates, verification',
-    },
-    {
-      title: 'Payment & Wallet',
-      icon: 'creditcard.fill',
-      description: 'Payment issues, wallet top-up, refunds',
-    },
-    {
-      title: 'Ride Issues',
-      icon: 'car.fill',
-      description: 'Ride problems, driver issues, route concerns',
-    },
-    {
-      title: 'Safety Concerns',
-      icon: 'shield.fill',
-      description: 'Safety reports, emergency situations',
-    },
+    { title: t('support.catAccount'), icon: 'person.circle.fill', description: t('support.catAccountText') },
+    { title: t('support.catPayment'), icon: 'creditcard.fill', description: t('support.catPaymentText') },
+    { title: t('support.catRide'), icon: 'car.fill', description: t('support.catRideText') },
+    { title: t('support.catSafety'), icon: 'shield.fill', description: t('support.catSafetyText') },
   ] as const;
 
   const handleFaqPress = (index: number) => {
@@ -67,12 +31,12 @@ export default function SupportScreen() {
   const handleSubmitSupport = () => {
     if (supportMessage.trim()) {
       Alert.alert(
-        'Support Request Submitted',
-        'Thank you for contacting us. Our support team will respond within 24 hours.',
-        [{ text: 'OK', onPress: () => setSupportMessage('') }]
+        t('support.sent'),
+        t('support.sentText'),
+        [{ text: t('common.ok'), onPress: () => setSupportMessage('') }]
       );
     } else {
-      Alert.alert('Error', 'Please enter your message before submitting.');
+      Alert.alert(t('history.error'), t('support.empty'));
     }
   };
 
@@ -80,24 +44,24 @@ export default function SupportScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.back()} />
       </View>
         <AppLogo size={40} />
       </View>
 
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Help & Support</Text>
-        <Text style={styles.subtitle}>We&apos;re here to help you</Text>
+        <Text style={styles.title}>{t('support.title')}</Text>
+        <Text style={styles.subtitle}>{t('support.subtitle')}</Text>
       </View>
 
       {/* Quick Support Categories */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Support</Text>
+        <Text style={styles.sectionTitle}>{t('support.quick')}</Text>
         {supportCategories.map((category, index) => (
           <TouchableOpacity
             key={index}
             style={styles.categoryItem}
-            onPress={() => Alert.alert(category.title, 'This will open a detailed support form')}
+            onPress={() => Alert.alert(category.title, t('settings.soon'))}
           >
             <View style={styles.categoryIcon}>
               <IconSymbol name={category.icon} size={24} color="#1976d2" />
@@ -113,7 +77,7 @@ export default function SupportScreen() {
 
       {/* FAQ Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+        <Text style={styles.sectionTitle}>{t('support.faq')}</Text>
         {faqData.map((faq, index) => (
           <View key={index} style={styles.faqItem}>
             <TouchableOpacity
@@ -138,14 +102,14 @@ export default function SupportScreen() {
 
       {/* Contact Support */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contact Support</Text>
+        <Text style={styles.sectionTitle}>{t('support.contact')}</Text>
         <Text style={styles.supportDescription}>
-          Can&apos;t find what you&apos;re looking for? Send us a message and we&apos;ll get back to you.
+          {t('support.contactText')}
         </Text>
         
         <TextInput
           style={styles.messageInput}
-          placeholder="Describe your issue or question..."
+          placeholder={t('support.placeholder')}
           value={supportMessage}
           onChangeText={setSupportMessage}
           multiline
@@ -154,18 +118,18 @@ export default function SupportScreen() {
         />
         
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmitSupport}>
-          <Text style={styles.submitButtonText}>Submit Support Request</Text>
+          <Text style={styles.submitButtonText}>{t('support.submit')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Contact Information */}
       <View style={styles.contactSection}>
-        <Text style={styles.contactTitle}>Other Ways to Reach Us</Text>
+        <Text style={styles.contactTitle}>{t('support.other')}</Text>
         
         <TouchableOpacity style={styles.contactItem}>
           <IconSymbol name="phone.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Phone Support</Text>
+            <Text style={styles.contactLabel}>{t('support.phone')}</Text>
             <Text style={styles.contactValue}>+257 79 000 000</Text>
           </View>
         </TouchableOpacity>
@@ -173,7 +137,7 @@ export default function SupportScreen() {
         <TouchableOpacity style={styles.contactItem}>
           <IconSymbol name="envelope.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Email Support</Text>
+            <Text style={styles.contactLabel}>{t('support.email')}</Text>
             <Text style={styles.contactValue}>support@greenrider.bi</Text>
           </View>
         </TouchableOpacity>
@@ -181,8 +145,8 @@ export default function SupportScreen() {
         <TouchableOpacity style={styles.contactItem}>
           <IconSymbol name="clock.fill" size={20} color="#111111" />
           <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>Support Hours</Text>
-            <Text style={styles.contactValue}>24/7 Available</Text>
+            <Text style={styles.contactLabel}>{t('support.hours')}</Text>
+            <Text style={styles.contactValue}>{t('support.always')}</Text>
           </View>
         </TouchableOpacity>
       </View>

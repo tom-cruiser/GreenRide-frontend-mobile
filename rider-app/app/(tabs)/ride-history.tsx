@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList, Alert, Modal, RefreshControl } from 'react-native';
-import { Text, TextInputFlow as TextInput, formatMoney, IconButton } from '@/design';
+import { Text, TextInputFlow as TextInput, formatKm, formatMoney, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '../../contexts/AuthContext';
 import { ridesAPI } from '../../services/api';
 import { CallRideButton, CALLABLE_RIDE_STATUSES } from '../../components/CallRideButton';
+import { useT, type TKey } from '@/i18n';
 
 type HistoryItem = {
   id: string;
-  type: 'Ride';
   date: string;
   amount: string;
   from: string;
@@ -25,12 +25,12 @@ type HistoryItem = {
 };
 
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Finding a driver',
-  accepted: 'Driver on the way',
-  arrived: 'Driver arrived',
-  in_progress: 'On the trip',
-  cancelled: 'Cancelled',
+const STATUS_LABELS: Record<string, TKey> = {
+  pending: 'history.pending',
+  accepted: 'history.accepted',
+  arrived: 'history.arrived',
+  in_progress: 'history.inProgress',
+  cancelled: 'history.cancelled',
 };
 
 type BackendRide = {
@@ -56,6 +56,7 @@ type BackendRide = {
 
 export default function RideHistoryScreen() {
   const router = useRouter();
+  const { t, locale } = useT();
   const { user, token } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRide, setSelectedRide] = useState<HistoryItem | null>(null);
@@ -75,18 +76,17 @@ export default function RideHistoryScreen() {
 
     const mapped: HistoryItem[] = backendRides.map((r) => {
       const shareLabel = r.is_shared && r.share
-        ? `${r.share.mode === 'friends' ? 'With friends' : 'Shared'} • ${r.share.ridersCount}/${r.share.maxRiders ?? r.share.ridersCount}`
+        ? `${r.share.mode === 'friends' ? t('history.withFriends') : t('history.shared')} • ${r.share.ridersCount}/${r.share.maxRiders ?? r.share.ridersCount}`
         : undefined;
 
       return {
         id: r.id,
-        type: 'Ride',
-        date: new Date(r.date).toDateString(),
+        date: new Date(r.date).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
         amount: `-${formatMoney(Number(r.fare))}`,
         from: r.pickup,
         to: r.dropoff,
-        driverName: r.driverName ?? (r.status === 'pending' ? 'Searching…' : '—'),
-        distance: `${Number(r.distance).toFixed(1)} km`,
+        driverName: r.driverName ?? (r.status === 'pending' ? t('history.searching') : '—'),
+        distance: formatKm(Number(r.distance)),
         duration: '—',
         rating: r.rating,
         status: r.status,
@@ -101,11 +101,11 @@ export default function RideHistoryScreen() {
   useEffect(() => {
     // Deferred a tick so no state is set during the effect itself.
     Promise.resolve().then(fetchHistory).catch((e) => {
-      const message = e instanceof Error ? e.message : 'Failed to load ride history.';
+      const message = e instanceof Error ? e.message : t('history.loadFailed');
       setLoadError(message);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user?.id]);
+  }, [token, user?.id, locale]);
 
   const handleRateRide = (ride: HistoryItem) => {
     setSelectedRide(ride);
@@ -116,12 +116,12 @@ export default function RideHistoryScreen() {
 
   const handleSubmitRating = async () => {
     if (rating === 0) {
-      Alert.alert('Please Rate', 'Please select a star rating before submitting.');
+      Alert.alert(t('history.pleaseRate'), t('history.pleaseRateText'));
       return;
     }
 
     if (!token || !selectedRide) {
-      Alert.alert('Error', 'Unable to submit rating right now.');
+      Alert.alert(t('history.error'), t('history.rateUnavailable'));
       return;
     }
 
@@ -129,13 +129,13 @@ export default function RideHistoryScreen() {
       await ridesAPI.rateRide(token, selectedRide.id, rating, feedback || undefined);
       await fetchHistory();
       Alert.alert(
-        'Thank You!',
-        `Your ${rating}-star rating has been submitted. Thank you for your feedback!`,
-        [{ text: 'OK', onPress: () => setModalVisible(false) }]
+        t('history.thanks'),
+        t('history.thanksText', { rating }),
+        [{ text: t('common.ok'), onPress: () => setModalVisible(false) }]
       );
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to submit rating.';
-      Alert.alert('Rating Failed', message);
+      const message = e instanceof Error ? e.message : t('history.rateFailed');
+      Alert.alert(t('history.rateFailedTitle'), message);
     }
   };
 
@@ -160,34 +160,34 @@ export default function RideHistoryScreen() {
       <View style={styles.rideCard}>
         <View style={styles.rideHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rideType}>{item.type}</Text>
+            <Text style={styles.rideType}>{t('history.ride')}</Text>
             <Text style={styles.rideDate}>{item.date}</Text>
             <Text style={styles.rideRoute}>{item.from} → {item.to}</Text>
             {item.shareLabel ? <Text style={styles.sharedBadge}>{item.shareLabel}</Text> : null}
             <View style={styles.rideDetails}>
-              <Text style={styles.rideDetailText}>Driver: {item.driverName}</Text>
+              <Text style={styles.rideDetailText}>{t('history.driver', { name: item.driverName })}</Text>
               <Text style={styles.rideDetailText}>{item.distance} • {item.duration}</Text>
             </View>
           </View>
           <View style={styles.rideRight}>
             <Text style={styles.amount}>{item.amount}</Text>
             {CALLABLE_RIDE_STATUSES.includes(item.status) && (
-              <CallRideButton rideId={item.id} label="Call driver" />
+              <CallRideButton rideId={item.id} label={t('history.callDriver')} />
             )}
             {item.rating != null ? (
               <View style={styles.existingRating}>
                 {renderStars(item.rating)}
-                <Text style={styles.ratingText}>You rated this ride</Text>
+                <Text style={styles.ratingText}>{t('history.rated')}</Text>
               </View>
             ) : item.status === 'completed' ? (
               <TouchableOpacity
                 style={styles.rateButton}
                 onPress={() => handleRateRide(item)}
               >
-                <Text style={styles.rateButtonText}>Rate Ride</Text>
+                <Text style={styles.rateButtonText}>{t('history.rate')}</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.statusText}>{STATUS_LABELS[item.status] ?? item.status}</Text>
+              <Text style={styles.statusText}>{STATUS_LABELS[item.status] ? t(STATUS_LABELS[item.status]) : item.status}</Text>
             )}
           </View>
         </View>
@@ -197,10 +197,10 @@ export default function RideHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.replace('/(tabs)')} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.replace('/(tabs)')} />
       </View>
       <AppLogo size={60} />
-      <Text style={styles.title}>Ride History</Text>
+      <Text style={styles.title}>{t('history.title')}</Text>
 
       {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
       
@@ -213,7 +213,7 @@ export default function RideHistoryScreen() {
           try {
             await fetchHistory();
           } catch (e) {
-            const message = e instanceof Error ? e.message : 'Failed to refresh.';
+            const message = e instanceof Error ? e.message : t('history.refreshFailed');
             setLoadError(message);
           } finally {
             setIsRefreshing(false);
@@ -231,19 +231,19 @@ export default function RideHistoryScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Rate Your Ride</Text>
+            <Text style={styles.modalTitle}>{t('history.rateTitle')}</Text>
             {selectedRide && (
               <Text style={styles.modalSubtitle}>
                 {selectedRide.from} → {selectedRide.to}
               </Text>
             )}
             
-            <Text style={styles.ratingLabel}>How was your ride with {selectedRide?.driverName}?</Text>
+            <Text style={styles.ratingLabel}>{t('history.howWas', { name: selectedRide?.driverName ?? '' })}</Text>
             {renderStars(rating, setRating)}
             
             <TextInput
               style={styles.feedbackInput}
-              placeholder="Share your feedback (optional)"
+              placeholder={t('history.feedback')}
               value={feedback}
               onChangeText={setFeedback}
               multiline
@@ -255,13 +255,13 @@ export default function RideHistoryScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.submitButton]}
                 onPress={handleSubmitRating}
               >
-                <Text style={styles.submitButtonText}>Submit</Text>
+                <Text style={styles.submitButtonText}>{t('history.submit')}</Text>
               </TouchableOpacity>
             </View>
           </View>

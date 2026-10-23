@@ -3,25 +3,27 @@ import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, colors, Field, Screen, space, Text } from '@/design';
+import { useT } from '@/i18n';
 
 // Dark sign-in, as on the website and the driver app.
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (!email.trim() || !password) return setError('Enter your email and password.');
+    if (!email.trim() || !password) return setError(t('auth.missingLogin'));
     setBusy(true);
     setError(null);
     try {
       await login(email.trim(), password);
       router.replace('/(tabs)');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not sign in. Please try again.');
+      setError(e instanceof Error ? e.message : t('auth.loginFailed'));
     } finally {
       setBusy(false);
     }
@@ -32,19 +34,19 @@ export default function LoginScreen() {
       <Screen dark edges={['top', 'bottom']}>
         <Image source={require('@/assets/images/app-logo.png')} style={{ width: 52, height: 52, borderRadius: 26 }} />
         <Text color={colors.onDark} weight="bold" style={{ fontSize: 44, lineHeight: 48, letterSpacing: -1.5, marginTop: space.xxxl }}>
-          Welcome back.
+          {t('auth.welcome')}
         </Text>
         <Text color={colors.onDarkMuted} style={{ marginTop: space.sm, marginBottom: space.xxl }}>
-          Sign in to book rides, share them with friends and pay with your Flow wallet.
+          {t('auth.welcomeText')}
         </Text>
         <View style={{ gap: space.lg }}>
-          <Field dark label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
-          <Field dark label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={submit} />
+          <Field dark label={t('auth.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
+          <Field dark label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={submit} />
           {error && <Text color="#FCA5A5">{error}</Text>}
-          <Button size="lg" variant="light" label="Log in" onPress={submit} loading={busy} />
+          <Button size="lg" variant="light" label={t('auth.login')} onPress={submit} loading={busy} />
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
-            <Text color={colors.onDarkMuted}>New to Flow?</Text>
-            <Button size="md" variant="ghostDark" label="Create an account" onPress={() => router.push('/(auth)/register')} style={{ paddingHorizontal: space.sm }} />
+            <Text color={colors.onDarkMuted}>{t('auth.newHere')}</Text>
+            <Button size="md" variant="ghostDark" label={t('auth.createAccount')} onPress={() => router.push('/(auth)/register')} style={{ paddingHorizontal: space.sm }} />
           </View>
         </View>
       </Screen>

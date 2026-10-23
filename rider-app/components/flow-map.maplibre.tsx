@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { colors, Icon, radius, shadow, space, Text } from '@/design';
 import { MAP_ATTRIBUTION, mapStyle } from '@/config/maps';
+import { useT } from '@/i18n';
 import type { FlowMapProps, LatLng, MapPin } from './flow-map.types';
 
 export type { FlowMapProps, LatLng, MapPin } from './flow-map.types';
@@ -60,6 +61,7 @@ export default function FlowMap({
   style, center, delta = 0.01, pins = [], userLocation, onPinPress,
   route, fitTo, followUser, onPress, controls = true, insets,
 }: FlowMapProps) {
+  const { t } = useT();
   const top = insets?.top ?? 0;
   const bottom = insets?.bottom ?? 0;
   const camera = useRef<CameraRef>(null);
@@ -96,7 +98,7 @@ export default function FlowMap({
     return (
       <View style={[style, styles.message]}>
         <Icon name="map" size={28} color={colors.muted} />
-        <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Map is not set up in this build</Text>
+        <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>{t('map.notSetUp')}</Text>
       </View>
     );
   }
@@ -154,13 +156,13 @@ export default function FlowMap({
 
       {controls && (
         <View style={[styles.controls, { bottom: bottom + 28 }]} pointerEvents="box-none">
-          <Pressable accessibilityRole="button" accessibilityLabel="Zoom in" style={styles.control} onPress={() => zoomBy(1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('map.zoomIn')} style={styles.control} onPress={() => zoomBy(1)}>
             <Icon name="plus" size={18} color={colors.ink} />
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Zoom out" style={styles.control} onPress={() => zoomBy(-1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('map.zoomOut')} style={styles.control} onPress={() => zoomBy(-1)}>
             <Icon name="minus" size={18} color={colors.ink} />
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Show my position" style={styles.control} onPress={recenter}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('map.myPosition')} style={styles.control} onPress={recenter}>
             <Icon name="crosshair" size={18} color={colors.ink} />
           </Pressable>
         </View>
@@ -168,7 +170,7 @@ export default function FlowMap({
 
       {failed && (
         <Pressable style={styles.failed} onPress={() => { setFailed(false); setAttempt((n) => n + 1); }}>
-          <Text variant="caption" color={colors.onDark}>Map could not load. Check your connection, then tap to retry.</Text>
+          <Text variant="caption" color={colors.onDark}>{t('map.failed')}</Text>
         </Pressable>
       )}
 

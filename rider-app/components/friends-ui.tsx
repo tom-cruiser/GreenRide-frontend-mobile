@@ -5,6 +5,7 @@ import { Badge, colors, IconButton, radius, shadow, space, formatMoney } from '@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { signalingClient } from '../services/signalingClient';
 import { isInsufficientBalance, type FriendsPerson } from '../services/api';
+import { tr, useT, type TKey } from '@/i18n';
 
 type Router = ReturnType<typeof useRouter>;
 
@@ -20,17 +21,18 @@ export function Avatar({ person, size = 44 }: { person: FriendsPerson; size?: nu
   return <PersonAvatar person={person} size={size} />;
 }
 
-const CHIP: Record<string, [string, 'neutral' | 'dark' | 'warning' | 'danger']> = {
-  invited: ['Invited', 'warning'],
-  accepted: ['Joined', 'dark'],
-  declined: ['Declined', 'neutral'],
-  expired: ['Expired', 'neutral'],
-  removed: ['Removed', 'danger'],
-  left: ['Left', 'neutral'],
+const CHIP: Record<string, [TKey, 'neutral' | 'dark' | 'warning' | 'danger']> = {
+  invited: ['chip.invited', 'warning'],
+  accepted: ['chip.joined', 'dark'],
+  declined: ['chip.declined', 'neutral'],
+  expired: ['chip.expired', 'neutral'],
+  removed: ['chip.removed', 'danger'],
+  left: ['chip.left', 'neutral'],
 };
 export function StatusChip({ status }: { status: string }) {
-  const [label, tone] = CHIP[status] ?? [status, 'neutral'];
-  return <Badge label={label} tone={tone} />;
+  const { t } = useT();
+  const chip = CHIP[status];
+  return <Badge label={chip ? t(chip[0]) : status} tone={chip ? chip[1] : 'neutral'} />;
 }
 
 // "8:42" until the time runs out, then null.
@@ -69,24 +71,25 @@ export function showError(router: Router, title: string, e: unknown) {
   if (isInsufficientBalance(e)) {
     const { price, balance, missing } = e.details;
     Alert.alert(
-      'Not enough balance',
-      `This ride costs ${money(price)}. You have ${money(balance)}, so you need ${money(missing)} more.`,
+      tr('chip.lowBalance'),
+      tr('chip.lowBalanceText', { price: money(price), balance: money(balance), missing: money(missing) }),
       [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Top up', onPress: () => router.push('/(tabs)/wallet') },
+        { text: tr('book.notNow'), style: 'cancel' },
+        { text: tr('home.topUp'), onPress: () => router.push('/(tabs)/wallet') },
       ],
     );
     return;
   }
-  Alert.alert(title, e instanceof Error ? e.message : 'Please try again.');
+  Alert.alert(title, e instanceof Error ? e.message : tr('common.tryAgain'));
 }
 
 export { Row } from '@/design';
 
-export function BackButton({ onPress, label = 'Home' }: { onPress: () => void; label?: string }) {
+export function BackButton({ onPress, label }: { onPress: () => void; label?: string }) {
+  const { t } = useT();
   return (
     <View style={{ marginBottom: space.md, alignSelf: 'flex-start' }}>
-      <IconButton icon="chevron-left" label={label} onPress={onPress} />
+      <IconButton icon="chevron-left" label={label ?? t('tabs.home')} onPress={onPress} />
     </View>
   );
 }

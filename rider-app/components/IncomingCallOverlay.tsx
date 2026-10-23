@@ -3,10 +3,12 @@ import { Modal, View, TouchableOpacity, StyleSheet, Platform, StatusBar } from '
 import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import { useCall } from '@/hooks/useCall';
+import { useT } from '@/i18n';
 
 export function IncomingCallOverlay() {
   const { phase, callInfo, acceptCall, rejectCall } = useCall();
   const router = useRouter();
+  const { t } = useT();
 
   const visible = phase === 'incoming';
 
@@ -38,15 +40,15 @@ export function IncomingCallOverlay() {
               {callInfo?.peerName?.[0]?.toUpperCase() ?? '?'}
             </Text>
           </View>
-          <Text style={styles.callerName}>{callInfo?.peerName ?? 'Unknown'}</Text>
-          <Text style={styles.status}>Incoming call…</Text>
+          <Text style={styles.callerName}>{callInfo?.peerName ?? t('call.unknown')}</Text>
+          <Text style={styles.status}>{t('call.incoming')}</Text>
 
           {/* Action buttons */}
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionBtn, styles.rejectBtn]}
               onPress={handleReject}
-              accessibilityLabel="Reject call"
+              accessibilityLabel={t('call.reject')}
             >
               <Text style={styles.actionIcon}>✕</Text>
             </TouchableOpacity>
@@ -54,13 +56,13 @@ export function IncomingCallOverlay() {
             <TouchableOpacity
               style={[styles.actionBtn, styles.acceptBtn]}
               onPress={handleAccept}
-              accessibilityLabel="Accept call"
+              accessibilityLabel={t('call.accept')}
             >
               <Text style={styles.actionIcon}>✆</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.hint}>Slide up to answer</Text>
+          <Text style={styles.hint}>{t('call.slide')}</Text>
         </View>
       </View>
     </Modal>

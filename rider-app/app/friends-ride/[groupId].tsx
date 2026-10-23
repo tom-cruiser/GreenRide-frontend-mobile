@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, socialAPI, type FriendsGroup, type SocialPerson } from '@/services/api';
 import { PersonAvatar } from '@/components/person-avatar';
 import { StatusChip, money, showError, useCountdown, useLiveGroup } from '@/components/friends-ui';
+import { useT } from '@/i18n';
 
 // A "share with friends" ride. The host shares the code, invites by phone,
 // sees friends join live, can remove a guest, and requests the driver.
@@ -14,6 +15,7 @@ import { StatusChip, money, showError, useCountdown, useLiveGroup } from '@/comp
 
 export default function FriendsRideScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { token, updateWalletBalance } = useAuth();
   const [group, setGroup] = useState<FriendsGroup | null>(null);
@@ -34,9 +36,9 @@ export default function FriendsRideScreen() {
       setGroup(next);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load the ride.');
+      setError(e instanceof Error ? e.message : t('friends.loadFailed'));
     }
-  }, [token, groupId]);
+  }, [token, groupId, t]);
   useLiveGroup(groupId, reload);
 
   const countdown = useCountdown(group?.status === 'gathering' ? group.expiresAt : null);
@@ -67,9 +69,9 @@ export default function FriendsRideScreen() {
         {error ? (
           <>
             <Icon name="slash" size={32} color={colors.muted} />
-            <Text variant="title" align="center" style={{ marginTop: space.lg }}>Ride not available</Text>
+            <Text variant="title" align="center" style={{ marginTop: space.lg }}>{t('friends.unavailable')}</Text>
             <Text color={colors.ink3} align="center" style={{ marginTop: space.xs }}>{error}</Text>
-            <Button label="Home" onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
+            <Button label={t('tabs.home')} onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
           </>
         ) : (
           <ActivityIndicator size="large" color={colors.ink} />
@@ -85,12 +87,11 @@ export default function FriendsRideScreen() {
   const joined = (group.guests ?? []).filter((g) => g.status === 'accepted');
   const invited = (group.guests ?? []).filter((g) => g.status === 'invited');
   const others = (group.guests ?? []).filter((g) => !['accepted', 'invited'].includes(g.status));
-  const shareMessage = `Ride with me on Flow from ${group.pickup} to ${group.dropoff}. ` +
-    `Open the app and enter the code ${group.code}, or tap ${group.link}`;
+  const shareMessage = t('friends.shareMessage', { from: group.pickup, to: group.dropoff, code: group.code, link: group.link });
 
   const copyCode = async () => {
     await Clipboard.setStringAsync(group.code);
-    Alert.alert('Code copied', `${group.code} is ready to paste.`);
+    Alert.alert(t('friends.codeCopied'), t('profile.copiedText', { code: group.code }));
   };
 
   const share = () => Share.share({ message: shareMessage }).catch(() => {});
@@ -100,57 +101,57 @@ export default function FriendsRideScreen() {
     run('invite', async () => {
       const { invitation } = await friendsAPI.invite(token, group.groupId, phone.trim());
       setPhone('');
-      Alert.alert('Invitation sent', `${invitation.firstName} will get a notification.`);
-    }, 'Could not invite');
+      Alert.alert(t('friends.inviteSent'), t('friends.inviteSentText', { name: invitation.firstName }));
+    }, t('friends.inviteFailed'));
   };
 
   const remove = (invitationId: number, name: string) =>
-    Alert.alert(`Remove ${name}?`, 'Their money goes back to their wallet.', [
-      { text: 'Keep', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => run(`remove-${invitationId}`, () => friendsAPI.removeGuest(token!, group.groupId, invitationId), 'Could not remove') },
+    Alert.alert(t('friends.removeTitle', { name }), t('friends.removeText'), [
+      { text: t('friends.keep'), style: 'cancel' },
+      { text: t('friends.remove'), style: 'destructive', onPress: () => run(`remove-${invitationId}`, () => friendsAPI.removeGuest(token!, group.groupId, invitationId), t('friends.removeFailed')) },
     ]);
 
   const request = (alone: boolean) =>
     Alert.alert(
-      alone ? 'Go alone?' : 'Request a driver?',
+      alone ? t('friends.aloneTitle') : t('friends.requestTitle'),
       alone
-        ? `You will pay the solo price, ${money(group.price.host, group.currency)}.`
-        : `Nobody else can join after this. Each rider pays ${money(group.price.guest, group.currency)}.`,
+        ? t('friends.aloneText', { price: money(group.price.host, group.currency) })
+        : t('friends.requestText', { price: money(group.price.guest, group.currency) }),
       [
-        { text: 'Not yet', style: 'cancel' },
-        { text: alone ? 'Go alone' : 'Request driver', onPress: () => run('request', () => friendsAPI.requestDriver(token!, group.groupId, alone), 'Could not request a driver') },
+        { text: t('friends.notYet'), style: 'cancel' },
+        { text: alone ? t('friends.goAlone') : t('friends.requestDriver'), onPress: () => run('request', () => friendsAPI.requestDriver(token!, group.groupId, alone), t('friends.requestFailed')) },
       ],
     );
 
   const leave = () =>
     Alert.alert(
-      isHost ? 'Cancel the ride for everyone?' : 'Leave this ride?',
-      isHost ? 'Everyone gets their money back.' : 'Your money goes back to your wallet.',
+      isHost ? t('friends.cancelAll') : t('friends.leaveTitle'),
+      isHost ? t('friends.cancelAllText') : t('friends.leaveText'),
       [
-        { text: 'Stay', style: 'cancel' },
+        { text: t('friends.stay'), style: 'cancel' },
         {
-          text: isHost ? 'Cancel ride' : 'Leave',
+          text: isHost ? t('ride.cancel') : t('friends.leave'),
           style: 'destructive',
           onPress: () => run('leave', async () => {
             await friendsAPI.leave(token!, group.groupId);
             router.replace('/(tabs)');
-          }, 'Could not leave'),
+          }, t('friends.leaveFailed')),
         },
       ],
     );
 
   const isPublic = group.visibility === 'public';
   const header = group.status === 'cancelled'
-    ? { title: 'Ride cancelled', detail: 'Any money held for it is back in your wallet.' }
+    ? { title: t('ride.cancelled'), detail: t('friends.cancelledText') }
     : group.status === 'requested'
-      ? { title: 'Looking for a driver', detail: 'Your group is one request for the drivers.' }
+      ? { title: t('friends.looking'), detail: t('friends.lookingText') }
       : isHost
         ? group.expired
-          ? { title: 'Time is up', detail: joined.length ? 'Request a driver for the friends who joined, or cancel.' : 'Nobody joined in time. Go alone or cancel.' }
+          ? { title: t('friends.timeUp'), detail: joined.length ? t('friends.timeUpJoined') : t('friends.timeUpAlone') }
           : isPublic
-            ? { title: 'Your ride is public', detail: countdown ? `Riders nearby can join · closes in ${countdown}` : 'Waiting for riders to join' }
-            : { title: 'Invite your friends', detail: countdown ? `Invitations close in ${countdown}` : 'Waiting for friends' }
-        : { title: `Riding with ${group.host.firstName}`, detail: `${group.host.firstName} will request the driver.` };
+            ? { title: t('friends.isPublic'), detail: countdown ? t('friends.publicCloses', { time: countdown }) : t('friends.waitingRiders') }
+            : { title: t('friends.inviteTitle'), detail: countdown ? t('friends.inviteCloses', { time: countdown }) : t('friends.waitingFriends') }
+        : { title: t('friends.ridingWith', { name: group.host.firstName }), detail: t('friends.hostRequests', { name: group.host.firstName }) };
 
   // The host alone pays the solo fare; it drops once a friend joins.
   const alone = isHost && group.ridersCount <= 1;
@@ -158,7 +159,7 @@ export default function FriendsRideScreen() {
 
   return (
     <Screen>
-      <Header title={isHost ? (isPublic ? 'Public ride' : 'Ride with friends') : 'Shared ride'} onBack={() => router.replace('/(tabs)')} backLabel="Home" />
+      <Header title={isHost ? (isPublic ? t('friends.publicRide') : t('ride.withFriends')) : t('book.shared')} onBack={() => router.replace('/(tabs)')} backLabel={t('tabs.home')} />
 
       {/* Status and your price */}
       <Card dark>
@@ -168,25 +169,25 @@ export default function FriendsRideScreen() {
         </View>
         <Text variant="title" color={colors.onDark} style={{ marginTop: space.xs }}>{header.title}</Text>
         <View style={{ marginTop: space.sm }}>
-          <Badge tone="light" label={group.visibility === 'public' ? 'Public: riders nearby can join' : 'Friends only'} icon={group.visibility === 'public' ? 'globe' : 'lock'} />
+          <Badge tone="light" label={group.visibility === 'public' ? t('friends.publicBadge') : t('book.friendsOnly')} icon={group.visibility === 'public' ? 'globe' : 'lock'} />
         </View>
-        <Text color={colors.onDarkMuted} style={{ marginTop: space.lg }}>{alone ? 'Your price alone' : `Your price with ${group.ridersCount} riders`}</Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: space.lg }}>{alone ? t('friends.priceAlone') : t('friends.priceWith', { count: group.ridersCount })}</Text>
         <Text color={colors.onDark} weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
           {money(group.myPrice, group.currency)}
         </Text>
         {alone && gathering && dropsTo < group.myPrice && (
-          <Text color={colors.onDarkMuted}>Drops to {money(dropsTo, group.currency)} when {isPublic ? 'someone' : 'a friend'} joins.</Text>
+          <Text color={colors.onDarkMuted}>{t(isPublic ? 'friends.dropsSomeone' : 'friends.dropsFriend', { price: money(dropsTo, group.currency) })}</Text>
         )}
       </Card>
 
       {/* Trip */}
       <Card style={{ marginTop: space.md }}>
-        <Row label="From" value={group.pickup} />
-        <Row label="To" value={group.dropoff} />
-        <Row label="Riders" value={`${group.ridersCount} of ${group.maxRiders}`} />
+        <Row label={t('book.from')} value={group.pickup} />
+        <Row label={t('book.to')} value={group.dropoff} />
+        <Row label={t('friends.riders')} value={t('friends.countOf', { count: group.ridersCount, max: group.maxRiders })} />
         {!isHost && (
           <View style={styles.hostRow}>
-            <Text color={colors.ink3}>Host</Text>
+            <Text color={colors.ink3}>{t('friends.host')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
               <PersonAvatar person={group.host} size={28} />
               <Text weight="semibold">{group.host.firstName}</Text>
@@ -200,9 +201,9 @@ export default function FriendsRideScreen() {
         <Card style={{ marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
           <Icon name="globe" />
           <View style={{ flex: 1 }}>
-            <Text weight="semibold">Listed for riders nearby</Text>
+            <Text weight="semibold">{t('friends.listed')}</Text>
             <Text variant="caption" color={colors.muted}>
-              Riders within 15 km see your ride under “Join a ride” and can join it themselves. You can still invite friends below.
+              {t('friends.listedText')}
             </Text>
           </View>
         </Card>
@@ -213,20 +214,20 @@ export default function FriendsRideScreen() {
         <Card style={{ marginTop: space.md }}>
           {friends.length > 0 && (
             <>
-              <Text variant="heading">Invite friends</Text>
+              <Text variant="heading">{t('friends.inviteFriends')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: space.md, marginHorizontal: -space.xl }}
                 contentContainerStyle={{ gap: space.lg, paddingHorizontal: space.xl }}>
                 {friends.map((f) => {
                   const done = invitedHandles.includes(f.handle);
                   return (
-                    <Pressable key={f.handle} disabled={done || busy === `friend-${f.handle}`} accessibilityRole="button" accessibilityLabel={`Invite ${f.firstName}`}
+                    <Pressable key={f.handle} disabled={done || busy === `friend-${f.handle}`} accessibilityRole="button" accessibilityLabel={t('friends.inviteName', { name: f.firstName })}
                       style={{ alignItems: 'center', gap: 6, width: 68, opacity: done ? 0.45 : 1 }}
                       onPress={() => run(`friend-${f.handle}`, async () => {
                         await friendsAPI.inviteFriend(token!, group.groupId, f.handle);
                         setInvitedHandles((list) => [...list, f.handle]);
-                      }, 'Could not invite')}>
+                      }, t('friends.inviteFailed'))}>
                       <PersonAvatar person={f} size={56} ring />
-                      <Text variant="caption" weight="semibold" numberOfLines={1}>{done ? 'Invited' : f.firstName}</Text>
+                      <Text variant="caption" weight="semibold" numberOfLines={1}>{done ? t('friends.invited') : f.firstName}</Text>
                     </Pressable>
                   );
                 })}
@@ -235,25 +236,25 @@ export default function FriendsRideScreen() {
             </>
           )}
 
-          <Text variant="heading">Ride code</Text>
+          <Text variant="heading">{t('friends.code')}</Text>
           <View style={styles.codeRow}>
             <Text weight="extrabold" style={{ fontSize: 24, lineHeight: 30, letterSpacing: 1.5, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit selectable>{group.code}</Text>
-            <Button size="md" variant="secondary" icon="copy" label="Copy" onPress={copyCode} />
+            <Button size="md" variant="secondary" icon="copy" label={t('friends.copy')} onPress={copyCode} />
           </View>
-          <Button label="Share by WhatsApp or SMS" icon="share-2" onPress={share} style={{ marginTop: space.md }} />
-          <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>Friends enter the code in Flow under “Join a ride”.</Text>
+          <Button label={t('friends.shareBy')} icon="share-2" onPress={share} style={{ marginTop: space.md }} />
+          <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>{t('friends.codeHint')}</Text>
 
           <View style={styles.divider} />
-          <Field label="Invite by phone number" placeholder="+257 79 123 456" keyboardType="phone-pad" value={phone}
-            onChangeText={setPhone} onSubmitEditing={invite} hint="They need a Flow rider account with this number." />
-          <Button label="Invite" variant="secondary" icon="send" onPress={invite} loading={busy === 'invite'} disabled={!phone.trim()} style={{ marginTop: space.md }} />
+          <Field label={t('friends.byPhone')} placeholder="+257 79 123 456" keyboardType="phone-pad" value={phone}
+            onChangeText={setPhone} onSubmitEditing={invite} hint={t('friends.byPhoneHint')} />
+          <Button label={t('friends.invite')} variant="secondary" icon="send" onPress={invite} loading={busy === 'invite'} disabled={!phone.trim()} style={{ marginTop: space.md }} />
         </Card>
       )}
 
       {/* Who's in */}
       {isHost && (group.guests?.length ?? 0) > 0 && (
         <Card style={{ marginTop: space.md }}>
-          <Text variant="heading">Friends</Text>
+          <Text variant="heading">{t('profile.friends')}</Text>
           {[...joined, ...invited, ...others].map((guest) => (
             <View key={guest.invitationId} style={styles.guest}>
               <PersonAvatar person={guest} size={44} />
@@ -265,7 +266,7 @@ export default function FriendsRideScreen() {
                 </View>
               </View>
               {gathering && ['accepted', 'invited'].includes(guest.status) && (
-                <Button size="md" variant="danger" label="Remove" onPress={() => remove(guest.invitationId, guest.firstName)}
+                <Button size="md" variant="danger" label={t('friends.remove')} onPress={() => remove(guest.invitationId, guest.firstName)}
                   loading={busy === `remove-${guest.invitationId}`} />
               )}
             </View>
@@ -276,15 +277,15 @@ export default function FriendsRideScreen() {
       {/* Next step */}
       <View style={{ gap: space.sm, marginTop: space.xl }}>
         {isHost && gathering && (joined.length > 0 ? (
-          <Button size="lg" label={`Request driver (${group.ridersCount} riders)`} icon="navigation" onPress={() => request(false)} loading={busy === 'request'} />
+          <Button size="lg" label={t('friends.requestN', { count: group.ridersCount })} icon="navigation" onPress={() => request(false)} loading={busy === 'request'} />
         ) : (
-          <Button size="lg" variant="secondary" label={`Go alone · ${money(group.price.host, group.currency)}`} onPress={() => request(true)} loading={busy === 'request'} />
+          <Button size="lg" variant="secondary" label={t('friends.goAloneFor', { price: money(group.price.host, group.currency) })} onPress={() => request(true)} loading={busy === 'request'} />
         ))}
         {group.status === 'requested' && (
-          <Button size="lg" label="Follow the ride" icon="arrow-right" onPress={() => router.replace('/active-ride')} />
+          <Button size="lg" label={t('friends.follow')} icon="arrow-right" onPress={() => router.replace('/active-ride')} />
         )}
         {group.status !== 'cancelled' && group.myRideId != null && (
-          <Button variant="danger" label={isHost ? 'Cancel ride' : 'Leave ride'} onPress={leave} loading={busy === 'leave'} />
+          <Button variant="danger" label={isHost ? t('ride.cancel') : t('friends.leaveRide')} onPress={leave} loading={busy === 'leave'} />
         )}
       </View>
     </Screen>

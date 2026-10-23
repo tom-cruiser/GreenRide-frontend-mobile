@@ -2,6 +2,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { pushAPI } from './api';
+import { tr } from '../i18n/translate';
 
 // Expo push notifications. After sign-in the app asks for permission, gets
 // this device's Expo push token and gives it to the backend, which sends ride
@@ -54,8 +55,8 @@ let registered: string | null = null;
 export type PushAction = 'accept' | 'decline';
 async function setCategories(N: NotificationsModule) {
   const actions = [
-    { identifier: 'accept', buttonTitle: 'Accept', options: { opensAppToForeground: true } },
-    { identifier: 'decline', buttonTitle: 'Decline', options: { opensAppToForeground: true, isDestructive: true } },
+    { identifier: 'accept', buttonTitle: tr('invite.accept'), options: { opensAppToForeground: true } },
+    { identifier: 'decline', buttonTitle: tr('invite.decline'), options: { opensAppToForeground: true, isDestructive: true } },
   ];
   await Promise.all([
     N.setNotificationCategoryAsync('ride_invite', actions),
@@ -73,15 +74,15 @@ export async function registerForPush(authToken: string): Promise<string | null>
     }
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Updates',
+        name: tr('pushChannels.updates'),
         importance: Notifications.AndroidImportance.HIGH,
       });
       // Ride invitations and friend requests: shown as a banner over any
       // open app, with sound and vibration, and on the lock screen. (Android
       // keeps a channel's settings once created, hence a separate channel.)
       await Notifications.setNotificationChannelAsync('rides', {
-        name: 'Ride invitations',
-        description: 'Friends inviting you to share a ride, and friend requests',
+        name: tr('pushChannels.rides'),
+        description: tr('pushChannels.ridesText'),
         importance: Notifications.AndroidImportance.MAX,
         // No `sound`: the channel then uses the phone's notification sound
         // (`sound` names a custom file bundled with the app).
@@ -92,8 +93,8 @@ export async function registerForPush(authToken: string): Promise<string | null>
       // Messages the Flow team sends to everyone: the Flow chime, over any
       // open app and on the lock screen.
       await Notifications.setNotificationChannelAsync('announcements', {
-        name: 'Announcements',
-        description: 'Messages from the Flow team',
+        name: tr('pushChannels.announcements'),
+        description: tr('pushChannels.announcementsText'),
         importance: Notifications.AndroidImportance.MAX,
         sound: 'announcement.wav',
         vibrationPattern: [0, 400, 200, 400],

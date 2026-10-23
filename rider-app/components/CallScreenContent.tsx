@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'rea
 import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import { useCall } from '@/hooks/useCall';
+import { useT, type TKey } from '@/i18n';
 
 function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60)
@@ -12,22 +13,16 @@ function formatDuration(secs: number): string {
   return `${m}:${s}`;
 }
 
-function phaseLabel(phase: string): string {
-  switch (phase) {
-    case 'outgoing':
-      return 'Calling…';
-    case 'negotiating':
-      return 'Connecting…';
-    case 'active':
-      return 'Connected';
-    default:
-      return '';
-  }
-}
+const PHASE_LABELS: Record<string, TKey> = {
+  outgoing: 'call.calling',
+  negotiating: 'call.connecting',
+  active: 'call.connected',
+};
 
 export default function CallScreenContent() {
   const { phase, callInfo, isMuted, durationSeconds, endCall, toggleMute } = useCall();
   const router = useRouter();
+  const { t } = useT();
 
   useEffect(() => {
     if (phase === 'idle' || phase === 'ended') {
@@ -54,7 +49,7 @@ export default function CallScreenContent() {
           </Text>
         </View>
         <Text style={styles.peerName}>{callInfo.peerName}</Text>
-        <Text style={styles.statusText}>{phaseLabel(phase)}</Text>
+        <Text style={styles.statusText}>{PHASE_LABELS[phase] ? t(PHASE_LABELS[phase]) : ''}</Text>
         {isActive && (
           <Text style={styles.duration}>{formatDuration(durationSeconds)}</Text>
         )}
@@ -64,19 +59,19 @@ export default function CallScreenContent() {
         <TouchableOpacity
           style={[styles.controlBtn, isMuted && styles.controlBtnActive]}
           onPress={toggleMute}
-          accessibilityLabel={isMuted ? 'Unmute' : 'Mute'}
+          accessibilityLabel={isMuted ? t('call.unmute') : t('call.mute')}
         >
           <Text style={styles.controlIcon}>{isMuted ? '🔇' : '🎙'}</Text>
-          <Text style={styles.controlLabel}>{isMuted ? 'Unmute' : 'Mute'}</Text>
+          <Text style={styles.controlLabel}>{isMuted ? t('call.unmute') : t('call.mute')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.controlBtn, styles.endBtn]}
           onPress={endCall}
-          accessibilityLabel="End call"
+          accessibilityLabel={t('call.end')}
         >
           <Text style={styles.controlIcon}>✕</Text>
-          <Text style={styles.controlLabel}>End</Text>
+          <Text style={styles.controlLabel}>{t('call.endShort')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -1,4 +1,5 @@
 import { apiCall } from './api';
+import { tr } from '../i18n/translate';
 
 // Address search and road routes. Screens use these two interfaces only; the
 // implementation below asks our API, which talks to the OpenStreetMap
@@ -79,8 +80,8 @@ export const routing: RoutingService = {
 // What to tell the rider when a lookup fails.
 export function geoErrorMessage(e: unknown): string {
   const status = (e as { status?: number })?.status;
-  if (status === 503) return 'Maps are not available right now. Please try again in a moment.';
-  if (status === 429) return 'Too many searches. Please wait a moment.';
-  if (e instanceof Error && e.name === 'AbortError') return 'No connection. Check your internet and try again.';
-  return 'Could not reach Flow. Check your internet and try again.';
+  if (status === 503) return tr('geo.unavailable');
+  if (status === 429) return tr('geo.tooMany');
+  if (e instanceof Error && e.name === 'AbortError') return tr('geo.offline');
+  return tr('geo.unreachable');
 }

@@ -4,6 +4,7 @@ import { Text, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../components/app-logo';
 import { IconSymbol, type SymbolName } from '@/components/ui/icon-symbol';
+import { useT } from '@/i18n';
 
 type SettingsState = {
   notifications: {
@@ -18,8 +19,7 @@ type SettingsState = {
     marketing: boolean;
   };
   preferences: {
-    theme: string;
-    language: string;
+    theme: 'light' | 'dark' | 'auto';
     currency: string;
   };
 };
@@ -27,11 +27,11 @@ type SettingsState = {
 type ToggleSection = 'notifications' | 'privacy';
 type NotificationKey = keyof SettingsState['notifications'];
 type PrivacyKey = keyof SettingsState['privacy'];
-type PreferenceKey = keyof SettingsState['preferences'];
 
 export default function SettingsScreen() {
   const router = useRouter();
-  
+  const { t, locale, setLocale } = useT();
+
   // Settings state
   const [settings, setSettings] = useState<SettingsState>({
     notifications: {
@@ -47,7 +47,6 @@ export default function SettingsScreen() {
     },
     preferences: {
       theme: 'light',
-      language: 'English',
       currency: 'FBU',
     },
   });
@@ -78,50 +77,43 @@ export default function SettingsScreen() {
 
   const handleLanguageChange = () => {
     Alert.alert(
-      'Language',
-      'Select your preferred language',
+      t('settings.language'),
+      t('settings.languagePick'),
       [
-        { text: 'English', onPress: () => updatePreference('language', 'English') },
-        { text: 'Kirundi', onPress: () => updatePreference('language', 'Kirundi') },
-        { text: 'French', onPress: () => updatePreference('language', 'French') },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Français', onPress: () => setLocale('fr') },
+        { text: 'English', onPress: () => setLocale('en') },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   };
 
   const handleThemeChange = () => {
     Alert.alert(
-      'Theme',
-      'Select your preferred theme',
+      t('settings.theme'),
+      t('settings.themePick'),
       [
-        { text: 'Light', onPress: () => updatePreference('theme', 'Light') },
-        { text: 'Dark', onPress: () => updatePreference('theme', 'Dark') },
-        { text: 'Auto', onPress: () => updatePreference('theme', 'Auto') },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('settings.light'), onPress: () => setTheme('light') },
+        { text: t('settings.dark'), onPress: () => setTheme('dark') },
+        { text: t('settings.auto'), onPress: () => setTheme('auto') },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   };
 
-  const updatePreference = (key: PreferenceKey, value: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        [key]: value,
-      },
-    }));
+  const setTheme = (theme: SettingsState['preferences']['theme']) => {
+    setSettings((prev) => ({ ...prev, preferences: { ...prev.preferences, theme } }));
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
+      t('settings.deleteAccount'),
+      t('settings.deleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.delete'),
           style: 'destructive',
-          onPress: () => Alert.alert('Account Deletion', 'Account deletion process will be initiated. You will receive an email with further instructions.'),
+          onPress: () => Alert.alert(t('settings.deletion'), t('settings.deletionText')),
         },
       ]
     );
@@ -195,64 +187,64 @@ export default function SettingsScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.back()} />
       </View>
         <AppLogo size={40} />
       </View>
 
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Customize your app experience</Text>
+        <Text style={styles.title}>{t('settings.title')}</Text>
+        <Text style={styles.subtitle}>{t('settings.subtitle')}</Text>
       </View>
 
       {/* Notifications */}
-      {renderSettingsSection('Notifications', (
+      {renderSettingsSection(t('settings.notifications'), (
         <>
-          {renderToggleItem('Ride Updates', 'Get notified about ride status changes', 'notifications', 'rideUpdates', 'bell.fill')}
-          {renderToggleItem('Promotional Offers', 'Receive notifications about discounts and offers', 'notifications', 'promotions', 'gift.fill')}
-          {renderToggleItem('Safety Alerts', 'Important safety and security notifications', 'notifications', 'safety', 'shield.fill')}
-          {renderToggleItem('Wallet Activity', 'Notifications for payment and wallet changes', 'notifications', 'wallet', 'creditcard.fill')}
+          {renderToggleItem(t('settings.rideUpdates'), t('settings.rideUpdatesText'), 'notifications', 'rideUpdates', 'bell.fill')}
+          {renderToggleItem(t('settings.offers'), t('settings.offersText'), 'notifications', 'promotions', 'gift.fill')}
+          {renderToggleItem(t('settings.safety'), t('settings.safetyText'), 'notifications', 'safety', 'shield.fill')}
+          {renderToggleItem(t('settings.wallet'), t('settings.walletText'), 'notifications', 'wallet', 'creditcard.fill')}
         </>
       ))}
 
       {/* Privacy & Data */}
-      {renderSettingsSection('Privacy & Data', (
+      {renderSettingsSection(t('settings.privacy'), (
         <>
-          {renderToggleItem('Location Sharing', 'Share location for better ride experience', 'privacy', 'shareLocation', 'location.fill')}
-          {renderToggleItem('Analytics & Performance', 'Help improve app performance', 'privacy', 'analytics', 'chart.bar.fill')}
-          {renderToggleItem('Marketing Communications', 'Receive marketing emails and messages', 'privacy', 'marketing', 'envelope.fill')}
+          {renderToggleItem(t('settings.location'), t('settings.locationText'), 'privacy', 'shareLocation', 'location.fill')}
+          {renderToggleItem(t('settings.analytics'), t('settings.analyticsText'), 'privacy', 'analytics', 'chart.bar.fill')}
+          {renderToggleItem(t('settings.marketing'), t('settings.marketingText'), 'privacy', 'marketing', 'envelope.fill')}
         </>
       ))}
 
       {/* Preferences */}
-      {renderSettingsSection('Preferences', (
+      {renderSettingsSection(t('settings.preferences'), (
         <>
-          {renderSelectItem('Language', 'Choose your preferred language', settings.preferences.language, handleLanguageChange, 'globe')}
-          {renderSelectItem('Theme', 'Customize app appearance', settings.preferences.theme, handleThemeChange, 'paintbrush.fill')}
-          {renderSelectItem('Currency', 'Display currency preference', settings.preferences.currency, () => Alert.alert('Currency', 'Currency setting coming soon'), 'dollarsign.circle.fill')}
+          {renderSelectItem(t('settings.language'), t('settings.languageText'), locale === 'fr' ? 'Français' : 'English', handleLanguageChange, 'globe')}
+          {renderSelectItem(t('settings.theme'), t('settings.themeText'), t(`settings.${settings.preferences.theme}`), handleThemeChange, 'paintbrush.fill')}
+          {renderSelectItem(t('settings.currency'), t('settings.currencyText'), settings.preferences.currency, () => Alert.alert(t('settings.currency'), t('settings.soon')), 'dollarsign.circle.fill')}
         </>
       ))}
 
       {/* Account Actions */}
-      {renderSettingsSection('Account', (
+      {renderSettingsSection(t('settings.account'), (
         <>
-          {renderActionItem('Payment Methods', 'Manage your payment options', () => Alert.alert('Payment Methods', 'Payment management coming soon'), 'creditcard.fill')}
-          {renderActionItem('Data Export', 'Download your data', () => Alert.alert('Data Export', 'Data export feature coming soon'), 'square.and.arrow.down.fill')}
-          {renderActionItem('Privacy Policy', 'Read our privacy policy', () => Alert.alert('Privacy Policy', 'Opening privacy policy...'), 'doc.text.fill')}
-          {renderActionItem('Terms of Service', 'View terms and conditions', () => Alert.alert('Terms of Service', 'Opening terms of service...'), 'doc.fill')}
+          {renderActionItem(t('settings.payment'), t('settings.paymentText'), () => Alert.alert(t('settings.payment'), t('settings.soon')), 'creditcard.fill')}
+          {renderActionItem(t('settings.export'), t('settings.exportText'), () => Alert.alert(t('settings.export'), t('settings.soon')), 'square.and.arrow.down.fill')}
+          {renderActionItem(t('settings.policy'), t('settings.policyText'), () => Alert.alert(t('settings.policy'), t('settings.soon')), 'doc.text.fill')}
+          {renderActionItem(t('settings.terms'), t('settings.termsText'), () => Alert.alert(t('settings.terms'), t('settings.soon')), 'doc.fill')}
         </>
       ))}
 
       {/* Danger Zone */}
-      {renderSettingsSection('Danger Zone', (
+      {renderSettingsSection(t('settings.danger'), (
         <>
-          {renderActionItem('Delete Account', 'Permanently delete your account and data', handleDeleteAccount, 'trash.fill', '#d32f2f')}
+          {renderActionItem(t('settings.deleteAccount'), t('settings.deleteText'), handleDeleteAccount, 'trash.fill', '#d32f2f')}
         </>
       ))}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Flow v1.0.0</Text>
-        <Text style={styles.footerSubtext}>© 2026 Flow. All rights reserved.</Text>
+        <Text style={styles.footerSubtext}>{t('settings.rights')}</Text>
       </View>
     </ScrollView>
   );

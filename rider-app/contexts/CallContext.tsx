@@ -23,6 +23,7 @@ import React, {
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import type { RTCPeerConnection, MediaStream } from 'react-native-webrtc';
 import { signalingClient } from '../services/signalingClient';
+import { tr, type TKey } from '../i18n/translate';
 
 // react-native-webrtc throws on import when its native code is missing, as in
 // Expo Go. Load it lazily so the rest of the app still runs there; calls are
@@ -72,11 +73,11 @@ type PeerConnectionEvents = {
 };
 const peerEvents = (conn: InstanceType<typeof RTCPeerConnection>) => conn as unknown as PeerConnectionEvents;
 
-const BUSY_MESSAGES: Record<string, string> = {
-  busy: 'They are on another call.',
-  unreachable: 'They are not connected right now.',
-  'not-allowed': 'Calls are only available between a rider and driver during an active ride.',
-  invalid: 'The call could not be started.',
+const BUSY_MESSAGES: Record<string, TKey> = {
+  busy: 'call.busy',
+  unreachable: 'call.unreachable',
+  'not-allowed': 'call.notAllowed',
+  invalid: 'call.invalid',
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -285,16 +286,16 @@ export function CallProvider({
       const { phase } = stateRef.current;
       if (phase !== 'idle' && phase !== 'ended') return false;
       if (!callsSupported) {
-        Alert.alert('Calls unavailable', "Calls need the full Flow app build; they don't work in Expo Go.");
+        Alert.alert(tr('call.unavailableTitle'), tr('call.expoGo'));
         return false;
       }
       if (!signalingClient.connected) {
-        Alert.alert('Call Failed', 'Not connected to the call service. Check your connection and try again.');
+        Alert.alert(tr('call.failed'), tr('call.notConnected'));
         return false;
       }
       const ok = await requestMicPermission();
       if (!ok) {
-        Alert.alert('Permission required', 'Microphone access is needed for calls.');
+        Alert.alert(tr('call.permission'), tr('call.permissionText'));
         return false;
       }
       const callId = `${userId}::${peerId}::${Date.now()}`;
@@ -333,7 +334,7 @@ export function CallProvider({
       signalingClient.send('call-rejected', { callId: callInfo.callId, reason: 'rejected' });
       cleanup();
       dispatch({ type: 'END' });
-      Alert.alert('Call Failed', 'Could not access the microphone.');
+      Alert.alert(tr('call.failed'), tr('call.micFailed'));
       return;
     }
     signalingClient.send('call-accepted', { callId: callInfo.callId });
@@ -371,7 +372,7 @@ export function CallProvider({
     if (state.phase !== 'outgoing') return;
     const timer = setTimeout(() => {
       endCall();
-      Alert.alert('No answer', 'The call was not answered.');
+      Alert.alert(tr('call.noAnswer'), tr('call.noAnswerText'));
     }, RING_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [state.phase, endCall]);
@@ -453,7 +454,7 @@ export function CallProvider({
 
     // The server refused the call (busy, unreachable, no active ride, ...)
     const offBusy = signalingClient.on('call-busy', (msg: any) => {
-      Alert.alert('Call Failed', BUSY_MESSAGES[msg?.reason] ?? BUSY_MESSAGES.invalid);
+      Alert.alert(tr('call.failed'), tr(BUSY_MESSAGES[msg?.reason] ?? BUSY_MESSAGES.invalid));
       cleanup();
       dispatch({ type: 'END' });
     });

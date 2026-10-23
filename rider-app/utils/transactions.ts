@@ -20,31 +20,37 @@ export type TransactionRow = {
   date: string;
 };
 
-const LABELS: Record<string, string> = {
-  topup: 'Wallet top-up',
-  topup_bonus: 'Top-up bonus',
-  withdrawal: 'Withdrawal',
-  commission: 'Ride fare',
+// Row names in the rider's language (wallet.tx* strings).
+export type TransactionLabels = {
+  topup: string;
+  topupBonus: string;
+  withdrawal: string;
+  rideFare: string;
+  rideEarnings: string;
 };
 
-const labelFor = (tx: Transaction) => {
-  if (tx.type === 'ride_payment') return tx.direction === 'incoming' ? 'Ride earnings' : 'Ride fare';
-  return LABELS[tx.type] ?? tx.type.replace(/_/g, ' ');
+const isRideFare = (tx: Transaction) => tx.type === 'commission' || (tx.type === 'ride_payment' && tx.direction !== 'incoming');
+
+const labelFor = (tx: Transaction, l: TransactionLabels) => {
+  if (isRideFare(tx)) return l.rideFare;
+  if (tx.type === 'ride_payment') return l.rideEarnings;
+  const known: Record<string, string> = { topup: l.topup, topup_bonus: l.topupBonus, withdrawal: l.withdrawal };
+  return known[tx.type] ?? tx.type.replace(/_/g, ' ');
 };
 
-export function toTransactionRows(transactions: Transaction[]): TransactionRow[] {
+export function toTransactionRows(transactions: Transaction[], labels: TransactionLabels): TransactionRow[] {
   const rows: TransactionRow[] = [];
   const rideFares = new Map<number, TransactionRow>();
 
   for (const tx of transactions) {
-    const label = labelFor(tx);
-    if (label === 'Ride fare' && tx.rideId != null) {
+    const label = labelFor(tx, labels);
+    if (isRideFare(tx) && tx.rideId != null) {
       const existing = rideFares.get(tx.rideId);
       if (existing) {
         existing.amount += tx.amount;
         continue;
       }
-      const row = { key: `ride-${tx.rideId}`, label: `Ride fare #${tx.rideId}`, amount: tx.amount, direction: tx.direction, date: tx.date };
+      const row = { key: `ride-${tx.rideId}`, label: `${label} #${tx.rideId}`, amount: tx.amount, direction: tx.direction, date: tx.date };
       rideFares.set(tx.rideId, row);
       rows.push(row);
       continue;
@@ -60,5 +66,5 @@ export function toTransactionRows(transactions: Transaction[]): TransactionRow[]
   return rows;
 }
 
-export const formatTxDate = (date: string) =>
-  new Date(date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+export const formatTxDate = (date: string, locale?: string) =>
+  new Date(date).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });

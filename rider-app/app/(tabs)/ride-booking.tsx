@@ -8,6 +8,7 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { ApiError, ridesAPI, driversAPI, friendsAPI } from "../../services/api";
+import { useT } from "@/i18n";
 
 // The price and the road route, both from the server.
 type Estimate = {
@@ -34,6 +35,7 @@ type Driver = {
 
 export default function RideBookingScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { user, token, walletBalance } = useAuth();
   const [pickup, setPickup] = useState<Place | null>(null);
   const [dropoff, setDropoff] = useState<Place | null>(null);
@@ -80,10 +82,7 @@ export default function RideBookingScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert(
-            "Location is off",
-            "Search for your pickup instead, or allow location in the phone settings.",
-          );
+          Alert.alert(t("book.locationOff"), t("book.locationOffText"));
           return;
         }
 
@@ -96,20 +95,19 @@ export default function RideBookingScreen() {
         const place = token ? await geocoding.reverse(token, here).catch(() => null) : null;
         if (cancelled) return;
         setPickup((current) => current ?? {
-          id: "here", name: place?.name ?? "My location", address: place?.address ?? "Where the phone is now", ...here,
+          id: "here", name: place?.name ?? t("book.myLocation"), address: place?.address ?? t("book.phoneHere"), ...here,
         });
       } catch (error) {
         console.error("Location init failed:", error);
-        Alert.alert(
-          "Location Error",
-          "Unable to get your current location. Please enable GPS and try again.",
-        );
+        Alert.alert(t("book.locationError"), t("book.locationErrorText"));
       }
     })();
 
     return () => {
       cancelled = true;
     };
+    // The strings are read once, when the screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const loadNearbyDrivers = async (lat: number, lng: number) => {
@@ -163,9 +161,9 @@ export default function RideBookingScreen() {
         setPriceSheet(false);
         const status = error instanceof ApiError ? error.status : undefined;
         Alert.alert(
-          "Could not price this trip",
+          t("book.priceFailed"),
           status === 422
-            ? "No road connects these places. Choose a point on a street."
+            ? t("book.noRoad")
             : status === 400 && error instanceof Error ? error.message : geoErrorMessage(error),
         );
       } finally {
@@ -176,22 +174,23 @@ export default function RideBookingScreen() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickup, dropoff, token, isSharedRide, withFriends, estimateTry]);
 
   const bookRide = async () => {
     if (!user || !token) {
-      Alert.alert("Authentication Required", "Please log in to book a ride.");
+      Alert.alert(t("book.authRequired"), t("book.authRequiredText"));
       return;
     }
     if (!estimate || !pickup || !dropoff) return;
 
     if (walletBalance < estimate.fare) {
       Alert.alert(
-        "Insufficient Balance",
-        `This ride costs ${formatMoney(estimate.fare)}. Please top up your wallet.`,
+        t("book.lowBalance"),
+        t("book.lowBalanceText", { price: formatMoney(estimate.fare) }),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Top up", onPress: () => { setPriceSheet(false); router.push("/(tabs)/wallet"); } },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("home.topUp"), onPress: () => { setPriceSheet(false); router.push("/(tabs)/wallet"); } },
         ],
       );
       return;
@@ -231,11 +230,11 @@ export default function RideBookingScreen() {
         const { ride } = await ridesAPI.getActiveRide(token).catch(() => ({ ride: null }));
         const groupId = ride?.status === "gathering" ? ride.share?.groupId : null;
         Alert.alert(
-          "You already have a ride",
-          "Finish or cancel your current ride before booking a new one.",
+          t("book.alreadyRide"),
+          t("book.alreadyRideText"),
           [
-            { text: "Not now", style: "cancel" },
-            { text: "See my ride", onPress: () => router.push(groupId ? `/friends-ride/${groupId}` : "/active-ride") },
+            { text: t("book.notNow"), style: "cancel" },
+            { text: t("book.seeRide"), onPress: () => router.push(groupId ? `/friends-ride/${groupId}` : "/active-ride") },
           ],
         );
         return;
@@ -244,8 +243,8 @@ export default function RideBookingScreen() {
       const message =
         error instanceof Error
           ? error.message
-          : "Failed to book the ride. Please try again.";
-      Alert.alert("Booking Failed", message);
+          : t("book.bookFailedText");
+      Alert.alert(t("book.bookFailed"), message);
     } finally {
       setIsBooking(false);
     }
@@ -256,7 +255,7 @@ export default function RideBookingScreen() {
 
   return (
     <Screen>
-      <Header title="Book a ride" onBack={() => router.replace("/(tabs)")} backLabel="Home" />
+      <Header title={t("book.title")} onBack={() => router.replace("/(tabs)")} backLabel={t("tabs.home")} />
 
       {/* Map with you and the drivers near you */}
       <View style={styles.mapWrap}>
@@ -273,13 +272,13 @@ export default function RideBookingScreen() {
           userLocation={Platform.OS === "android" && location ? { latitude: userLat, longitude: userLng } : undefined}
           pins={[
             // iOS keeps its "You" pin; Android shows the live blue dot.
-          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: "You", color: colors.ink }] : []),
+          ...(Platform.OS === "ios" ? [{ id: "me", latitude: userLat, longitude: userLng, title: t("home.you"), color: colors.ink }] : []),
             ...(estimate && dropoff ? [{ id: "dropoff", latitude: dropoff.lat, longitude: dropoff.lng, title: dropoff.name, color: colors.ink }] : []),
             ...nearbyDrivers.map((driver) => ({
               id: `driver-${driver.id}`,
               latitude: driver.latitude,
               longitude: driver.longitude,
-              title: driver.name || `Driver ${driver.id}`,
+              title: driver.name || t("home.driver", { id: driver.id }),
               color: colors.ink3,
             })),
           ]}
@@ -287,23 +286,23 @@ export default function RideBookingScreen() {
         <View style={styles.driversPill}>
           <Icon name="navigation" size={14} color={colors.onDark} />
           <Text variant="caption" weight="semibold" color={colors.onDark}>
-            {nearbyDrivers.length ? `${nearbyDrivers.length} driver${nearbyDrivers.length > 1 ? "s" : ""} nearby` : "No drivers nearby yet"}
+            {nearbyDrivers.length ? t(nearbyDrivers.length > 1 ? "home.driversNearby" : "home.driverNearby", { count: nearbyDrivers.length }) : t("book.noDrivers")}
           </Text>
         </View>
       </View>
 
       {/* Where from, where to */}
       <View style={{ gap: space.md, marginTop: space.lg }}>
-        <PlaceButton label="Pickup" place={pickup} placeholder="Where are you?" onPress={() => setPicking("pickup")} />
-        <PlaceButton label="Drop-off" place={dropoff} placeholder="Where to?" onPress={() => setPicking("dropoff")} />
+        <PlaceButton start label={t("book.pickup")} place={pickup} placeholder={t("book.whereAreYou")} onPress={() => setPicking("pickup")} />
+        <PlaceButton label={t("book.dropoff")} place={dropoff} placeholder={t("home.whereTo")} onPress={() => setPicking("dropoff")} />
       </View>
 
       {/* Shared ride */}
       <Card style={{ marginTop: space.lg }}>
         <View style={styles.sharedRow}>
           <View style={{ flex: 1 }}>
-            <Text weight="semibold">Shared ride</Text>
-            <Text variant="caption" color={colors.muted}>Pay less by riding with friends or nearby riders</Text>
+            <Text weight="semibold">{t("book.shared")}</Text>
+            <Text variant="caption" color={colors.muted}>{t("book.sharedText")}</Text>
           </View>
           <Switch
             value={isSharedRide}
@@ -316,8 +315,8 @@ export default function RideBookingScreen() {
         {isSharedRide && (
           <View style={styles.modeRow}>
             {([
-              ["friends", "With friends", "Invite people you know", "users"],
-              ["others", "With others", "Match with nearby riders", "shuffle"],
+              ["friends", t("book.withFriends"), t("book.withFriendsText"), "users"],
+              ["others", t("book.withOthers"), t("book.withOthersText"), "shuffle"],
             ] as const).map(([mode, label, hint, icon]) => {
               const on = shareMode === mode;
               return (
@@ -340,8 +339,8 @@ export default function RideBookingScreen() {
         {withFriends && (
           <View style={[styles.modeRow, { marginTop: space.md }]}>
             {([
-              [false, "Friends only", "Invite by code or tap", "lock"],
-              [true, "Public", "Riders nearby can join", "globe"],
+              [false, t("book.friendsOnly"), t("book.friendsOnlyText"), "lock"],
+              [true, t("book.public"), t("book.publicText"), "globe"],
             ] as const).map(([pub, label, hint, icon]) => {
               const on = isPublic === pub;
               return (
@@ -360,8 +359,8 @@ export default function RideBookingScreen() {
           <Pressable onPress={() => router.push("/join")} accessibilityRole="button" style={styles.joinLink}>
             <Icon name="users" size={18} />
             <View style={{ flex: 1 }}>
-              <Text weight="semibold">{"Joining a friend's ride?"}</Text>
-              <Text variant="caption" color={colors.muted}>Use their code or tap their public ride</Text>
+              <Text weight="semibold">{t("book.joining")}</Text>
+              <Text variant="caption" color={colors.muted}>{t("book.joiningText")}</Text>
             </View>
             <Icon name="chevron-right" color={colors.muted} />
           </Pressable>
@@ -369,14 +368,14 @@ export default function RideBookingScreen() {
 
         {isSharedRide && shareMode === "others" && (
           <View style={styles.stepper}>
-            <Text color={colors.ink3} style={{ flex: 1 }}>You + up to {maxCoRiders} co-rider{maxCoRiders > 1 ? "s" : ""}</Text>
+            <Text color={colors.ink3} style={{ flex: 1 }}>{t(maxCoRiders > 1 ? "book.coRiders" : "book.coRider", { count: maxCoRiders })}</Text>
             <Pressable style={[styles.stepBtn, maxCoRiders <= 1 && { opacity: 0.4 }]} disabled={maxCoRiders <= 1}
-              onPress={() => setMaxCoRiders((v) => Math.max(1, v - 1))} accessibilityLabel="Fewer co-riders">
+              onPress={() => setMaxCoRiders((v) => Math.max(1, v - 1))} accessibilityLabel={t("book.fewer")}>
               <Icon name="minus" size={18} />
             </Pressable>
             <Text variant="heading" style={{ minWidth: 24, textAlign: "center" }}>{maxCoRiders}</Text>
             <Pressable style={[styles.stepBtn, maxCoRiders >= 3 && { opacity: 0.4 }]} disabled={maxCoRiders >= 3}
-              onPress={() => setMaxCoRiders((v) => Math.min(3, v + 1))} accessibilityLabel="More co-riders">
+              onPress={() => setMaxCoRiders((v) => Math.min(3, v + 1))} accessibilityLabel={t("book.more")}>
               <Icon name="plus" size={18} />
             </Pressable>
           </View>
@@ -387,11 +386,11 @@ export default function RideBookingScreen() {
       {pickup && dropoff && (
         <View style={{ marginTop: space.lg }}>
           {estimating ? (
-            <Button label="Working out the price…" loading onPress={() => {}} />
+            <Button label={t("book.pricing")} loading onPress={() => {}} />
           ) : estimate ? (
-            <Button label={`Book this ride · ${formatMoney(estimate.fare)}`} icon="arrow-right" onPress={() => setPriceSheet(true)} />
+            <Button label={t("book.bookFor", { price: formatMoney(estimate.fare) })} icon="arrow-right" onPress={() => setPriceSheet(true)} />
           ) : estimateFailed ? (
-            <Button label="Try the price again" icon="search" onPress={() => { setPriceSheet(true); setEstimateTry((n) => n + 1); }} />
+            <Button label={t("book.priceAgain")} icon="search" onPress={() => { setPriceSheet(true); setEstimateTry((n) => n + 1); }} />
           ) : null}
         </View>
       )}
@@ -399,7 +398,7 @@ export default function RideBookingScreen() {
       {token && (
         <PlacePicker
           visible={picking !== null}
-          title={picking === "pickup" ? "Pickup" : "Drop-off"}
+          title={picking === "pickup" ? t("book.pickup") : t("book.dropoff")}
           token={token}
           here={location ? { lat: location.latitude, lng: location.longitude } : null}
           onPick={(place) => {
@@ -418,7 +417,7 @@ export default function RideBookingScreen() {
           <View style={styles.sheet}>
             {estimate && (
               <>
-                <Text color={colors.muted}>{withFriends ? (isPublic ? "Public ride · each rider pays" : "Each rider pays") : "Your price"}</Text>
+                <Text color={colors.muted}>{withFriends ? (isPublic ? t("book.publicEach") : t("book.each")) : t("book.yourPrice")}</Text>
                 <Text weight="extrabold" style={{ fontSize: 40, lineHeight: 46, letterSpacing: -1.2 }}>
                   {formatMoney(estimate.fare)}
                 </Text>
@@ -426,27 +425,31 @@ export default function RideBookingScreen() {
                   <Text color={colors.ink3} style={{ marginTop: space.xs }}>
                     {withFriends
                       ? isPublic
-                        ? `Your ride is listed under "Join a ride" for 30 minutes, to riders within 15 km, who can join it themselves. ${estimate.soloFare != null ? `Until someone joins you pay the solo price, ${formatMoney(estimate.soloFare)}. ` : ""}Up to 4 riders; you request the driver when you are ready.`
+                        ? [
+                          t("book.publicListed"),
+                          estimate.soloFare != null ? t("book.soloUntilSomeone", { price: formatMoney(estimate.soloFare) }) : "",
+                          t("book.publicUpTo"),
+                        ].filter(Boolean).join(" ")
                         : estimate.soloFare != null
-                          ? `Until a friend joins you pay the solo price, ${formatMoney(estimate.soloFare)}. Up to 4 riders. You get a code to share; the driver is requested when you are ready.`
-                          : "You get a code to share; the driver is requested when you are ready."
-                      : `Shared ride with up to ${maxCoRiders} co-rider${maxCoRiders > 1 ? "s" : ""}.`}
+                          ? `${t("book.soloUntilFriend", { price: formatMoney(estimate.soloFare) })} ${t("book.friendsUpTo")}`
+                          : t("book.codeToShare")
+                      : t(maxCoRiders > 1 ? "book.sharedWithMany" : "book.sharedWithOne", { count: maxCoRiders })}
                   </Text>
                 )}
                 <View style={{ marginTop: space.lg }}>
-                  <Row label="From" value={pickup?.name} />
-                  <Row label="To" value={dropoff?.name} />
-                  <Row label="Distance by road" value={formatKm(estimate.distanceKm)} />
-                  {estimate.durationMin != null && <Row label="Trip time" value={`about ${estimate.durationMin} min`} />}
+                  <Row label={t("book.from")} value={pickup?.name} />
+                  <Row label={t("book.to")} value={dropoff?.name} />
+                  <Row label={t("book.distance")} value={formatKm(estimate.distanceKm)} />
+                  {estimate.durationMin != null && <Row label={t("book.tripTime")} value={t("book.aboutMin", { min: estimate.durationMin })} />}
                 </View>
                 <Text variant="caption" color={colors.muted} style={{ marginTop: space.md }}>
-                  The fare is held from your wallet and charged when the trip ends.
+                  {t("book.held")}
                 </Text>
               </>
             )}
             <View style={{ gap: space.sm, marginTop: space.xl }}>
-              <Button label={withFriends ? (isPublic ? "Post public ride" : "Continue and invite friends") : "Book this ride"} icon={withFriends && isPublic ? "globe" : "arrow-right"} onPress={bookRide} loading={isBooking} />
-              <Button label="Change the trip" variant="secondary" onPress={() => setPriceSheet(false)} disabled={isBooking} />
+              <Button label={withFriends ? (isPublic ? t("book.postPublic") : t("book.inviteFriends")) : t("book.book")} icon={withFriends && isPublic ? "globe" : "arrow-right"} onPress={bookRide} loading={isBooking} />
+              <Button label={t("book.change")} variant="secondary" onPress={() => setPriceSheet(false)} disabled={isBooking} />
             </View>
           </View>
         </View>

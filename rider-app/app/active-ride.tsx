@@ -8,6 +8,9 @@ import { ridesAPI } from '@/services/api';
 import FlowMap from '@/components/flow-map';
 import { routing, type Route } from '@/services/geo';
 import { signalingClient } from '@/services/signalingClient';
+import { useT } from '@/i18n';
+
+type T = ReturnType<typeof useT>['t'];
 
 const POLL_MS = 4000;
 // Re-route from the car at most this often, or when it moved this far.
@@ -51,28 +54,29 @@ type Ride = {
 
 const CANCELLABLE = ['gathering', 'pending', 'accepted', 'arrived'];
 
-function headline(ride: Ride): { title: string; detail: string } {
-  const driver = firstName(ride.driver_name) || 'Your driver';
+function headline(ride: Ride, t: T): { title: string; detail: string } {
+  const driver = firstName(ride.driver_name) || t('ride.yourDriver');
   switch (ride.status) {
     case 'gathering':
-      return { title: 'Waiting for your friends…', detail: 'The driver is requested once your group is ready.' };
+      return { title: t('home.gathering'), detail: t('ride.gatheringText') };
     case 'pending':
-      return { title: 'Finding a driver…', detail: 'We are offering your ride to nearby drivers.' };
+      return { title: t('ride.finding'), detail: t('ride.findingText') };
     case 'accepted':
-      return { title: `${driver} is on the way`, detail: `Heading to ${ride.pickup}.` };
+      return { title: t('ride.onTheWay', { name: driver }), detail: t('ride.heading', { place: ride.pickup }) };
     case 'arrived':
-      return { title: `${driver} has arrived`, detail: `Meet your driver at ${ride.pickup}.` };
+      return { title: t('ride.arrived', { name: driver }), detail: t('ride.meet', { place: ride.pickup }) };
     case 'in_progress':
-      return { title: 'On your trip', detail: `Heading to ${ride.dropoff}.` };
+      return { title: t('ride.onTrip'), detail: t('ride.heading', { place: ride.dropoff }) };
     case 'completed':
-      return { title: 'You have arrived', detail: `${formatMoney(ride.fare)} was paid from your wallet.` };
+      return { title: t('ride.done'), detail: t('ride.paid', { price: formatMoney(ride.fare) }) };
     default:
-      return { title: 'Ride cancelled', detail: 'The held fare was returned to your wallet.' };
+      return { title: t('ride.cancelled'), detail: t('ride.refunded') };
   }
 }
 
 export default function ActiveRideScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { token, updateWalletBalance } = useAuth();
   const [ride, setRide] = useState<Ride | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,12 +158,10 @@ export default function ActiveRideScreen() {
   const cancel = () => {
     if (!ride || !token) return;
     const hostOfGroup = ride.share?.mode === 'friends' && ride.share.role === 'host';
-    Alert.alert('Cancel ride?', hostOfGroup
-      ? 'This cancels the ride for your whole group. Everyone gets their money back.'
-      : 'The held fare will be returned to your wallet.', [
-      { text: 'Keep ride', style: 'cancel' },
+    Alert.alert(t('ride.cancelTitle'), hostOfGroup ? t('ride.cancelGroup') : t('ride.cancelText'), [
+      { text: t('ride.keep'), style: 'cancel' },
       {
-        text: 'Cancel ride',
+        text: t('ride.cancel'),
         style: 'destructive',
         onPress: async () => {
           setCancelling(true);
@@ -169,7 +171,7 @@ export default function ActiveRideScreen() {
             setRide({ ...ride, ...cancelled });
             updateWalletBalance();
           } catch (e) {
-            Alert.alert('Could not cancel', e instanceof Error ? e.message : 'Please try again.');
+            Alert.alert(t('ride.cancelFailed'), e instanceof Error ? e.message : t('common.tryAgain'));
           } finally {
             setCancelling(false);
           }
@@ -183,11 +185,11 @@ export default function ActiveRideScreen() {
     setSubmittingRating(true);
     try {
       await ridesAPI.rateRide(token, String(ride.id), rating, feedback.trim() || undefined);
-      Alert.alert('Thank you!', 'Your rating has been sent.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      Alert.alert(t('history.thanks'), t('ride.ratingSent'), [
+        { text: t('common.ok'), onPress: () => router.replace('/(tabs)') },
       ]);
     } catch (e) {
-      Alert.alert('Rating failed', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('history.rateFailedTitle'), e instanceof Error ? e.message : t('common.tryAgain'));
     } finally {
       setSubmittingRating(false);
     }
@@ -205,20 +207,20 @@ export default function ActiveRideScreen() {
     return (
       <Screen scroll={false} contentStyle={styles.center}>
         <Icon name="map-pin" size={36} color={colors.muted} />
-        <Text variant="title" align="center" style={{ marginTop: space.lg }}>No active ride</Text>
-        <Text color={colors.ink3} align="center" style={{ marginTop: space.xs }}>Book a ride and you can follow it here.</Text>
-        <Button label="Book a ride" icon="map-pin" onPress={() => router.replace('/(tabs)/ride-booking')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
+        <Text variant="title" align="center" style={{ marginTop: space.lg }}>{t('ride.none')}</Text>
+        <Text color={colors.ink3} align="center" style={{ marginTop: space.xs }}>{t('ride.noneText')}</Text>
+        <Button label={t('book.title')} icon="map-pin" onPress={() => router.replace('/(tabs)/ride-booking')} style={{ marginTop: space.xl, alignSelf: 'stretch' }} />
       </Screen>
     );
   }
 
-  const { title, detail } = headline(ride);
+  const { title, detail } = headline(ride, t);
   const hasDriver = ['accepted', 'arrived', 'in_progress'].includes(ride.status);
   const waiting = ride.status === 'pending' || ride.status === 'gathering';
 
   return (
     <Screen>
-      <Header onBack={() => router.replace('/(tabs)')} backLabel="Home" />
+      <Header onBack={() => router.replace('/(tabs)')} backLabel={t('tabs.home')} />
 
       {/* Status in plain words */}
       <Card dark style={{ alignItems: 'flex-start' }}>
@@ -238,17 +240,17 @@ export default function ActiveRideScreen() {
             route={toGo?.geometry}
             fitTo={car && target ? [{ latitude: car.lat, longitude: car.lng }, { latitude: target.lat, longitude: target.lng }] : null}
             pins={[
-              { id: 'pickup', latitude: ride.pickup_lat, longitude: ride.pickup_lng!, title: 'Pickup', color: colors.ink },
+              { id: 'pickup', latitude: ride.pickup_lat, longitude: ride.pickup_lng!, title: t('book.pickup'), color: colors.ink },
               ...(ride.dropoff_lat != null && ride.status === 'in_progress'
-                ? [{ id: 'dropoff', latitude: ride.dropoff_lat, longitude: ride.dropoff_lng!, title: 'Drop-off', color: colors.ink }] : []),
+                ? [{ id: 'dropoff', latitude: ride.dropoff_lat, longitude: ride.dropoff_lng!, title: t('book.dropoff'), color: colors.ink }] : []),
               ...(car && hasDriver
-                ? [{ id: 'car', latitude: car.lat, longitude: car.lng, title: firstName(ride.driver_name) || 'Driver', kind: 'car' as const, heading: car.heading, animate: true }] : []),
+                ? [{ id: 'car', latitude: car.lat, longitude: car.lng, title: firstName(ride.driver_name) || t('ride.driver'), kind: 'car' as const, heading: car.heading, animate: true }] : []),
             ]}
           />
           {toGo && (
             <View style={styles.eta}>
               <Text variant="caption" weight="semibold" color={colors.onDark}>
-                {ride.status === 'in_progress' ? `${toGo.durationMin} min to go` : `${toGo.durationMin} min away · ${formatKm(toGo.distanceKm)}`}
+                {ride.status === 'in_progress' ? t('ride.minToGo', { min: toGo.durationMin }) : t('ride.minAway', { min: toGo.durationMin, distance: formatKm(toGo.distanceKm) })}
               </Text>
             </View>
           )}
@@ -260,19 +262,19 @@ export default function ActiveRideScreen() {
         <Card style={{ marginTop: space.md, flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
           <Avatar name={ride.driver_name} />
           <View style={{ flex: 1 }}>
-            <Text variant="caption" color={colors.muted}>Your driver</Text>
+            <Text variant="caption" color={colors.muted}>{t('ride.yourDriver')}</Text>
             <Text variant="heading" weight="bold">{firstName(ride.driver_name)}</Text>
           </View>
         </Card>
       )}
-      {hasDriver && <View style={{ marginTop: space.md }}><CallRideButton rideId={ride.id} label="Call your driver" /></View>}
+      {hasDriver && <View style={{ marginTop: space.md }}><CallRideButton rideId={ride.id} label={t('ride.callDriver')} /></View>}
 
       {/* Trip */}
       <Card style={{ marginTop: space.md }}>
-        <Row label="From" value={ride.pickup} />
-        <Row label="To" value={ride.dropoff} />
-        <Row label="Distance" value={`~${formatKm(Number(ride.distance))}`} />
-        <Row label="Fare" value={formatMoney(ride.fare)} strong />
+        <Row label={t('book.from')} value={ride.pickup} />
+        <Row label={t('book.to')} value={ride.dropoff} />
+        <Row label={t('ride.distance')} value={`~${formatKm(Number(ride.distance))}`} />
+        <Row label={t('ride.fare')} value={formatMoney(ride.fare)} strong />
       </Card>
 
       {ride.share?.mode === 'friends' && ride.status !== 'cancelled' && (
@@ -280,8 +282,8 @@ export default function ActiveRideScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
             <Icon name="users" />
             <View style={{ flex: 1 }}>
-              <Text weight="semibold">Ride with friends</Text>
-              <Text variant="caption" color={colors.muted}>{ride.share.ridersCount} of {ride.share.maxRiders} riders. Tap to see the group.</Text>
+              <Text weight="semibold">{t('ride.withFriends')}</Text>
+              <Text variant="caption" color={colors.muted}>{t('ride.groupText', { count: ride.share.ridersCount, max: ride.share.maxRiders })}</Text>
             </View>
             <Icon name="chevron-right" color={colors.muted} />
           </View>
@@ -290,10 +292,10 @@ export default function ActiveRideScreen() {
 
       {ride.is_shared && ride.share && ride.share.mode !== 'friends' && ride.status === 'pending' && (
         <Card style={{ marginTop: space.md }} onPress={() => router.push({ pathname: '/shared-ride', params: { groupId: String(ride.share!.groupId) } })}>
-          <Text weight="semibold">Shared ride</Text>
+          <Text weight="semibold">{t('book.shared')}</Text>
           <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
-            <Badge label={`${ride.share.ridersCount} of ${ride.share.maxRiders} riders`} icon="users" />
-            <Badge label={ride.share.status} />
+            <Badge label={t('ride.ridersOf', { count: ride.share.ridersCount, max: ride.share.maxRiders })} icon="users" />
+            <Badge label={ride.share.status === 'confirmed' ? t('sharedRide.confirmed') : t('sharedRide.matching')} />
           </View>
         </Card>
       )}
@@ -301,26 +303,26 @@ export default function ActiveRideScreen() {
       {/* Rating once the trip is done */}
       {ride.status === 'completed' && ride.rating === null && (
         <Card style={{ marginTop: space.md }}>
-          <Text variant="heading">How was your ride?</Text>
+          <Text variant="heading">{t('ride.howWas')}</Text>
           <View style={styles.stars}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <Pressable key={star} onPress={() => setRating(star)} accessibilityRole="button" accessibilityLabel={`${star} stars`} hitSlop={6}>
+              <Pressable key={star} onPress={() => setRating(star)} accessibilityRole="button" accessibilityLabel={t('ride.stars', { count: star })} hitSlop={6}>
                 <Text style={{ fontSize: 36, lineHeight: 42 }} color={star <= rating ? colors.ink : colors.line}>★</Text>
               </Pressable>
             ))}
           </View>
-          <Field label="Anything to add? (optional)" value={feedback} onChangeText={setFeedback} multiline
+          <Field label={t('ride.addNote')} value={feedback} onChangeText={setFeedback} multiline
             style={{ height: 90, paddingTop: space.md, textAlignVertical: 'top' }} />
-          <Button label={submittingRating ? 'Sending…' : 'Send rating'} onPress={submitRating}
+          <Button label={submittingRating ? t('ride.sending') : t('ride.sendRating')} onPress={submitRating}
             disabled={rating === 0} loading={submittingRating} style={{ marginTop: space.md }} />
         </Card>
       )}
 
       {CANCELLABLE.includes(ride.status) && (
-        <Button label="Cancel ride" variant="danger" onPress={cancel} loading={cancelling} style={{ marginTop: space.xl }} />
+        <Button label={t('ride.cancel')} variant="danger" onPress={cancel} loading={cancelling} style={{ marginTop: space.xl }} />
       )}
       {['completed', 'cancelled'].includes(ride.status) && (
-        <Button label="Done" variant="secondary" onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl }} />
+        <Button label={t('common.done')} variant="secondary" onPress={() => router.replace('/(tabs)')} style={{ marginTop: space.xl }} />
       )}
     </Screen>
   );

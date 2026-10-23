@@ -7,14 +7,16 @@ import AppLogo from '../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { useColorScheme } from '../hooks/use-color-scheme';
+import { useT, type TKey } from '@/i18n';
 
+// Texts are promo.* keys, shown in the rider's language.
 type Promotion = {
   id: number;
-  title: string;
-  description: string;
+  title: TKey;
+  description: TKey;
   code: string;
-  discountLabel: string;
-  validUntil: string;
+  discountLabel: TKey;
+  validUntil: TKey;
   isActive: boolean;
   accent: string;
 };
@@ -22,31 +24,31 @@ type Promotion = {
 const PROMOTIONS: Promotion[] = [
   {
     id: 1,
-    title: 'First Ride Free',
-    description: 'Get your first ride completely free up to 5,000 FBU',
+    title: 'promo.p1Title',
+    description: 'promo.p1Text',
     code: 'WELCOME50',
-    discountLabel: 'FREE',
-    validUntil: 'March 15, 2026',
+    discountLabel: 'promo.free',
+    validUntil: 'promo.p1Until',
     isActive: true,
     accent: '#111111',
   },
   {
     id: 2,
-    title: 'Weekend Special',
-    description: '20% off all weekend rides',
+    title: 'promo.p2Title',
+    description: 'promo.p2Text',
     code: 'WEEKEND20',
-    discountLabel: '20% OFF',
-    validUntil: 'Every Weekend',
+    discountLabel: 'promo.off20',
+    validUntil: 'promo.p2Until',
     isActive: true,
     accent: '#F59E0B',
   },
   {
     id: 3,
-    title: 'Student Discount',
-    description: '15% off for verified students',
+    title: 'promo.p3Title',
+    description: 'promo.p3Text',
     code: 'STUDENT15',
-    discountLabel: '15% OFF',
-    validUntil: 'Dec 31, 2026',
+    discountLabel: 'promo.off15',
+    validUntil: 'promo.p3Until',
     isActive: false,
     accent: '#1976d2',
   },
@@ -54,6 +56,7 @@ const PROMOTIONS: Promotion[] = [
 
 export default function PromotionsScreen() {
   const router = useRouter();
+  const { t } = useT();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [promoCode, setPromoCode] = useState('');
@@ -72,29 +75,29 @@ export default function PromotionsScreen() {
   const handleApplyPromo = () => {
     const trimmed = promoCode.trim();
     if (!trimmed) {
-      Alert.alert('Enter Code', 'Please enter a promo code.');
+      Alert.alert(t('promo.enter'), t('promo.enterText'));
       return;
     }
 
     const found = PROMOTIONS.find((p) => p.code.toLowerCase() === trimmed.toLowerCase());
     if (!found) {
-      Alert.alert('Invalid Code', 'Please check your promo code and try again.');
+      Alert.alert(t('promo.invalid'), t('promo.invalidText'));
       return;
     }
 
-    Alert.alert('Promo Applied', `${found.title} applied. Use it on your next ride.`);
+    Alert.alert(t('promo.applied'), t('promo.appliedText', { name: t(found.title) }));
     setPromoCode('');
   };
 
   const handlePromoCopy = (code: string) => {
-    Alert.alert('Code Copied', `Promo code "${code}" copied.`);
+    Alert.alert(t('promo.copied'), t('promo.copiedText', { code }));
   };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 28 }}>
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.back()} />
       </View>
         <AppLogo size={28} compact />
       </View>
@@ -104,21 +107,21 @@ export default function PromotionsScreen() {
           <IconSymbol name="gift.fill" size={18} color={theme.tint} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: theme.text }]}>Promotions</Text>
-          <Text style={[styles.subtitle, { color: theme.muted }]}>Save money on your rides</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t('more.promotions')}</Text>
+          <Text style={[styles.subtitle, { color: theme.muted }]}>{t('promo.subtitle')}</Text>
         </View>
       </View>
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>Loyalty Rewards</Text>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>{t('promo.loyalty')}</Text>
 
         <View style={styles.pointsRow}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.pointsValue, { color: theme.text }]}>{rewardsProgram.currentPoints}</Text>
-            <Text style={[styles.pointsLabel, { color: theme.muted }]}>Current points</Text>
+            <Text style={[styles.pointsLabel, { color: theme.muted }]}>{t('promo.points')}</Text>
           </View>
           <View style={[styles.pill, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-            <Text style={[styles.pillText, { color: theme.tint }]}>+{pointsToNext} to next reward</Text>
+            <Text style={[styles.pillText, { color: theme.tint }]}>{t('promo.toNextShort', { count: pointsToNext })}</Text>
           </View>
         </View>
 
@@ -126,29 +129,29 @@ export default function PromotionsScreen() {
           <View style={[styles.progressTrack, { backgroundColor: theme.surfaceAlt }]}> 
             <View style={[styles.progressFill, { width: `${pointsPct}%`, backgroundColor: theme.tint }]} />
           </View>
-          <Text style={[styles.progressText, { color: theme.muted }]}>{pointsToNext} points to next reward</Text>
+          <Text style={[styles.progressText, { color: theme.muted }]}>{t('promo.toNext', { count: pointsToNext })}</Text>
         </View>
       </View>
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>Have a promo code?</Text>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>{t('promo.have')}</Text>
         <View style={[styles.inputRow, { borderColor: theme.border, backgroundColor: theme.surfaceAlt }]}> 
           <TextInput
             style={[styles.input, { color: theme.text }]}
-            placeholder="Enter promo code"
+            placeholder={t('promo.placeholder')}
             placeholderTextColor={theme.muted}
             value={promoCode}
             onChangeText={setPromoCode}
             autoCapitalize="characters"
           />
           <TouchableOpacity style={[styles.applyBtn, { backgroundColor: theme.tint }]} onPress={handleApplyPromo} accessibilityRole="button">
-            <Text style={[styles.applyBtnText, { color: theme.background }]}>Apply</Text>
+            <Text style={[styles.applyBtnText, { color: theme.background }]}>{t('promo.apply')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Available promotions</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('promo.available')}</Text>
 
         {PROMOTIONS.map((promo) => {
           const accent = promo.isActive ? promo.accent : theme.muted;
@@ -166,13 +169,13 @@ export default function PromotionsScreen() {
               ]}
             >
               <View style={styles.promoTopRow}>
-                <Text style={[styles.promoTitle, { color: theme.text }]}>{promo.title}</Text>
+                <Text style={[styles.promoTitle, { color: theme.text }]}>{t(promo.title)}</Text>
                 <View style={[styles.discountBadge, { backgroundColor: promo.isActive ? accent : theme.surfaceAlt, borderColor: theme.border }]}>
-                  <Text style={[styles.discountText, { color: promo.isActive ? '#FFFFFF' : theme.text }]}>{promo.discountLabel}</Text>
+                  <Text style={[styles.discountText, { color: promo.isActive ? '#FFFFFF' : theme.text }]}>{t(promo.discountLabel)}</Text>
                 </View>
               </View>
 
-              <Text style={[styles.promoDescription, { color: theme.muted }]}>{promo.description}</Text>
+              <Text style={[styles.promoDescription, { color: theme.muted }]}>{t(promo.description)}</Text>
 
               <View style={styles.promoBottomRow}>
                 <TouchableOpacity
@@ -184,7 +187,7 @@ export default function PromotionsScreen() {
                   <IconSymbol name="doc.on.doc" size={16} color={promo.isActive ? accent : theme.text} />
                 </TouchableOpacity>
 
-                <Text style={[styles.validityText, { color: theme.muted }]}>Valid until: {promo.validUntil}</Text>
+                <Text style={[styles.validityText, { color: theme.muted }]}>{t('promo.validUntil', { date: t(promo.validUntil) })}</Text>
               </View>
             </View>
           );
@@ -192,24 +195,24 @@ export default function PromotionsScreen() {
       </View>
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>How it works</Text>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>{t('promo.how')}</Text>
         <View style={styles.step}>
           <View style={[styles.stepDot, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}> 
             <Text style={[styles.stepDotText, { color: theme.tint }]}>1</Text>
           </View>
-          <Text style={[styles.stepText, { color: theme.muted }]}>Copy a code from the list above.</Text>
+          <Text style={[styles.stepText, { color: theme.muted }]}>{t('promo.step1')}</Text>
         </View>
         <View style={styles.step}>
           <View style={[styles.stepDot, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}> 
             <Text style={[styles.stepDotText, { color: theme.tint }]}>2</Text>
           </View>
-          <Text style={[styles.stepText, { color: theme.muted }]}>Paste it here or during booking.</Text>
+          <Text style={[styles.stepText, { color: theme.muted }]}>{t('promo.step2')}</Text>
         </View>
         <View style={styles.step}>
           <View style={[styles.stepDot, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}> 
             <Text style={[styles.stepDotText, { color: theme.tint }]}>3</Text>
           </View>
-          <Text style={[styles.stepText, { color: theme.muted }]}>Discount applies on your next ride.</Text>
+          <Text style={[styles.stepText, { color: theme.muted }]}>{t('promo.step3')}</Text>
         </View>
       </View>
     </ScrollView>

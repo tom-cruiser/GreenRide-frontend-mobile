@@ -5,6 +5,7 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { EMERGENCY } from '@/config/safety';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, colors, firstName, Icon, IconButton, type IconName, radius, shadow, space, Text } from '@/design';
+import { useT, type TKey } from '@/i18n';
 import { ridesAPI, socialAPI, type SocialPerson } from '@/services/api';
 
 // Safety, in the same style as "Join a ride": help first (emergency call,
@@ -13,15 +14,16 @@ import { ridesAPI, socialAPI, type SocialPerson } from '@/services/api';
 
 type ActiveRide = { id: number; status: string; pickup: string; dropoff: string; driver_name: string | null };
 
-const TIPS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'eye', title: 'Check the car', text: 'Match the driver and the car in the app before you get in.' },
-  { icon: 'share-2', title: 'Share your trip', text: 'Send your ride to someone you trust, every time.' },
-  { icon: 'user', title: 'Sit in the back', text: 'It gives you and the driver some space.' },
-  { icon: 'alert-triangle', title: 'Trust yourself', text: 'Feel unsafe? Ask to stop in a busy place and call for help.' },
+const TIPS: { icon: IconName; title: TKey; text: TKey }[] = [
+  { icon: 'eye', title: 'safety.tip1', text: 'safety.tip1Text' },
+  { icon: 'share-2', title: 'safety.tip2', text: 'safety.tip2Text' },
+  { icon: 'user', title: 'safety.tip3', text: 'safety.tip3Text' },
+  { icon: 'alert-triangle', title: 'safety.tip4', text: 'safety.tip4Text' },
 ];
 
 export default function SafetyScreen() {
   const router = useRouter();
+  const { t, locale } = useT();
   const { token, user, refreshUser } = useAuth();
   const [friends, setFriends] = useState<SocialPerson[]>([]);
   const [ride, setRide] = useState<ActiveRide | null>(null);
@@ -35,18 +37,18 @@ export default function SafetyScreen() {
 
   const contact = user?.emergency_contact || null;
   const call = (number: string, who: string) =>
-    Alert.alert(`Call ${who}?`, number, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Call', style: 'destructive', onPress: () => Linking.openURL(`tel:${number.replace(/[^\d+]/g, '')}`).catch(() => {}) },
+    Alert.alert(t('safety.callWho', { who }), number, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('safety.call'), style: 'destructive', onPress: () => Linking.openURL(`tel:${number.replace(/[^\d+]/g, '')}`).catch(() => {}) },
     ]);
 
   const shareTrip = () => {
     if (!ride) return;
     const driver = firstName(ride.driver_name);
     const lines = [
-      `I'm on a Flow ride from ${ride.pickup} to ${ride.dropoff}.`,
-      driver ? `My driver is ${driver}.` : 'The driver is on the way.',
-      `${user?.name ? firstName(user.name) : 'Me'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      t('safety.shareLine', { from: ride.pickup, to: ride.dropoff }),
+      driver ? t('safety.shareDriver', { name: driver }) : t('safety.shareOnWay'),
+      `${user?.name ? firstName(user.name) : t('safety.me')} · ${new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`,
     ];
     Share.share({ message: lines.join('\n') }).catch(() => {});
   };
@@ -55,28 +57,28 @@ export default function SafetyScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.page}>
       {/* Header */}
       <View style={styles.header}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
-        <Text variant="title" style={{ flex: 1 }}>Safety</Text>
-        <IconButton icon="phone" label={`Call ${EMERGENCY.label}`} onPress={() => call(EMERGENCY.number, EMERGENCY.label)} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+        <Text variant="title" style={{ flex: 1 }}>{t('home.safety')}</Text>
+        <IconButton icon="phone" label={t('safety.callWho', { who: t('safety.services') })} onPress={() => call(EMERGENCY.number, t('safety.services'))} />
       </View>
 
       {/* Help, first */}
       <View style={styles.sos}>
         <View style={styles.sosIcon}><Icon name="alert-octagon" size={26} color={colors.onDark} /></View>
-        <Text variant="title" color={colors.onDark} style={{ marginTop: space.md }}>In danger?</Text>
-        <Text color={colors.onDarkMuted} style={{ marginTop: 2 }}>Call for help now. Your safety comes first.</Text>
-        <Button size="lg" variant="light" icon="phone" label={`Call ${EMERGENCY.number}`} onPress={() => call(EMERGENCY.number, EMERGENCY.label)}
+        <Text variant="title" color={colors.onDark} style={{ marginTop: space.md }}>{t('safety.danger')}</Text>
+        <Text color={colors.onDarkMuted} style={{ marginTop: 2 }}>{t('safety.dangerText')}</Text>
+        <Button size="lg" variant="light" icon="phone" label={t('safety.callNumber', { number: EMERGENCY.number })} onPress={() => call(EMERGENCY.number, t('safety.services'))}
           style={{ marginTop: space.lg }} />
         {contact ? (
-          <Button size="lg" variant="ghostDark" icon="heart" label={`Call your emergency contact`} onPress={() => call(contact, 'your emergency contact')}
+          <Button size="lg" variant="ghostDark" icon="heart" label={t('safety.callContact')} onPress={() => call(contact, t('safety.yourContact'))}
             style={{ marginTop: space.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' }} />
         ) : null}
       </View>
 
       {/* Your circle */}
       <View style={styles.sectionHead}>
-        <Text variant="heading">Your circle</Text>
-        <Text variant="caption" color={colors.muted}>People you trust</Text>
+        <Text variant="heading">{t('safety.circle')}</Text>
+        <Text variant="caption" color={colors.muted}>{t('safety.circleText')}</Text>
       </View>
       <FlatList
         horizontal
@@ -86,12 +88,12 @@ export default function SafetyScreen() {
         style={{ marginHorizontal: -space.xl }}
         contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.lg }}
         ListHeaderComponent={
-          <Pressable onPress={() => (contact ? call(contact, 'your emergency contact') : router.push('/profile'))}
-            style={styles.circleItem} accessibilityRole="button" accessibilityLabel={contact ? 'Call your emergency contact' : 'Add an emergency contact'}>
+          <Pressable onPress={() => (contact ? call(contact, t('safety.yourContact')) : router.push('/profile'))}
+            style={styles.circleItem} accessibilityRole="button" accessibilityLabel={contact ? t('safety.callContact') : t('safety.addContactLong')}>
             <View style={[styles.circle, contact ? styles.circleSos : styles.circleAdd]}>
               <Icon name={contact ? 'heart' : 'plus'} size={24} color={contact ? colors.onDark : colors.ink} />
             </View>
-            <Text variant="caption" weight="semibold" numberOfLines={1}>{contact ? 'Emergency' : 'Add contact'}</Text>
+            <Text variant="caption" weight="semibold" numberOfLines={1}>{contact ? t('safety.emergency') : t('safety.addContact')}</Text>
           </Pressable>
         }
         renderItem={({ item }) => (
@@ -103,7 +105,7 @@ export default function SafetyScreen() {
       />
       <Button
         icon="share-2"
-        label={ride ? 'Share my trip' : 'Share my trip (during a ride)'}
+        label={ride ? t('safety.share') : t('safety.shareLater')}
         variant={ride ? 'primary' : 'secondary'}
         disabled={!ride}
         onPress={shareTrip}
@@ -111,26 +113,26 @@ export default function SafetyScreen() {
       />
       {ride && (
         <Text variant="caption" color={colors.muted} style={{ marginTop: space.sm }}>
-          Sends {ride.pickup} → {ride.dropoff} by WhatsApp, SMS or any app you choose.
+          {t('safety.shareHint', { from: ride.pickup, to: ride.dropoff })}
         </Text>
       )}
 
       {/* Tips */}
       <View style={styles.sectionHead}>
-        <Text variant="heading">Ride safe</Text>
+        <Text variant="heading">{t('safety.rideSafe')}</Text>
       </View>
       <FlatList
         horizontal
         data={TIPS}
-        keyExtractor={(t) => t.title}
+        keyExtractor={(tip) => tip.title}
         showsHorizontalScrollIndicator={false}
         style={{ marginHorizontal: -space.xl }}
         contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.md }}
         renderItem={({ item }) => (
           <View style={styles.tip}>
             <View style={styles.tipIcon}><Icon name={item.icon} size={20} color={colors.ink} /></View>
-            <Text variant="heading" color={colors.onDark} style={{ marginTop: space.lg }}>{item.title}</Text>
-            <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>{item.text}</Text>
+            <Text variant="heading" color={colors.onDark} style={{ marginTop: space.lg }}>{t(item.title)}</Text>
+            <Text color={colors.onDarkMuted} style={{ marginTop: space.xs }}>{t(item.text)}</Text>
           </View>
         )}
       />
@@ -138,8 +140,8 @@ export default function SafetyScreen() {
       {/* More */}
       <View style={styles.list}>
         {([
-          ['flag', 'Report a problem', 'The Flow team answers in your notifications', () => router.push('/support')],
-          ['user', 'Emergency contact', contact ?? 'Not set yet', () => router.push('/profile')],
+          ['flag', t('safety.report'), t('safety.reportText'), () => router.push('/support')],
+          ['user', t('profile.emergency'), contact ?? t('safety.notSet'), () => router.push('/profile')],
         ] as [IconName, string, string, () => void][]).map(([icon, title, sub, onPress], i) => (
           <Pressable key={title} onPress={onPress} style={({ pressed }) => [styles.row, i > 0 && styles.rowLine, pressed && { opacity: 0.7 }]} accessibilityRole="button">
             <View style={styles.rowIcon}><Icon name={icon} size={18} /></View>

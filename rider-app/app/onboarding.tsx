@@ -3,16 +3,18 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Button, colors, Icon, type IconName, Screen, space, Text } from '@/design';
+import { useT, type TKey } from '@/i18n';
 
-const SLIDES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'navigation', title: 'Ride with Flow', text: 'Safe, affordable rides around town, booked in seconds.' },
-  { icon: 'users', title: 'Share with friends', text: 'Invite friends to your ride and each pay less.' },
-  { icon: 'credit-card', title: 'Pay with your wallet', text: 'Top up with mobile money and pay in one tap.' },
+const SLIDES: { icon: IconName; title: TKey; text: TKey }[] = [
+  { icon: 'navigation', title: 'onboarding.s1Title', text: 'onboarding.s1Text' },
+  { icon: 'users', title: 'onboarding.s2Title', text: 'onboarding.s2Text' },
+  { icon: 'credit-card', title: 'onboarding.s3Title', text: 'onboarding.s3Text' },
 ];
 
 // Three short slides, shown once (same layout as the driver app).
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { t } = useT();
   const [i, setI] = useState(0);
   const last = i === SLIDES.length - 1;
 
@@ -26,7 +28,7 @@ export default function OnboardingScreen() {
     <Screen dark scroll={false} edges={['top', 'bottom']}>
       <View style={styles.top}>
         <Image source={require('@/assets/images/app-logo.png')} style={styles.logo} />
-        {!last && <Button size="md" variant="ghostDark" label="Skip" onPress={finish} style={{ paddingHorizontal: 0 }} />}
+        {!last && <Button size="md" variant="ghostDark" label={t('onboarding.skip')} onPress={finish} style={{ paddingHorizontal: 0 }} />}
       </View>
       <View style={styles.middle}>
         {i === 0 ? (
@@ -35,12 +37,12 @@ export default function OnboardingScreen() {
           <View style={styles.iconCircle}><Icon name={slide.icon} size={56} color={colors.ink} /></View>
         )}
       </View>
-      <Text color={colors.onDark} weight="bold" style={{ fontSize: 36, lineHeight: 40, letterSpacing: -1.1 }}>{slide.title}</Text>
-      <Text color={colors.onDarkMuted} style={{ marginTop: space.md, fontSize: 17, lineHeight: 24 }}>{slide.text}</Text>
+      <Text color={colors.onDark} weight="bold" style={{ fontSize: 36, lineHeight: 40, letterSpacing: -1.1 }}>{t(slide.title)}</Text>
+      <Text color={colors.onDarkMuted} style={{ marginTop: space.md, fontSize: 17, lineHeight: 24 }}>{t(slide.text)}</Text>
       <View style={styles.dots}>
         {SLIDES.map((s, n) => <View key={s.title} style={[styles.dot, n === i && styles.dotOn]} />)}
       </View>
-      <Button size="lg" variant="light" label={last ? 'Get started' : 'Next'} icon={last ? undefined : 'arrow-right'}
+      <Button size="lg" variant="light" label={last ? t('onboarding.start') : t('onboarding.next')} icon={last ? undefined : 'arrow-right'}
         onPress={() => (last ? finish() : setI(i + 1))} />
     </Screen>
   );

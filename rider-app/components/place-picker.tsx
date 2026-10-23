@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, colors, EmptyState, Field, Header, Icon, ListItem, radius, space, Text } from '@/design';
 import FlowMap from '@/components/flow-map';
 import { geocoding, geoErrorMessage, type Place, type Point } from '@/services/geo';
+import { useT } from '@/i18n';
 
 // Choosing a pickup or drop-off: search by name (on submit; the geocoder must
 // not be asked on every key), the phone's own position, or a tap on the map
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export function PlacePicker({ visible, title, token, here, onPick, onClose }: Props) {
+  const { t } = useT();
   const [mode, setMode] = useState<'search' | 'map'>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[] | null>(null);
@@ -41,7 +43,7 @@ export function PlacePicker({ visible, title, token, here, onPick, onClose }: Pr
 
   const search = async () => {
     if (query.trim().length < 2) {
-      setError('Type at least 2 letters.');
+      setError(t('place.tooShort'));
       return;
     }
     setBusy(true);
@@ -69,38 +71,38 @@ export function PlacePicker({ visible, title, token, here, onPick, onClose }: Pr
   const useMyLocation = async () => {
     if (!here) return;
     setBusy(true);
-    pick(await describe(here, 'My location'));
+    pick(await describe(here, t('book.myLocation')));
     setBusy(false);
   };
 
   const onMapTap = async (point: Point) => {
-    setTapped({ id: 'tap', name: 'Looking up the address…', address: '', ...point });
-    setTapped(await describe(point, 'Pinned place'));
+    setTapped({ id: 'tap', name: t('place.lookingUp'), address: '', ...point });
+    setTapped(await describe(point, t('place.pinned')));
   };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
       <SafeAreaView style={styles.page} edges={['top', 'bottom']}>
         <View style={{ paddingHorizontal: space.lg }}>
-          <Header title={title} onBack={mode === 'map' ? () => setMode('search') : close} backLabel={mode === 'map' ? 'Search' : 'Close'} />
+          <Header title={title} onBack={mode === 'map' ? () => setMode('search') : close} backLabel={mode === 'map' ? t('place.search') : t('common.close')} />
         </View>
 
         {mode === 'search' ? (
           <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: space.xxl }}>
-            <Field label="Search a place" placeholder="e.g. Marché de Kamenge" value={query} autoFocus
+            <Field label={t('place.searchPlace')} placeholder={t('place.example')} value={query} autoFocus
               returnKeyType="search" onChangeText={setQuery} onSubmitEditing={search} error={error} />
-            <Button label="Search" icon="search" onPress={search} loading={busy} style={{ marginTop: space.md }} />
+            <Button label={t('place.search')} icon="search" onPress={search} loading={busy} style={{ marginTop: space.md }} />
 
             <View style={styles.shortcuts}>
-              {here && <ListItem icon="crosshair" title="My location" subtitle="Where the phone is now" onPress={useMyLocation} />}
+              {here && <ListItem icon="crosshair" title={t('book.myLocation')} subtitle={t('book.phoneHere')} onPress={useMyLocation} />}
               {/* Tap-to-pick needs the Android (MapLibre) map. */}
               {Platform.OS === 'android' && (
-                <ListItem icon="map-pin" title="Pick on the map" subtitle="Tap the exact spot" onPress={() => setMode('map')} />
+                <ListItem icon="map-pin" title={t('place.onMap')} subtitle={t('place.onMapText')} onPress={() => setMode('map')} />
               )}
             </View>
 
             {results && results.length === 0 && (
-              <EmptyState icon="search" title="No places found" text="Try a nearby landmark, a street or the neighbourhood, or pick the spot on the map." />
+              <EmptyState icon="search" title={t('place.none')} text={t('place.noneText')} />
             )}
             {results?.map((place) => (
               <ListItem key={place.id} icon="map-pin" title={place.name} subtitle={place.address} onPress={() => pick(place)} />
@@ -121,12 +123,12 @@ export function PlacePicker({ visible, title, token, here, onPick, onClose }: Pr
                 <>
                   <Text weight="semibold">{tapped.name}</Text>
                   {tapped.address ? <Text variant="caption" color={colors.muted}>{tapped.address}</Text> : <ActivityIndicator />}
-                  <Button label="Use this place" onPress={() => pick(tapped)} disabled={!tapped.address} style={{ marginTop: space.md }} />
+                  <Button label={t('place.use')} onPress={() => pick(tapped)} disabled={!tapped.address} style={{ marginTop: space.md }} />
                 </>
               ) : (
                 <View style={styles.hint}>
                   <Icon name="map-pin" size={18} />
-                  <Text>Tap the map where you want to be.</Text>
+                  <Text>{t('place.tapMap')}</Text>
                 </View>
               )}
             </View>
@@ -138,12 +140,13 @@ export function PlacePicker({ visible, title, token, here, onPick, onClose }: Pr
 }
 
 // The chosen place, shown in the booking form; tap to change.
-export function PlaceButton({ label, place, placeholder, onPress }: {
-  label: string; place: Place | null; placeholder: string; onPress: () => void;
+// start: the pickup (a circle), otherwise the drop-off (a pin).
+export function PlaceButton({ label, place, placeholder, start, onPress }: {
+  label: string; place: Place | null; placeholder: string; start?: boolean; onPress: () => void;
 }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${place?.name ?? placeholder}`} onPress={onPress} style={styles.placeButton}>
-      <Icon name={label === 'Pickup' ? 'circle' : 'map-pin'} size={18} />
+      <Icon name={start ? 'circle' : 'map-pin'} size={18} />
       <View style={{ flex: 1 }}>
         <Text variant="caption" color={colors.muted}>{label}</Text>
         <Text weight={place ? 'semibold' : undefined} color={place ? colors.ink : colors.muted} numberOfLines={1}>{place?.name ?? placeholder}</Text>

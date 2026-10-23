@@ -6,6 +6,7 @@ import AppLogo from '../../components/app-logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { paymentsAPI, walletAPI } from '../../services/api';
 import { formatTxDate, toTransactionRows, type TransactionRow } from '../../utils/transactions';
+import { useT } from '@/i18n';
 
 const QUICK_AMOUNTS = [5000, 10000, 20000, 50000];
 const PAYMENT_POLL_MS = 3000;
@@ -20,6 +21,7 @@ type Payment = {
 
 export default function WalletScreen() {
   const router = useRouter();
+  const { t, locale } = useT();
   const { user, token, walletBalance, updateWalletBalance } = useAuth();
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [loadingTx, setLoadingTx] = useState(false);
@@ -39,13 +41,19 @@ export default function WalletScreen() {
     setLoadingTx(true);
     try {
       const resp = await walletAPI.getTransactions(token);
-      setRows(toTransactionRows(resp.transactions ?? []));
+      setRows(toTransactionRows(resp.transactions ?? [], {
+        topup: t('wallet.txTopup'),
+        topupBonus: t('wallet.txBonus'),
+        withdrawal: t('wallet.txWithdrawal'),
+        rideFare: t('wallet.txFare'),
+        rideEarnings: t('wallet.txEarnings'),
+      }));
     } catch {
       setRows([]);
     } finally {
       setLoadingTx(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,13 +83,13 @@ export default function WalletScreen() {
         updateWalletBalance();
         loadTransactions();
         closeTopUp();
-        Alert.alert('Top-up complete', `${formatMoney(settled.amount)} was added to your wallet.`);
+        Alert.alert(t('wallet.complete'), t('wallet.completeText', { amount: formatMoney(settled.amount) }));
       } else {
-        Alert.alert('Top-up failed', settled.failure_reason ?? 'The payment was not completed.');
+        Alert.alert(t('wallet.failed'), settled.failure_reason ?? t('wallet.notCompleted'));
         setPayment(null);
       }
     },
-    [updateWalletBalance, loadTransactions],
+    [updateWalletBalance, loadTransactions, t],
   );
 
   // While a payment waits for approval, check its status every few seconds.
@@ -102,7 +110,7 @@ export default function WalletScreen() {
     if (!token) return;
     const value = Number(amount);
     if (!Number.isInteger(value) || value <= 0) {
-      Alert.alert('Invalid amount', 'Enter a whole amount in FBU.');
+      Alert.alert(t('wallet.invalid'), t('wallet.invalidText'));
       return;
     }
     setStarting(true);
@@ -110,7 +118,7 @@ export default function WalletScreen() {
       const resp = await walletAPI.topUp(token, value, phone.trim() || undefined);
       setPayment(resp.payment);
     } catch (e) {
-      Alert.alert('Top-up failed', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('wallet.failed'), e instanceof Error ? e.message : t('common.tryAgain'));
     } finally {
       setStarting(false);
     }
@@ -124,7 +132,7 @@ export default function WalletScreen() {
       const { payment: settled } = await paymentsAPI.devConfirm(token, payment.id);
       onPaymentSettled(settled);
     } catch (e) {
-      Alert.alert('Could not confirm', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('wallet.confirmFailed'), e instanceof Error ? e.message : t('common.tryAgain'));
     } finally {
       setConfirming(false);
     }
@@ -137,35 +145,35 @@ export default function WalletScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.replace('/(tabs)')} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.replace('/(tabs)')} />
       </View>
       <View style={styles.header}>
         <AppLogo size={60} />
-        <Text style={styles.title}>Wallet</Text>
+        <Text style={styles.title}>{t('wallet.title')}</Text>
       </View>
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Current Balance</Text>
+        <Text style={styles.balanceLabel}>{t('wallet.balance')}</Text>
         <Text style={styles.balanceAmount}>{formatMoney(walletBalance)}</Text>
-        <Text style={styles.bonus}>Includes bonuses (if any)</Text>
+        <Text style={styles.bonus}>{t('wallet.bonuses')}</Text>
       </View>
       <TouchableOpacity style={styles.topUpButton} onPress={() => setTopUpVisible(true)}>
-        <Text style={styles.topUpText}>Top Up Wallet</Text>
+        <Text style={styles.topUpText}>{t('wallet.topUp')}</Text>
       </TouchableOpacity>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <Text style={styles.sectionTitle}>{t('wallet.recent')}</Text>
         {loadingTx && rows.length === 0 ? (
           <View style={{ paddingVertical: 18 }}>
             <ActivityIndicator />
           </View>
         ) : rows.length === 0 ? (
-          <Text style={styles.emptyText}>No transactions yet.</Text>
+          <Text style={styles.emptyText}>{t('wallet.empty')}</Text>
         ) : (
           rows.map((row) => (
             <View key={row.key} style={styles.transactionRow}>
               <Image source={require('../../assets/images/app-logo.png')} style={styles.txnIcon} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.txnTitle}>{row.label}</Text>
-                <Text style={styles.txnDate}>{formatTxDate(row.date)}</Text>
+                <Text style={styles.txnDate}>{formatTxDate(row.date, locale)}</Text>
               </View>
               <Text
                 style={[
@@ -185,7 +193,7 @@ export default function WalletScreen() {
           <View style={styles.modalContent}>
             {!payment ? (
               <>
-                <Text style={styles.modalTitle}>Top up with mobile money</Text>
+                <Text style={styles.modalTitle}>{t('wallet.modalTitle')}</Text>
                 <View style={styles.chips}>
                   {QUICK_AMOUNTS.map((value) => (
                     <TouchableOpacity
@@ -199,16 +207,16 @@ export default function WalletScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={styles.inputLabel}>Amount (FBU)</Text>
+                <Text style={styles.inputLabel}>{t('wallet.amount')}</Text>
                 <TextInput
                   style={styles.input}
                   value={amount}
                   onChangeText={(v) => setAmount(v.replace(/[^0-9]/g, ''))}
                   keyboardType="number-pad"
-                  placeholder="e.g. 10000"
+                  placeholder={t('wallet.amountPlaceholder')}
                   placeholderTextColor="#9CA3AF"
                 />
-                <Text style={styles.inputLabel}>Mobile money number</Text>
+                <Text style={styles.inputLabel}>{t('wallet.phone')}</Text>
                 <TextInput
                   style={styles.input}
                   value={phone}
@@ -217,25 +225,24 @@ export default function WalletScreen() {
                   placeholder="+257 ..."
                   placeholderTextColor="#9CA3AF"
                 />
-                {bonusPercent ? <Text style={styles.modalHint}>You get a {bonusPercent}% bonus on every top-up.</Text> : null}
+                {bonusPercent ? <Text style={styles.modalHint}>{t('wallet.bonusHint', { percent: bonusPercent })}</Text> : null}
                 <TouchableOpacity
                   style={[styles.modalPrimary, starting && { opacity: 0.6 }]}
                   onPress={startTopUp}
                   disabled={starting}
                 >
-                  {starting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalPrimaryText}>Continue</Text>}
+                  {starting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalPrimaryText}>{t('wallet.continue')}</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalSecondary} onPress={closeTopUp}>
-                  <Text style={styles.modalSecondaryText}>Cancel</Text>
+                  <Text style={styles.modalSecondaryText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text style={styles.modalTitle}>Waiting for approval</Text>
+                <Text style={styles.modalTitle}>{t('wallet.waiting')}</Text>
                 <ActivityIndicator color="#0B0B0B" style={{ marginVertical: 12 }} />
                 <Text style={styles.modalHint}>
-                  Approve the payment of {formatMoney(payment.amount)} on your phone. Your balance updates
-                  automatically once it is confirmed.
+                  {t('wallet.waitingText', { amount: formatMoney(payment.amount) })}
                 </Text>
                 {payment.provider === 'fake' && (
                   <TouchableOpacity
@@ -244,12 +251,12 @@ export default function WalletScreen() {
                     disabled={confirming}
                   >
                     <Text style={styles.modalPrimaryText}>
-                      {confirming ? 'Confirming…' : 'Simulate approval (dev)'}
+                      {confirming ? t('wallet.confirming') : t('wallet.simulate')}
                     </Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={styles.modalSecondary} onPress={closeTopUp}>
-                  <Text style={styles.modalSecondaryText}>Close</Text>
+                  <Text style={styles.modalSecondaryText}>{t('common.close')}</Text>
                 </TouchableOpacity>
               </>
             )}

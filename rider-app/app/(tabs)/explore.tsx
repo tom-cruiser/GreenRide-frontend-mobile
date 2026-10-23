@@ -4,9 +4,11 @@ import { Text } from '@/design';
 import { useRouter } from 'expo-router';
 import AppLogo from '../../components/app-logo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useT } from '@/i18n';
 
 export default function MoreScreen() {
   const router = useRouter();
+  const { t } = useT();
 
   const handleFeature = (feature: string) => {
     switch (feature) {
@@ -26,25 +28,25 @@ export default function MoreScreen() {
         router.push('/settings');
         break;
       default:
-        Alert.alert('Coming Soon', `${feature} feature is under development`);
+        Alert.alert(t('more.soon'), t('more.soonText'));
     }
   };
 
   const menuItems = [
-    { title: 'Profile Management', icon: 'person.fill', feature: 'profile' },
-    { title: 'Safety & Support', icon: 'shield.fill', feature: 'safety' },
-    { title: 'Help Center', icon: 'questionmark.circle.fill', feature: 'support' },
-    { title: 'Promotions', icon: 'gift.fill', feature: 'promotions' },
-    { title: 'Settings', icon: 'gear', feature: 'settings' },
-    { title: 'Notifications', icon: 'bell.fill', feature: 'notifications' },
-    { title: 'Rate App', icon: 'star.fill', feature: 'rate' },
+    { title: t('more.profile'), icon: 'person.fill', feature: 'profile' },
+    { title: t('more.safety'), icon: 'shield.fill', feature: 'safety' },
+    { title: t('more.help'), icon: 'questionmark.circle.fill', feature: 'support' },
+    { title: t('more.promotions'), icon: 'gift.fill', feature: 'promotions' },
+    { title: t('more.settings'), icon: 'gear', feature: 'settings' },
+    { title: t('more.notifications'), icon: 'bell.fill', feature: 'notifications' },
+    { title: t('more.rate'), icon: 'star.fill', feature: 'rate' },
   ] as const;
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <AppLogo size={60} />
-        <Text style={styles.title}>More Options</Text>
+        <Text style={styles.title}>{t('more.title')}</Text>
       </View>
 
       <View style={styles.menuContainer}>
@@ -63,7 +65,7 @@ export default function MoreScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Flow v1.0.0</Text>
-        <Text style={styles.footerSubtext}>Eco-friendly rides for everyone</Text>
+        <Text style={styles.footerSubtext}>{t('more.tagline')}</Text>
       </View>
     </ScrollView>
   );

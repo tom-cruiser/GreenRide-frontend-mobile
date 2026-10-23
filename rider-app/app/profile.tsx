@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PersonAvatar } from '@/components/person-avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, colors, Field, formatMoney, Icon, IconButton, type IconName, initials, radius, shadow, space, Text } from '@/design';
+import { useT, type TKey } from '@/i18n';
 import { removeProfilePhoto, socialAPI, uploadProfilePhoto } from '@/services/api';
 
 // Profile, in the clean card style: the photo (tap the pencil to change it),
@@ -14,10 +15,11 @@ import { removeProfilePhoto, socialAPI, uploadProfilePhoto } from '@/services/ap
 // links. Everything shown is the rider's real data, saved to the server.
 
 type EditField = 'name' | 'phone' | 'emergency_contact';
-const LABELS: Record<EditField, string> = { name: 'Full name', phone: 'Phone', emergency_contact: 'Emergency contact' };
+const LABELS: Record<EditField, TKey> = { name: 'profile.fullName', phone: 'profile.phone', emergency_contact: 'profile.emergency' };
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { user, token, walletBalance, updateProfile, refreshUser, logout } = useAuth();
   const [friendsCount, setFriendsCount] = useState<number | null>(null);
   const [code, setCode] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function ProfileScreen() {
   const pickPhoto = async () => {
     if (!token) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return Alert.alert('Photos', 'Allow access to your photos to add a profile picture.');
+    if (!permission.granted) return Alert.alert(t('profile.photos'), t('profile.photosText'));
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
@@ -51,7 +53,7 @@ export default function ProfileScreen() {
       await uploadProfilePhoto(token, { uri: asset.uri, name: asset.fileName ?? 'photo.jpg', mimeType: asset.mimeType ?? 'image/jpeg' });
       await refreshUser();
     } catch (e) {
-      Alert.alert('Could not upload', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('profile.uploadFailed'), e instanceof Error ? e.message : t('common.tryAgain'));
     } finally {
       setUploading(false);
     }
@@ -59,10 +61,10 @@ export default function ProfileScreen() {
 
   const photoMenu = () =>
     user.photoUrl
-      ? Alert.alert('Profile photo', undefined, [
-          { text: 'Choose a new photo', onPress: pickPhoto },
-          { text: 'Remove photo', style: 'destructive', onPress: async () => { await removeProfilePhoto(token!).catch(() => {}); refreshUser(); } },
-          { text: 'Cancel', style: 'cancel' },
+      ? Alert.alert(t('profile.photo'), undefined, [
+          { text: t('profile.newPhoto'), onPress: pickPhoto },
+          { text: t('profile.removePhoto'), style: 'destructive', onPress: async () => { await removeProfilePhoto(token!).catch(() => {}); refreshUser(); } },
+          { text: t('common.cancel'), style: 'cancel' },
         ])
       : pickPhoto();
 
@@ -79,7 +81,7 @@ export default function ProfileScreen() {
       await refreshUser();
       setEditing(null);
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('profile.saveFailed'), e instanceof Error ? e.message : t('common.tryAgain'));
     } finally {
       setSaving(false);
     }
@@ -88,13 +90,14 @@ export default function ProfileScreen() {
   const copyCode = async () => {
     if (!code) return;
     await Clipboard.setStringAsync(code);
-    Alert.alert('Copied', `${code} is ready to paste.`);
+    Alert.alert(t('profile.copied'), t('profile.copiedText', { code }));
   };
 
-  const rows: [IconName, string, string, EditField | null][] = [
-    ['phone', 'Phone', user.phone || 'Add your number', 'phone'],
-    ['mail', 'Email', user.email, null],
-    ['shield', 'Emergency contact', user.emergency_contact || 'Add someone to call', 'emergency_contact'],
+  // [icon, label, value, placeholder when empty, field to edit]
+  const rows: [IconName, string, string | null | undefined, string, EditField | null][] = [
+    ['phone', t('profile.phone'), user.phone, t('profile.addPhone'), 'phone'],
+    ['mail', t('profile.email'), user.email, '', null],
+    ['shield', t('profile.emergency'), user.emergency_contact, t('profile.addEmergency'), 'emergency_contact'],
   ];
 
   return (
@@ -102,14 +105,14 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <IconButton icon="chevron-left" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
-          <Text variant="heading" weight="bold">Profile</Text>
-          <IconButton icon="settings" label="Settings" onPress={() => router.push('/settings')} />
+          <IconButton icon="chevron-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+          <Text variant="heading" weight="bold">{t('profile.title')}</Text>
+          <IconButton icon="settings" label={t('more.settings')} onPress={() => router.push('/settings')} />
         </View>
 
         {/* Photo and name */}
         <View style={styles.hero}>
-          <Pressable onPress={photoMenu} accessibilityRole="button" accessibilityLabel="Change profile photo">
+          <Pressable onPress={photoMenu} accessibilityRole="button" accessibilityLabel={t('profile.changePhoto')}>
             <View style={styles.photoRing}>
               <PersonAvatar person={me} size={112} />
               {uploading && (
@@ -118,21 +121,21 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.pencil}><Icon name="edit-2" size={14} color={colors.onDark} /></View>
           </Pressable>
-          <Pressable onPress={() => startEdit('name')} accessibilityRole="button" accessibilityLabel="Edit your name">
+          <Pressable onPress={() => startEdit('name')} accessibilityRole="button" accessibilityLabel={t('profile.editName')}>
             <Text variant="title" style={{ marginTop: space.lg }}>{user.name}</Text>
           </Pressable>
         </View>
 
         {/* Contact rows */}
         <View style={styles.group}>
-          {rows.map(([icon, label, val, field], i) => (
+          {rows.map(([icon, label, val, empty, field], i) => (
             <Pressable key={label} onPress={field ? () => startEdit(field) : undefined} disabled={!field}
               style={({ pressed }) => [styles.infoRow, i > 0 && styles.infoRowLine, pressed && { opacity: 0.7 }]}
               accessibilityRole={field ? 'button' : undefined}>
               <View style={styles.infoIcon}><Icon name={icon} size={18} /></View>
               <View style={{ flex: 1 }}>
                 <Text variant="overline" color={colors.muted}>{label}</Text>
-                <Text weight="medium" numberOfLines={1} color={val.startsWith('Add ') ? colors.muted : colors.ink}>{val}</Text>
+                <Text weight="medium" numberOfLines={1} color={val ? colors.ink : colors.muted}>{val || empty}</Text>
               </View>
               {field && <Icon name="chevron-right" size={18} color={colors.muted} />}
             </Pressable>
@@ -141,32 +144,35 @@ export default function ProfileScreen() {
 
         {/* My Flow */}
         <Pressable style={styles.sectionHead} onPress={() => router.push('/join')} accessibilityRole="button">
-          <Text variant="heading" weight="bold">My Flow</Text>
+          <Text variant="heading" weight="bold">{t('profile.myFlow')}</Text>
           <Icon name="chevron-right" color={colors.muted} />
         </Pressable>
         <View style={styles.tiles}>
-          <Tile icon="hash" title="Flow code" sub={code ?? '…'} onPress={copyCode} />
-          <Tile icon="users" title="Friends" sub={friendsCount == null ? '…' : String(friendsCount)} onPress={() => router.push('/join')} />
-          <Tile icon="credit-card" title="Wallet" sub={formatMoney(Number(walletBalance ?? 0))} onPress={() => router.push('/(tabs)/wallet')} />
+          <Tile icon="hash" title={t('profile.code')} sub={code ?? '…'} onPress={copyCode} />
+          <Tile icon="users" title={t('profile.friends')} sub={friendsCount == null ? '…' : String(friendsCount)} onPress={() => router.push('/join')} />
+          <Tile icon="credit-card" title={t('wallet.title')} sub={formatMoney(Number(walletBalance ?? 0))} onPress={() => router.push('/(tabs)/wallet')} />
         </View>
 
         {/* Account */}
-        <Text variant="heading" weight="bold" style={{ marginTop: space.xxl, marginBottom: space.md }}>Account</Text>
+        <Text variant="heading" weight="bold" style={{ marginTop: space.xxl, marginBottom: space.md }}>{t('settings.account')}</Text>
         <View style={styles.group}>
           {([
-            ['clock', 'Ride history', () => router.push('/(tabs)/ride-history')],
-            ['help-circle', 'Help & support', () => router.push('/support')],
-            ['log-out', 'Log out', () => Alert.alert('Log out?', undefined, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Log out', style: 'destructive', onPress: logout },
+            ['clock', t('profile.history'), () => router.push('/(tabs)/ride-history')],
+            ['help-circle', t('profile.help'), () => router.push('/support')],
+            ['log-out', t('profile.logout'), () => Alert.alert(t('profile.logoutTitle'), undefined, [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('profile.logout'), style: 'destructive', onPress: logout },
             ])],
-          ] as [IconName, string, () => void][]).map(([icon, label, onPress], i) => (
+          ] as [IconName, string, () => void][]).map(([icon, label, onPress], i) => {
+            const danger = icon === 'log-out';
+            return (
             <Pressable key={label} onPress={onPress} style={({ pressed }) => [styles.infoRow, i > 0 && styles.infoRowLine, pressed && { opacity: 0.7 }]} accessibilityRole="button">
-              <View style={styles.infoIcon}><Icon name={icon} size={18} color={label === 'Log out' ? colors.danger : colors.ink} /></View>
-              <Text weight="medium" style={{ flex: 1 }} color={label === 'Log out' ? colors.danger : colors.ink}>{label}</Text>
+              <View style={styles.infoIcon}><Icon name={icon} size={18} color={danger ? colors.danger : colors.ink} /></View>
+              <Text weight="medium" style={{ flex: 1 }} color={danger ? colors.danger : colors.ink}>{label}</Text>
               <Icon name="chevron-right" size={18} color={colors.muted} />
             </Pressable>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -177,12 +183,12 @@ export default function ProfileScreen() {
           <Pressable style={styles.sheet} onPress={() => {}}>
             {editing && (
               <View style={{ gap: space.lg }}>
-                <Text variant="title">{LABELS[editing]}</Text>
-                <Field label={LABELS[editing]} value={value} onChangeText={setValue} autoFocus
+                <Text variant="title">{t(LABELS[editing])}</Text>
+                <Field label={t(LABELS[editing])} value={value} onChangeText={setValue} autoFocus
                   keyboardType={editing === 'name' ? 'default' : 'phone-pad'}
-                  hint={editing === 'name' ? undefined : 'With the country code, for example +257 79 12 34 56'} />
-                <Button label="Save" onPress={save} loading={saving} disabled={!value.trim()} />
-                <Button label="Cancel" variant="ghost" onPress={() => setEditing(null)} />
+                  hint={editing === 'name' ? undefined : t('profile.phoneHint')} />
+                <Button label={t('common.save')} onPress={save} loading={saving} disabled={!value.trim()} />
+                <Button label={t('common.cancel')} variant="ghost" onPress={() => setEditing(null)} />
               </View>
             )}
           </Pressable>

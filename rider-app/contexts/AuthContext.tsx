@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { authAPI, setUnauthorizedHandler, walletAPI } from '../services/api';
 import { unregisterPush } from '../services/push';
+import { tr } from '../i18n/translate';
 
 interface User {
   id: string;
@@ -155,7 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (sessionExpired.current) return;
       sessionExpired.current = true;
       logoutRef.current();
-      Alert.alert('Session expired', 'Please sign in again.');
+      Alert.alert(tr('session.expired'), tr('session.expiredText'));
     });
     return () => setUnauthorizedHandler(null);
   }, []);

@@ -5,10 +5,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsAPI, type FriendsGroup } from '@/services/api';
 import { Avatar, BackButton, ACCENT, Row, money, showError, ui, useCountdown, useLiveGroup } from '@/components/friends-ui';
+import { useT } from '@/i18n';
 
 // Opened from an invitation notification: who invited, the ride, the price, Accept / Decline.
 export default function InvitationScreen() {
   const router = useRouter();
+  const { t, locale } = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, updateWalletBalance } = useAuth();
   const [group, setGroup] = useState<FriendsGroup | null>(null);
@@ -20,9 +22,9 @@ export default function InvitationScreen() {
     try {
       setGroup((await friendsAPI.getInvitation(token, id)).group);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load the invitation.');
+      setError(e instanceof Error ? e.message : t('invite.loadFailed'));
     }
-  }, [token, id]);
+  }, [token, id, t]);
   useLiveGroup(group?.groupId, reload);
   const countdown = useCountdown(group?.invitation?.status === 'invited' ? group.expiresAt : null);
 
@@ -48,7 +50,7 @@ export default function InvitationScreen() {
         router.replace('/(tabs)');
       }
     } catch (e) {
-      showError(router, accept ? 'Could not accept' : 'Could not decline', e);
+      showError(router, accept ? t('push.acceptFailed') : t('push.declineFailed'), e);
       reload();
     } finally {
       setBusy(false);
@@ -60,32 +62,32 @@ export default function InvitationScreen() {
       <BackButton onPress={() => router.replace('/(tabs)')} />
       <View style={ui.statusCard}>
         <Avatar person={group.host} size={64} />
-        <Text style={[ui.title, { marginTop: 10 }]}>{group.host.firstName} invited you</Text>
+        <Text style={[ui.title, { marginTop: 10 }]}>{t('invite.title', { name: group.host.firstName })}</Text>
         <Text style={ui.detail}>
-          {open ? (countdown ? `Answer within ${countdown}` : 'Share a ride') : group.role === 'guest' ? 'You are in this ride' : 'This invitation is closed'}
+          {open ? (countdown ? t('invite.answerWithin', { time: countdown }) : t('invite.share')) : group.role === 'guest' ? t('invite.inRide') : t('invite.closed')}
         </Text>
         <Text style={ui.price}>{money(group.myPrice, group.currency)}</Text>
-        <Text style={ui.hint}>Your price, paid from your wallet</Text>
+        <Text style={ui.hint}>{t('invite.price')}</Text>
       </View>
       <View style={ui.card}>
-        <Row label="Pickup" value={group.pickup} />
-        <Row label="Drop-off" value={group.dropoff} />
-        <Row label="Requested" value={new Date(group.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
-        <Row label="Riders" value={`${group.ridersCount} of ${group.maxRiders}`} />
+        <Row label={t('book.pickup')} value={group.pickup} />
+        <Row label={t('book.dropoff')} value={group.dropoff} />
+        <Row label={t('invite.requested')} value={new Date(group.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} />
+        <Row label={t('friends.riders')} value={t('friends.countOf', { count: group.ridersCount, max: group.maxRiders })} />
       </View>
       {open && (
         <>
           <TouchableOpacity style={[ui.primaryBtn, busy && ui.disabled]} onPress={() => answer(true)} disabled={busy}>
-            <Text style={ui.primaryBtnText}>Accept</Text>
+            <Text style={ui.primaryBtnText}>{t('invite.accept')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[ui.cancelBtn, busy && ui.disabled]} onPress={() => answer(false)} disabled={busy}>
-            <Text style={ui.cancelText}>Decline</Text>
+            <Text style={ui.cancelText}>{t('invite.decline')}</Text>
           </TouchableOpacity>
         </>
       )}
       {group.role === 'guest' && (
         <TouchableOpacity style={ui.primaryBtn} onPress={() => router.replace(`/friends-ride/${group.groupId}`)}>
-          <Text style={ui.primaryBtnText}>Open the ride</Text>
+          <Text style={ui.primaryBtnText}>{t('invite.open')}</Text>
         </TouchableOpacity>
       )}
     </ScrollView>

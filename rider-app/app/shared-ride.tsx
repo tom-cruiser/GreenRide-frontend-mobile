@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ridesAPI } from '../services/api';
 import AppLogo from '../components/app-logo';
+import { useT } from '@/i18n';
 
 type Rider = {
   id: number;
@@ -23,6 +24,7 @@ type Group = {
 
 export default function SharedRideScreen() {
   const router = useRouter();
+  const { t } = useT();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { token } = useAuth();
 
@@ -43,9 +45,10 @@ export default function SharedRideScreen() {
   useEffect(() => {
     // Deferred a tick so no state is set during the effect itself.
     Promise.resolve().then(load).catch((e) => {
-      const message = e instanceof Error ? e.message : 'Failed to load shared ride status.';
+      const message = e instanceof Error ? e.message : t('sharedRide.loadFailed');
       setError(message);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   const onRefresh = async () => {
@@ -53,7 +56,7 @@ export default function SharedRideScreen() {
     try {
       await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to refresh.';
+      const message = e instanceof Error ? e.message : t('history.refreshFailed');
       setError(message);
     } finally {
       setIsRefreshing(false);
@@ -63,32 +66,32 @@ export default function SharedRideScreen() {
   return (
     <View style={styles.container}>
       <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.replace('/(tabs)')} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.replace('/(tabs)')} />
       </View>
 
       <AppLogo size={52} />
-      <Text style={styles.title}>Shared Ride</Text>
+      <Text style={styles.title}>{t('sharedRide.title')}</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Match status</Text>
-        <Text style={styles.status}>{group?.status ?? 'matching'}</Text>
+        <Text style={styles.cardTitle}>{t('sharedRide.status')}</Text>
+        <Text style={styles.status}>{group?.status === 'confirmed' ? t('sharedRide.confirmed') : t('sharedRide.matching')}</Text>
         <Text style={styles.meta}>
-          Riders: {group?.ridersCount ?? riders.length}/{group?.maxRiders ?? '—'}
+          {t('sharedRide.riders', { count: group?.ridersCount ?? riders.length, max: group?.maxRiders ?? '—' })}
         </Text>
-        <Text style={styles.meta}>Dropoff: {group?.dropoff ?? '—'}</Text>
+        <Text style={styles.meta}>{t('sharedRide.dropoff', { place: group?.dropoff ?? '—' })}</Text>
 
         {group?.status === 'confirmed' ? (
           <View style={styles.confirmedPill}>
-            <Text style={styles.confirmedText}>Matched! Driver assignment comes next.</Text>
+            <Text style={styles.confirmedText}>{t('sharedRide.matched')}</Text>
           </View>
         ) : (
-          <Text style={styles.hint}>We’ll keep searching for riders heading your way.</Text>
+          <Text style={styles.hint}>{t('sharedRide.searching')}</Text>
         )}
       </View>
 
-      <Text style={styles.listTitle}>Riders in your pool</Text>
+      <Text style={styles.listTitle}>{t('sharedRide.pool')}</Text>
       <FlatList
         data={riders}
         keyExtractor={(item) => String(item.id)}
@@ -96,15 +99,15 @@ export default function SharedRideScreen() {
         renderItem={({ item }) => (
           <View style={styles.riderRow}>
             <Text style={styles.riderName}>{item.name}</Text>
-            <Text style={styles.riderSub}>Joined</Text>
+            <Text style={styles.riderSub}>{t('sharedRide.joined')}</Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No riders yet.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('sharedRide.empty')}</Text>}
         contentContainerStyle={{ paddingBottom: 24 }}
       />
 
       <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/messaging')}>
-        <Text style={styles.primaryText}>Open Messaging</Text>
+        <Text style={styles.primaryText}>{t('sharedRide.messaging')}</Text>
       </TouchableOpacity>
     </View>
   );

@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-nat
 import { Text, TextInputFlow as TextInput, IconButton } from '@/design';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useT } from '@/i18n';
 
 type ChatMessage = {
   id: number;
@@ -13,23 +14,25 @@ type ChatMessage = {
 
 export default function MessagingScreen() {
   const router = useRouter();
+  const { t, locale } = useT();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  // Sample conversation until chat is connected to the server.
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: 1,
-      text: 'Hello! I\'m your driver Jean Pierre. I\'ll be arriving in about 3 minutes.',
+      text: t('chat.sample1'),
       sender: 'driver',
       timestamp: '10:25 AM',
     },
     {
       id: 2,
-      text: 'Great! I\'m waiting near the main entrance.',
+      text: t('chat.sample2'),
       sender: 'user',
       timestamp: '10:26 AM',
     },
     {
       id: 3,
-      text: 'Perfect! I see you now. I\'m in the white Toyota.',
+      text: t('chat.sample3'),
       sender: 'driver',
       timestamp: '10:28 AM',
     },
@@ -37,7 +40,7 @@ export default function MessagingScreen() {
 
   const sendMessage = () => {
     if (message.trim()) {
-      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const now = new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
       const newMessage: ChatMessage = {
         id: messages.length + 1,
         text: message,
@@ -51,9 +54,9 @@ export default function MessagingScreen() {
       setTimeout(() => {
         const driverResponse: ChatMessage = {
           id: messages.length + 2,
-          text: 'Message received! Thanks for the update.',
+          text: t('chat.received'),
           sender: 'driver',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages((prev) => [...prev, driverResponse]);
       }, 2000);
@@ -83,15 +86,15 @@ export default function MessagingScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-        <IconButton icon="chevron-left" label="Back" onPress={() => router.back()} />
+        <IconButton icon="chevron-left" label={t('common.back')} onPress={() => router.back()} />
       </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Chat with Driver</Text>
-          <Text style={styles.headerSubtitle}>Jean Pierre • Online</Text>
+          <Text style={styles.headerTitle}>{t('chat.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('chat.online', { name: 'Jean Pierre' })}</Text>
         </View>
         <TouchableOpacity
           style={styles.callButton}
-          onPress={() => Alert.alert('Calling', 'Calling Jean Pierre...')}
+          onPress={() => Alert.alert(t('chat.calling'), t('chat.callingText', { name: 'Jean Pierre' }))}
         >
           <IconSymbol name="phone.fill" size={20} color="#111111" />
         </TouchableOpacity>
@@ -104,7 +107,7 @@ export default function MessagingScreen() {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.textInput}
-          placeholder="Type a message..."
+          placeholder={t('chat.placeholder')}
           value={message}
           onChangeText={setMessage}
           multiline

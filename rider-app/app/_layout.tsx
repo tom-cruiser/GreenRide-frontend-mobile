@@ -16,6 +16,7 @@ import { friendsAPI, notificationsAPI, socialAPI } from '@/services/api';
 import { showError } from '@/components/friends-ui';
 import { signalingClient } from '@/services/signalingClient';
 import { DesignProvider, useFlowFonts } from '@/design';
+import { I18nProvider, useT } from '@/i18n';
 
 // Screens a shared link or a notification can open; kept through sign-in.
 const LINKABLE = ['join', 'invitation', 'friends-ride'];
@@ -32,6 +33,7 @@ function RootNavigator() {
   const segments = useSegments();
   const pathname = usePathname();
   const { user, token, isLoading } = useAuth();
+  const { t, chosen: languageChosen } = useT();
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
   // A ride link opened while signed out: open it once the rider has signed in.
   const pendingLink = useRef<string | null>(null);
@@ -42,7 +44,7 @@ function RootNavigator() {
       .catch(() => setHasOnboarded(false));
   }, []);
 
-  const bootstrapping = isLoading || hasOnboarded === null;
+  const bootstrapping = isLoading || hasOnboarded === null || languageChosen === null;
 
   useEffect(() => {
     if (bootstrapping) return;
@@ -56,6 +58,15 @@ function RootNavigator() {
     const inAuthGroup = first === '(auth)';
     const onOnboarding = first === 'onboarding';
     const isAuthed = !!user && !!token;
+
+    // First launch: the language comes before everything else.
+    if (!languageChosen) {
+      if (first !== 'language') {
+        if (LINKABLE.includes(first)) pendingLink.current = pathname;
+        router.replace('/language');
+      }
+      return;
+    }
 
     if (!hasOnboarded) {
       // The onboarding screen saves the flag and then navigates away, so
@@ -72,17 +83,21 @@ function RootNavigator() {
     }
 
     if (!isAuthed && !inAuthGroup) {
+      if (first === 'language') {
+        router.replace('/(auth)/login');
+        return;
+      }
       if (LINKABLE.includes(first)) pendingLink.current = pathname;
       router.replace('/(auth)/login');
       return;
     }
 
-    if (isAuthed && (inAuthGroup || onOnboarding)) {
+    if (isAuthed && (inAuthGroup || onOnboarding || first === 'language')) {
       const link = pendingLink.current;
       pendingLink.current = null;
       router.replace((link ?? '/(tabs)') as any);
     }
-  }, [bootstrapping, hasOnboarded, user, token, segments, router, pathname]);
+  }, [bootstrapping, languageChosen, hasOnboarded, user, token, segments, router, pathname]);
 
   // Signed in: this device receives ride invitations and updates.
   useEffect(() => {
@@ -116,12 +131,12 @@ function RootNavigator() {
             router.push(`/friends-ride/${group.groupId}` as any);
           } else {
             await friendsAPI.decline(token, data.invitationId);
-            Alert.alert('Invitation declined', data.host?.firstName ? `${data.host.firstName} will see you can't come.` : undefined);
+            Alert.alert(t('push.declined'), data.host?.firstName ? t('push.declinedText', { name: data.host.firstName }) : undefined);
           }
         } else if (data.type === 'friends.request' && data.requestId) {
           await (accept ? socialAPI.accept(token, data.requestId) : socialAPI.decline(token, data.requestId));
           if (accept) router.push('/join' as any);
-          else Alert.alert('Request declined');
+          else Alert.alert(t('push.requestDeclined'));
         } else {
           const route = routeForNotification(data);
           if (route) router.push(route as any);
@@ -129,12 +144,12 @@ function RootNavigator() {
       } catch (e) {
         // Expired, already answered, not enough balance…: say why, then show
         // the screen it is about.
-        showError(router, accept ? 'Could not accept' : 'Could not decline', e);
+        showError(router, accept ? t('push.acceptFailed') : t('push.declineFailed'), e);
         const route = routeForNotification(data);
         if (route) router.push(route as any);
       }
     },
-    [token, router],
+    [token, router, t],
   );
   useEffect(() => {
     if (!bootstrapping && token && pendingAction.current) {
@@ -157,13 +172,13 @@ function RootNavigator() {
         const route = routeForNotification(note.data);
         if (note.type === 'announcement') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         Alert.alert('Flow', note.message, route
-          ? [{ text: 'Later', style: 'cancel' }, { text: 'Open', onPress: () => router.push(route as any) }]
-          : [{ text: 'OK' }]);
+          ? [{ text: t('common.later'), style: 'cancel' }, { text: t('common.open'), onPress: () => router.push(route as any) }]
+          : [{ text: t('common.ok') }]);
       } catch {
         // The notification is still in the list; nothing else to do.
       }
     });
-  }, [token, router]);
+  }, [token, router, t]);
 
   if (bootstrapping) return null;
 
@@ -177,6 +192,7 @@ function RootNavigator() {
     >
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
+          <Stack.Screen name="language" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -207,9 +223,11 @@ export default function RootLayout() {
   if (!fontsReady) return null;
   return (
     <AuthProvider>
-      <DesignProvider density="rider">
-        <RootNavigator />
-      </DesignProvider>
+      <I18nProvider>
+        <DesignProvider density="rider">
+          <RootNavigator />
+        </DesignProvider>
+      </I18nProvider>
     </AuthProvider>
   );
 }
