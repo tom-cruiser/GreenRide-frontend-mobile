@@ -47,6 +47,7 @@ export default function WalletScreen() {
         withdrawal: t('wallet.txWithdrawal'),
         rideFare: t('wallet.txFare'),
         rideEarnings: t('wallet.txEarnings'),
+        scheduledTrip: t('wallet.txScheduled'),
       }));
     } catch {
       setRows([]);

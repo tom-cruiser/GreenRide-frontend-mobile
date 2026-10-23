@@ -9,6 +9,7 @@ export type Transaction = {
   direction: 'incoming' | 'outgoing';
   rideId: number | null;
   paymentId: number | null;
+  tripBookingId?: number | null;
   date: string;
 };
 
@@ -27,6 +28,7 @@ export type TransactionLabels = {
   withdrawal: string;
   rideFare: string;
   rideEarnings: string;
+  scheduledTrip: string;
 };
 
 const isRideFare = (tx: Transaction) => tx.type === 'commission' || (tx.type === 'ride_payment' && tx.direction !== 'incoming');
@@ -42,7 +44,21 @@ export function toTransactionRows(transactions: Transaction[], labels: Transacti
   const rows: TransactionRow[] = [];
   const rideFares = new Map<number, TransactionRow>();
 
+  const trips = new Map<number, TransactionRow>();
+
   for (const tx of transactions) {
+    // A scheduled-trip seat is paid as two entries too (driver + commission): one row.
+    if (tx.tripBookingId != null) {
+      const existing = trips.get(tx.tripBookingId);
+      if (existing) {
+        existing.amount += tx.amount;
+        continue;
+      }
+      const row = { key: `trip-${tx.tripBookingId}`, label: labels.scheduledTrip, amount: tx.amount, direction: tx.direction, date: tx.date };
+      trips.set(tx.tripBookingId, row);
+      rows.push(row);
+      continue;
+    }
     const label = labelFor(tx, labels);
     if (isRideFare(tx) && tx.rideId != null) {
       const existing = rideFares.get(tx.rideId);

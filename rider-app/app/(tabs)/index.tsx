@@ -130,6 +130,7 @@ export default function HomeScreen() {
 
   const quick: [IconName, string, () => void][] = [
     ["users", t("home.joinRide"), () => router.push("/join")],
+    ["calendar", t("home.scheduled"), () => router.push("/scheduled")],
     ["shield", t("home.safety"), () => router.push("/safety")],
     ["gift", t("home.promos"), () => router.push("/promotions")],
   ];

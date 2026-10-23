@@ -106,6 +106,9 @@ function Guard() {
         <Stack.Screen name="promotions" />
         <Stack.Screen name="messaging" />
         <Stack.Screen name="safety" />
+        <Stack.Screen name="scheduled/index" />
+        <Stack.Screen name="scheduled/new" />
+        <Stack.Screen name="scheduled/[id]" />
       </Stack>
       <StatusBar style="dark" />
       <IncomingCallOverlay />

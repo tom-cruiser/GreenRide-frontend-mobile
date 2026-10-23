@@ -19,7 +19,7 @@ import { DesignProvider, useFlowFonts } from '@/design';
 import { I18nProvider, useT } from '@/i18n';
 
 // Screens a shared link or a notification can open; kept through sign-in.
-const LINKABLE = ['join', 'invitation', 'friends-ride'];
+const LINKABLE = ['join', 'invitation', 'friends-ride', 'scheduled'];
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -208,6 +208,8 @@ function RootNavigator() {
           <Stack.Screen name="invitation/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="join/index" options={{ headerShown: false }} />
           <Stack.Screen name="join/[code]" options={{ headerShown: false }} />
+          <Stack.Screen name="scheduled/index" options={{ headerShown: false }} />
+          <Stack.Screen name="scheduled/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="call" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         </Stack>
         <StatusBar style="auto" />

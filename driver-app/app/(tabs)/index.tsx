@@ -60,7 +60,10 @@ export default function HomeScreen() {
             <Text variant="caption" color={colors.muted}>{t('home.today')}</Text>
             <Text variant="heading" weight="bold">{today == null ? '—' : formatMoney(today)}</Text>
           </Card>
-          <IconButton icon="bell" label={t('home.notifications')} count={unread} onPress={() => router.push('/notifications')} size={52} />
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <IconButton icon="calendar" label={t('scheduled.title')} onPress={() => router.push('/scheduled')} size={52} />
+            <IconButton icon="bell" label={t('home.notifications')} count={unread} onPress={() => router.push('/notifications')} size={52} />
+          </View>
         </View>
       </SafeAreaView>
 

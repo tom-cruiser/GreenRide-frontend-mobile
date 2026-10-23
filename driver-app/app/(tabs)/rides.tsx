@@ -43,7 +43,20 @@ export default function RidesScreen() {
         keyExtractor={(r) => r.id}
         contentContainerStyle={{ padding: space.xl, paddingBottom: space.xxxl * 2, gap: space.md }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
-        ListHeaderComponent={<Header title={t('rides.title')} />}
+        ListHeaderComponent={
+          <View style={{ gap: space.md }}>
+            <Header title={t('rides.title')} />
+            {/* Trips the driver posts ahead of time, riders book seats */}
+            <Card onPress={() => router.push('/scheduled')} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              <Icon name="calendar" />
+              <View style={{ flex: 1 }}>
+                <Text weight="semibold">{t('scheduled.title')}</Text>
+                <Text variant="caption" color={colors.muted}>{t('scheduled.newIntro')}</Text>
+              </View>
+              <Icon name="chevron-right" color={colors.muted} />
+            </Card>
+          </View>
+        }
         ListEmptyComponent={rides ? <EmptyState icon="clock" title={t('rides.none')} text={t('rides.noneHint')} /> : null}
         renderItem={({ item }) => {
           const group = item.share?.mode === 'friends' && (item.share.ridersCount ?? 1) > 1;

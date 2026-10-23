@@ -8,7 +8,7 @@ import { Button, Card, colors, EmptyState, formatDateTime, Header, Icon, space, 
 import { useT } from '@/i18n';
 import { notificationsAPI } from '@/services/api';
 
-type Note = { id: number; message: string; read_at: string | null; created_at: string };
+type Note = { id: number; message: string; read_at: string | null; created_at: string; data?: { tripId?: number } | null };
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -54,7 +54,12 @@ export default function NotificationsScreen() {
         }
         ListEmptyComponent={notes ? <EmptyState icon="bell" title={t('notifications.none')} /> : null}
         renderItem={({ item }) => (
-          <Card onPress={item.read_at ? undefined : () => read(item.id)}
+          <Card
+            onPress={() => {
+              if (!item.read_at) read(item.id);
+              // About a scheduled trip (a booking, a cancellation): open it.
+              if (item.data?.tripId) router.push(`/scheduled/${item.data.tripId}`);
+            }}
             style={[{ flexDirection: 'row', gap: space.md }, !item.read_at && { borderColor: colors.ink, borderWidth: 1.5 }]}>
             <Icon name="bell" size={20} color={item.read_at ? colors.muted : colors.ink} />
             <View style={{ flex: 1, gap: 4 }}>

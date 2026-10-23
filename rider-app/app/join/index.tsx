@@ -130,6 +130,7 @@ export default function JoinScreen() {
         <View style={styles.header}>
           <IconButton icon="chevron-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
           <Text variant="title" style={{ flex: 1 }}>{t('join.title')}</Text>
+          <IconButton icon="calendar" label={t('home.scheduled')} onPress={() => router.push('/scheduled')} />
           <IconButton icon="hash" label={t('join.myCode')} onPress={() => setSheet({ kind: 'me' })} />
           <IconButton icon="user-plus" label={t('join.addFriend')} onPress={() => setSheet({ kind: 'add' })} />
         </View>

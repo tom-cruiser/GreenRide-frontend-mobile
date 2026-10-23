@@ -135,6 +135,7 @@ export function routeForNotification(data: Record<string, any> | undefined | nul
   if (data.screen === 'invitation' && data.invitationId) return `/invitation/${data.invitationId}`;
   if (data.screen === 'friends-ride' && data.groupId) return `/friends-ride/${data.groupId}`;
   if (data.screen === 'join') return '/join';
+  if (typeof data.type === 'string' && data.type.startsWith('scheduled.') && data.tripId) return `/scheduled/${data.tripId}`;
   return null;
 }
 
