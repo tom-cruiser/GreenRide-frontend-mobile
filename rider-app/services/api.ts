@@ -40,6 +40,11 @@ const { baseUrl: API_BASE_URL, origin: API_ORIGIN } = getApiConfig();
 // Full address of a path the API returns (e.g. a photo's /api/photos/...).
 export const apiUrl = (path: string) => `${API_ORIGIN}${path}`;
 
+// A profile photo for <Image>: one on ImageKit is a public https URL; one
+// kept by the API is private and fetched with the signed-in user's token.
+export const photoSource = (url: string, token: string) =>
+  /^https?:\/\//.test(url) ? { uri: url } : { uri: apiUrl(url), headers: { Authorization: `Bearer ${token}` } };
+
 // eslint-disable-next-line no-console
 console.log('[api] base URL:', API_BASE_URL);
 

@@ -3,11 +3,11 @@ import React from 'react';
 import { View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, colors } from '@/design';
-import { apiUrl, type FriendsPerson } from '@/services/api';
+import { photoSource, type FriendsPerson } from '@/services/api';
 
 // A rider's photo in a circle (or filling its box with `fill`), or their
-// initials when there is none. Photos
-// are private: fetched with the signed-in rider's token.
+// initials when there is none (photoSource: ImageKit URL, or fetched from the
+// API with the signed-in rider's token).
 export function PersonAvatar({ person, size = 48, ring = false, fill = false }: {
   person: Pick<FriendsPerson, 'initials' | 'photoUrl'>; size?: number; ring?: boolean | 'space'; fill?: boolean;
 }) {
@@ -18,7 +18,7 @@ export function PersonAvatar({ person, size = 48, ring = false, fill = false }: 
     <View style={fill ? { flex: 1 } : frame}>
       {person.photoUrl && token ? (
         <Image
-          source={{ uri: apiUrl(person.photoUrl), headers: { Authorization: `Bearer ${token}` } }}
+          source={photoSource(person.photoUrl, token)}
           style={fill ? { width: '100%', height: '100%' } : { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.soft2 }}
           contentFit="cover"
           transition={150}

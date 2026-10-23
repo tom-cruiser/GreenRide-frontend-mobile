@@ -5,6 +5,11 @@ const getApiBase = (): string => `${getBackendOrigin()}/api`;
 // A full URL for a path the backend returns, e.g. a photo's "/api/photos/…".
 export const apiUrl = (path: string) => `${getBackendOrigin()}${path}`;
 
+// A profile photo for <Image>: one on ImageKit is a public https URL; one
+// kept by the API is private and fetched with the signed-in user's token.
+export const photoSource = (url: string, token: string) =>
+  /^https?:\/\//.test(url) ? { uri: url } : { uri: apiUrl(url), headers: { Authorization: `Bearer ${token}` } };
+
 // Keeps the HTTP status so screens can tell e.g. "not found" from a failure.
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
