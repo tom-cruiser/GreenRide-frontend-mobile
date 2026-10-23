@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { File as FSFile } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 type ApiConfig = {
@@ -358,9 +359,14 @@ export const socialAPI = {
 };
 
 // Profile photo: a picked image, sent as multipart form data.
+// A picked image as a FormData part. Expo's fetch sends files that can read
+// their bytes (expo-file-system's File), not React Native's { uri } objects
+// ("Unsupported FormDataPart implementation").
+const uploadPart = (uri: string) => new FSFile(uri) as unknown as Blob;
+
 export async function uploadProfilePhoto(token: string, file: { uri: string; name: string; mimeType: string }) {
   const body = new FormData();
-  body.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+  body.append('file', uploadPart(file.uri), file.name);
   const res = await fetch(`${API_BASE_URL}/users/me/photo`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError((data as any).error || `HTTP ${res.status}`, res.status, (data as any).details);
