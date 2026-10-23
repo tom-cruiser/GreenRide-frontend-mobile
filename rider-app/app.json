@@ -68,7 +68,14 @@
         }
       ],
       "@maplibre/maplibre-react-native",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Flow uses your photos to set your profile picture.",
+          "cameraPermission": "Flow uses the camera to take your profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

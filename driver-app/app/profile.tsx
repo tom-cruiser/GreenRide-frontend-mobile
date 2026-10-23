@@ -42,11 +42,16 @@ export default function ProfileScreen() {
     not_onboarded: { label: t('account.notOnboarded'), tone: 'neutral' as const, icon: 'file-plus' as const },
   }[approval as 'verified' | 'pending' | 'rejected' | 'not_onboarded'];
 
-  const pickPhoto = async () => {
+  // From the camera or the gallery, cropped square; the backend stores it on ImageKit.
+  const pickPhoto = async (source: 'camera' | 'library') => {
     if (!token) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return Alert.alert(t('profile.photo'), t('profile.photoAccess'));
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
+    const camera = source === 'camera';
+    const permission = camera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return Alert.alert(t('profile.photo'), camera ? t('profile.cameraAccess') : t('profile.photoAccess'));
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 };
+    const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
     setUploading(true);
@@ -61,13 +66,14 @@ export default function ProfileScreen() {
   };
 
   const photoMenu = () =>
-    user.photoUrl
-      ? Alert.alert(t('profile.photo'), undefined, [
-          { text: t('profile.choosePhoto'), onPress: pickPhoto },
-          { text: t('profile.removePhoto'), style: 'destructive', onPress: async () => { await removeProfilePhoto(token!).catch(() => {}); refreshUser(); } },
-          { text: t('common.cancel'), style: 'cancel' },
-        ])
-      : pickPhoto();
+    Alert.alert(t('profile.photo'), undefined, [
+      { text: t('profile.takePhoto'), onPress: () => pickPhoto('camera') },
+      { text: t('profile.choosePhoto'), onPress: () => pickPhoto('library') },
+      ...(user.photoUrl
+        ? [{ text: t('profile.removePhoto'), style: 'destructive' as const, onPress: async () => { await removeProfilePhoto(token!).catch(() => {}); refreshUser(); } }]
+        : []),
+      { text: t('common.cancel'), style: 'cancel' as const },
+    ]);
 
   const startEdit = (field: EditField) => {
     setValue(String(user[field] ?? ''));
